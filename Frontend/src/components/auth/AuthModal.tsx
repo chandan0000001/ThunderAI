@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import confetti from 'canvas-confetti';
-import { X, Lock, Mail, User as UserIcon, Calendar, ArrowRight, Check, AlertCircle, Sparkles, Zap } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, Calendar, ArrowRight, Check, AlertCircle, Zap } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -69,14 +69,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = () => {
-    setName('Chandan Dev');
-    setEmail('chandan.dev@thunder.ai');
-    setPassword('ThunderAI#2026');
-    setAge(25);
-    setError(null);
   };
 
   return (
@@ -253,19 +245,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </button>
         </form>
-
-        {/* Quick Demo Credentials shortcut */}
-        <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono">
-          <span className="text-zinc-500">Quick fill:</span>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            className="text-white hover:text-zinc-300 transition flex items-center space-x-1 underline underline-offset-2"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Fill Demo Credentials</span>
-          </button>
-        </div>
       </div>
     </div>
   );
