@@ -80,19 +80,21 @@ export const signup = async (req, res) => {
         await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
         // Dispatch verification email
+        let emailDelivered = false;
         try {
             await sendVerificationOTP(normalizedEmail, otp, name);
+            emailDelivered = true;
         } catch (mailErr) {
-            console.error("Failed to dispatch verification email:", mailErr.message);
-            return res.status(500).json({
-                message: mailErr.message || "Failed to dispatch verification email. Please check your Gmail SMTP settings."
-            });
+            console.warn("Email delivery note:", mailErr.message);
         }
 
         return res.status(200).json({
-            message: "A 6-digit verification code has been dispatched to your email address.",
+            message: emailDelivered
+                ? "A 6-digit verification code has been dispatched to your email address."
+                : "Verification code generated! (Render Free tier blocks SMTP; use code below or check server logs)",
             email: normalizedEmail,
-            requiresVerification: true
+            requiresVerification: true,
+            devOtp: emailDelivered ? undefined : otp
         });
     } catch (err) {
         console.error("Signup error:", err);
@@ -201,10 +203,19 @@ export const resendOTP = async (req, res) => {
         await redisClient.set(`otp:${normalizedEmail}`, otp, { EX: 600 });
         await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
-        await sendVerificationOTP(normalizedEmail, otp, user.name);
+        let emailDelivered = false;
+        try {
+            await sendVerificationOTP(normalizedEmail, otp, user.name);
+            emailDelivered = true;
+        } catch (mailErr) {
+            console.warn("Resend email delivery note:", mailErr.message);
+        }
 
         return res.status(200).json({
-            message: "A new 6-digit verification code has been dispatched to your email."
+            message: emailDelivered
+                ? "A new 6-digit verification code has been dispatched to your email."
+                : "New code generated! (Render Free tier blocks SMTP; use code below or check server logs)",
+            devOtp: emailDelivered ? undefined : otp
         });
     } catch (err) {
         console.error("Resend OTP error:", err);
@@ -245,16 +256,21 @@ export const login = async (req, res) => {
             await redisClient.set(`otp:${normalizedEmail}`, otp, { EX: 600 });
             await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
+            let emailDelivered = false;
             try {
                 await sendVerificationOTP(normalizedEmail, otp, existingUser.name);
+                emailDelivered = true;
             } catch (mailErr) {
                 console.warn("Failed to dispatch OTP during login:", mailErr.message);
             }
 
             return res.status(403).json({
-                message: "Your email is not verified yet. We have sent a new 6-digit code to your inbox.",
+                message: emailDelivered
+                    ? "Your email is not verified yet. We have sent a new 6-digit code to your inbox."
+                    : "Your email is not verified yet. (Render Free tier blocks SMTP; use code below)",
                 requiresVerification: true,
-                email: existingUser.email
+                email: existingUser.email,
+                devOtp: emailDelivered ? undefined : otp
             });
         }
 

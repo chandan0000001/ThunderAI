@@ -86,12 +86,14 @@ const startServer = async () => {
     try {
         await connectionDB();
         await connectRedis();
-        await verifyEmailConfiguration();
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`⚡ Thunder AI Server is running at http://0.0.0.0:${PORT}`);
         });
+
+        // Test email configuration asynchronously in background (never blocks port binding)
+        verifyEmailConfiguration().catch(() => {});
     } catch (error) {
         console.error("Failed to connect. Please try again. ERROR:", error);
     }

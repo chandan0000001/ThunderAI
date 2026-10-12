@@ -110,9 +110,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         if (res.requiresVerification) {
           setStep('otp');
-          setOtp('');
+          setOtp(res.devOtp || '');
           setResendCooldown(60);
-          setSuccessBanner('A 6-digit verification code has been dispatched to your email.');
+          setSuccessBanner(
+            res.devOtp
+              ? `Verification code: ${res.devOtp} (Render Free Tier blocks SMTP)`
+              : (res.message || 'A 6-digit verification code has been dispatched to your email.')
+          );
           return;
         }
 
@@ -130,9 +134,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         if (res.requiresVerification) {
           setStep('otp');
-          setOtp('');
+          setOtp(res.devOtp || '');
           setResendCooldown(60);
-          setSuccessBanner('Your email is not verified yet. A fresh 6-digit code has been sent to your email.');
+          setSuccessBanner(
+            res.devOtp
+              ? `Verification code: ${res.devOtp} (Render Free Tier blocks SMTP)`
+              : (res.message || 'Your email is not verified yet. A fresh 6-digit code has been sent to your email.')
+          );
           return;
         }
 
@@ -200,12 +208,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setResending(true);
 
     try {
-      const res = await api.auth.resendOTP({
+      const res: any = await api.auth.resendOTP({
         email: email.trim().toLowerCase(),
       });
-      setSuccessBanner(res.message || 'A new 6-digit code has been sent to your email.');
       setResendCooldown(60);
-      setOtp('');
+      if (res.devOtp) {
+        setOtp(res.devOtp);
+        setSuccessBanner(`New code: ${res.devOtp} (Render Free Tier blocks SMTP)`);
+      } else {
+        setSuccessBanner(res.message || 'A new 6-digit code has been sent to your email.');
+        setOtp('');
+      }
       otpInputRef.current?.focus();
     } catch (err: any) {
       setError(err.message || 'Failed to resend code. Please try again later.');

@@ -25,6 +25,8 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
       - key: TOKEN_LIMIT
         value: 10000
       - key: TOKEN_WINDOW_SECONDS

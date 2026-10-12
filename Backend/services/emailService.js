@@ -22,18 +22,62 @@ const getTransporter = () => {
     tls: {
       rejectUnauthorized: false,
     },
+    // Fast 5-second timeouts so Render firewall drops don't freeze the process for 2 minutes
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 };
 
 /**
- * Verifies Gmail SMTP credentials during server startup and logs diagnostic info.
+ * Sends OTP email via Resend HTTP REST API (over HTTPS Port 443, never blocked by Render).
+ */
+const sendViaResend = async (email, otp, name = 'User') => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+
+  const senderEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const senderName = process.env.RESEND_FROM_NAME || 'Thunder AI';
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey.trim()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `${senderName} <${senderEmail}>`,
+      to: [email],
+      subject: `⚡ Your Thunder AI Verification Code is ${otp}`,
+      html: getEmailHtml(otp, name),
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || `Resend API error status ${response.status}`);
+  }
+
+  console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} via Resend API (ID: ${data.id})`);
+  return true;
+};
+
+/**
+ * Verifies email service configuration during server startup and logs diagnostic info.
  */
 export const verifyEmailConfiguration = async () => {
+  if (process.env.RESEND_API_KEY) {
+    console.log('✅ [EmailService] Resend API configured (HTTPS Port 443 - Fully supported on Render Free Tier)');
+    return true;
+  }
+
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.warn('\n⚠️  [EmailService] EMAIL_USER or EMAIL_PASS is missing in Environment!');
-    console.warn('👉 Please set EMAIL_USER (your Gmail) and EMAIL_PASS (16-char App Password) on Render.\n');
+    console.warn('\n⚠️  [EmailService] Neither RESEND_API_KEY nor Gmail credentials configured in Environment.');
+    console.warn('👉 On Render Free tier, outbound SMTP (465/587) is blocked by firewall.');
+    console.warn('👉 Add RESEND_API_KEY in Render Environment for 100% free delivery over HTTPS (port 443).\n');
     return false;
   }
 
@@ -42,8 +86,9 @@ export const verifyEmailConfiguration = async () => {
     console.log(`✅ [EmailService] Gmail SMTP successfully connected as: ${process.env.EMAIL_USER}`);
     return true;
   } catch (err) {
-    console.error(`\n❌ [EmailService] Gmail SMTP authentication FAILED:`, err.message);
-    console.error(`💡 Tip: Gmail requires a 16-character App Password (from https://myaccount.google.com/apppasswords), NOT your normal Gmail password.\n`);
+    console.warn(`\n⚠️  [EmailService] Gmail SMTP connection failed:`, err.message);
+    console.warn(`💡 Reason: Render Free Tier firewall blocks outbound SMTP ports (25, 465, 587).`);
+    console.warn(`👉 Solution: Set RESEND_API_KEY in Render Environment. Resend sends via HTTPS (port 443) which is never blocked.\n`);
     return false;
   }
 };
@@ -202,31 +247,48 @@ const getEmailHtml = (otp, name = 'Agent') => {
  * @returns {Promise<boolean>}
  */
 export const sendVerificationOTP = async (email, otp, name = 'User') => {
+  // Option 1: Resend HTTP REST API (Bypasses Render's egress SMTP firewall on Port 443)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      return await sendViaResend(email, otp, name);
+    } catch (err) {
+      console.error(`❌ [EmailService] Resend API failed:`, err.message);
+      // Fall through to try Gmail SMTP if configured
+    }
+  }
+
+  // Option 2: Gmail SMTP (Fast 5s timeout)
   const transporter = getTransporter();
 
-  // If email credentials are not configured on the server, alert the user and log OTP
-  if (!transporter) {
-    console.error(`\n🚨 [EmailService] Cannot send email to ${email}: EMAIL_USER or EMAIL_PASS is missing in Environment!`);
-    console.log(`⚡ [CONSOLE OTP BACKUP] For ${email}: ${otp}\n`);
-    throw new Error('Gmail SMTP is not configured. Please set EMAIL_USER and EMAIL_PASS (16-character Google App Password) in your Render Dashboard -> Environment.');
+  if (transporter) {
+    const mailOptions = {
+      from: `"Thunder AI" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `⚡ Your Thunder AI Verification Code is ${otp}`,
+      text: `Hello ${name},\n\nYour Thunder AI verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this, please ignore this message.`,
+      html: getEmailHtml(otp, name),
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} (Message ID: ${info.messageId})`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [EmailService] Gmail SMTP failed to send to ${email}:`, error.message);
+      console.log(`\n======================================================`);
+      console.log(`⚡ [RENDER FREE TIER OTP BACKUP]`);
+      console.log(`✉️  User: ${email}`);
+      console.log(`🔑  OTP Code: ${otp}`);
+      console.log(`======================================================\n`);
+      throw error;
+    }
   }
 
-  const mailOptions = {
-    from: `"Thunder AI" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: `⚡ Your Thunder AI Verification Code is ${otp}`,
-    text: `Hello ${name},\n\nYour Thunder AI verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this, please ignore this message.`,
-    html: getEmailHtml(otp, name),
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} (Message ID: ${info.messageId})`);
-    return true;
-  } catch (error) {
-    console.error(`❌ [EmailService] Failed to send email to ${email}:`, error.message);
-    // Print fallback OTP in console so user is never locked out during local development
-    console.log(`⚡ [FALLBACK CONSOLE OTP] For ${email}: ${otp}`);
-    throw new Error(`Failed to send verification email: ${error.message}`);
-  }
+  // If neither service is active, log OTP to console
+  console.log(`\n======================================================`);
+  console.log(`⚡ [RENDER FREE TIER OTP BACKUP]`);
+  console.log(`✉️  User: ${email}`);
+  console.log(`🔑  OTP Code: ${otp}`);
+  console.log(`======================================================\n`);
+  throw new Error('SMTP connection timed out or blocked on Render free tier. Use the OTP from server logs or configure RESEND_API_KEY.');
 };
