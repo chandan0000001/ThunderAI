@@ -56,6 +56,8 @@ DEFAULT_AI_MODEL=openrouter/free
 REDIS_URL=your_redis_connection_url
 TOKEN_LIMIT=10000
 TOKEN_WINDOW_SECONDS=18000
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_16_character_app_password
 ```
 
 Start the backend:
@@ -74,5 +76,41 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
+## ☁️ Deploying to Render (Free Single-Service Deployment)
+
+Thunder AI is preconfigured to build and serve both the React SPA frontend and the Express backend as a single unified service on Render's free tier with zero CORS or cookie domain issues.
+
+### Option 1: Automatic Blueprint (Recommended)
+1. Push your repository to GitHub.
+2. Go to [dashboard.render.com](https://dashboard.render.com).
+3. Click **New +** > **Blueprint**.
+4. Connect `chandan0000001/ThunderAI`. Render reads `render.yaml` automatically.
+5. Fill in your environment variables (`MONGO_URI`, `OPENROUTER_API_KEY`, `REDIS_URL`, `EMAIL_USER`, `EMAIL_PASS`).
+6. Click **Apply**.
+
+### Option 2: Manual Web Service
+1. Click **New +** > **Web Service** on Render.
+2. Connect your GitHub repository.
+3. Configure the service:
+   - **Environment**: `Node`
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm start`
+   - **Plan**: `Free`
+   - **Health Check Path**: `/health`
+4. Add the following **Environment Variables**:
+   - `NODE_ENV`: `production`
+   - `MONGO_URI`: Your MongoDB Atlas URI
+   - `JWT_SECRET`: A secure random string
+   - `OPENROUTER_API_KEY`: Your OpenRouter API key
+   - `REDIS_URL`: Your Redis connection URL (e.g., from Upstash)
+   - `EMAIL_USER`: Your Gmail address
+   - `EMAIL_PASS`: Your 16-character Google App Password
+   - `TOKEN_LIMIT`: `10000`
+   - `TOKEN_WINDOW_SECONDS`: `18000`
+5. Click **Create Web Service**.
+
+---
+
 ## 📄 License
 ISC
+

@@ -1,59 +1,78 @@
 import dotenv from "dotenv/config";
 import express from "express";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import connectionDB from "./config/database.js";
-import  {connectRedis} from "./config/redis.js";
+import { connectRedis } from "./config/redis.js";
 import userRouter from "./routes/userRouter.js";
 import messageRouter from "./routes/messageRouter.js";
 import chatRouter from "./routes/chatRouter.js";
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import {login,signup,profile,logout} from './controllers/userController.js';
+import cookieParser from "cookie-parser";
+import cors from "cors";
 
-
-
-// dotenv.config();
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDistPath = path.resolve(__dirname, "../Frontend/dist");
 
 const app = express();
 
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000"
+];
 
-//for testing user
-//rin this below in terminal
-// 10 -d 20 http://localhost:3000/users
-// app.use("/",(req,res)=>{
-//     res.json("Hello ji me nahii hu")
-// })
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+}
 
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000"
-    ],
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(null, true);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
-app.use("/user",userRouter) ; //userrelated jo bhi ayega ussw userrouter ko bhejj dega 
-app.use("/msg", messageRouter);
-app.use("/chat",chatRouter);
+// Health check endpoint for Render / monitoring
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
+});
 
-const startServer = async ()=>{
-    try{
-        await connectionDB() 
+// API Routes
+app.use("/user", userRouter);
+app.use("/msg", messageRouter);
+app.use("/chat", chatRouter);
+
+// Serve Frontend SPA assets in unified production mode
+if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+
+    app.get("*", (req, res) => {
+        res.sendFile(path.join(frontendDistPath, "index.html"));
+    });
+}
+
+const startServer = async () => {
+    try {
+        await connectionDB();
         await connectRedis();
-        app.listen(process.env.PORT , ()=>{
-            console.log(`Server is listening at port ${process.env.PORT}`)
-        })
+
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`⚡ Thunder AI Server is running at http://0.0.0.0:${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to connect. Please try again. ERROR:", error);
     }
-    catch(error){
-        console.log("Failed to connect Please try again");
-        console.error("ERROR",error);
-    }
-   
-} 
+};
 
 startServer();

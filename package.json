@@ -1,0 +1,16 @@
+{
+  "name": "thunder-ai",
+  "version": "1.0.0",
+  "description": "Thunder AI - Conversational intelligence platform with 3D landing, streaming LLM, and Redis token governance",
+  "main": "Backend/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix Frontend install && npm --prefix Frontend run build && npm --prefix Backend install",
+    "start": "node Backend/index.js",
+    "dev:frontend": "npm --prefix Frontend run dev",
+    "dev:backend": "npm --prefix Backend run dev"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
