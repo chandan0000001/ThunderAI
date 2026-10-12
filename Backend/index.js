@@ -13,6 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 import connectionDB from "./config/database.js";
 import { connectRedis } from "./config/redis.js";
+import { verifyEmailConfiguration } from "./services/emailService.js";
 import userRouter from "./routes/userRouter.js";
 import messageRouter from "./routes/messageRouter.js";
 import chatRouter from "./routes/chatRouter.js";
@@ -69,6 +70,7 @@ const startServer = async () => {
     try {
         await connectionDB();
         await connectRedis();
+        await verifyEmailConfiguration();
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, "0.0.0.0", () => {

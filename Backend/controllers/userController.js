@@ -84,6 +84,9 @@ export const signup = async (req, res) => {
             await sendVerificationOTP(normalizedEmail, otp, name);
         } catch (mailErr) {
             console.error("Failed to dispatch verification email:", mailErr.message);
+            return res.status(500).json({
+                message: mailErr.message || "Failed to dispatch verification email. Please check your Gmail SMTP settings."
+            });
         }
 
         return res.status(200).json({

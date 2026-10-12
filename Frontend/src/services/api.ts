@@ -25,7 +25,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      if (response.status === 401 && typeof window !== 'undefined') {
+      if (
+        response.status === 401 &&
+        typeof window !== 'undefined' &&
+        endpoint !== '/user/profile' &&
+        endpoint !== '/user/login'
+      ) {
         window.dispatchEvent(
           new CustomEvent('thunder:auth-expired', {
             detail: { message: data.message || 'You need to login first' },

@@ -332,6 +332,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Spam / Junk Reminder */}
+            <p className="mt-3 text-[11px] text-zinc-500 font-mono text-center">
+              💡 Tip: Please check your <span className="text-zinc-300">Spam</span> or <span className="text-zinc-300">Junk / Promotions</span> folder if the code doesn't appear in your main inbox.
+            </p>
           </div>
         ) : (
           /* ==================== STEP 1: CREDENTIALS VIEW ==================== */

@@ -106,16 +106,32 @@ export function App() {
   // Listen for global auth-expired event from API interceptor
   useEffect(() => {
     const handleAuthExpired = () => {
-      setCurrentUser(null);
-      localStorage.removeItem('thunder_cached_user');
-      navigate('/');
-      setAuthInitialMode('login');
-      setAuthModalOpen(true);
+      if (currentUser) {
+        setCurrentUser(null);
+        localStorage.removeItem('thunder_cached_user');
+        navigate('/');
+        setAuthInitialMode('login');
+        setAuthModalOpen(true);
+      }
     };
 
     window.addEventListener('thunder:auth-expired', handleAuthExpired);
     return () => window.removeEventListener('thunder:auth-expired', handleAuthExpired);
-  }, [navigate]);
+  }, [currentUser, navigate]);
+
+  // Auto-display Login / Signup modal after 13 seconds of landing on the page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentUser((user) => {
+        if (!user) {
+          setAuthModalOpen(true);
+        }
+        return user;
+      });
+    }, 13000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLaunchApp = () => {
     if (currentUser) {

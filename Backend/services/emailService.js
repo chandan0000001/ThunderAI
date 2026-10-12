@@ -8,19 +8,44 @@ const getTransporter = () => {
   const pass = process.env.EMAIL_PASS;
 
   if (!user || !pass) {
-    console.warn(
-      '⚠️ [EmailService] EMAIL_USER or EMAIL_PASS not configured in .env. OTP will be printed to console.'
-    );
     return null;
   }
 
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
       user: user.trim(),
-      pass: pass.trim().replace(/\s+/g, ''), // Google app passwords often contain spaces
+      pass: pass.trim().replace(/\s+/g, ''), // Strip spaces from Google App Password
+    },
+    tls: {
+      rejectUnauthorized: false,
     },
   });
+};
+
+/**
+ * Verifies Gmail SMTP credentials during server startup and logs diagnostic info.
+ */
+export const verifyEmailConfiguration = async () => {
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    console.warn('\n⚠️  [EmailService] EMAIL_USER or EMAIL_PASS is missing in Environment!');
+    console.warn('👉 Please set EMAIL_USER (your Gmail) and EMAIL_PASS (16-char App Password) on Render.\n');
+    return false;
+  }
+
+  try {
+    await transporter.verify();
+    console.log(`✅ [EmailService] Gmail SMTP successfully connected as: ${process.env.EMAIL_USER}`);
+    return true;
+  } catch (err) {
+    console.error(`\n❌ [EmailService] Gmail SMTP authentication FAILED:`, err.message);
+    console.error(`💡 Tip: Gmail requires a 16-character App Password (from https://myaccount.google.com/apppasswords), NOT your normal Gmail password.\n`);
+    return false;
+  }
 };
 
 /**
@@ -179,15 +204,11 @@ const getEmailHtml = (otp, name = 'Agent') => {
 export const sendVerificationOTP = async (email, otp, name = 'User') => {
   const transporter = getTransporter();
 
-  // If email credentials are not set yet, print to console for development convenience
+  // If email credentials are not configured on the server, alert the user and log OTP
   if (!transporter) {
-    console.log('\n======================================================');
-    console.log(`⚡ [THUNDER AI VERIFICATION OTP]`);
-    console.log(`✉️  Recipient: ${email}`);
-    console.log(`🔑  OTP Code:  ${otp}`);
-    console.log(`⏰  Valid for: 10 minutes`);
-    console.log('======================================================\n');
-    return true;
+    console.error(`\n🚨 [EmailService] Cannot send email to ${email}: EMAIL_USER or EMAIL_PASS is missing in Environment!`);
+    console.log(`⚡ [CONSOLE OTP BACKUP] For ${email}: ${otp}\n`);
+    throw new Error('Gmail SMTP is not configured. Please set EMAIL_USER and EMAIL_PASS (16-character Google App Password) in your Render Dashboard -> Environment.');
   }
 
   const mailOptions = {
