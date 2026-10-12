@@ -1,8 +1,16 @@
-import dotenv from "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDistPath = path.resolve(__dirname, "../Frontend/dist");
+
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+
 import connectionDB from "./config/database.js";
 import { connectRedis } from "./config/redis.js";
 import userRouter from "./routes/userRouter.js";
@@ -10,10 +18,6 @@ import messageRouter from "./routes/messageRouter.js";
 import chatRouter from "./routes/chatRouter.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const frontendDistPath = path.resolve(__dirname, "../Frontend/dist");
 
 const app = express();
 
@@ -56,7 +60,7 @@ app.use("/chat", chatRouter);
 if (fs.existsSync(frontendDistPath)) {
     app.use(express.static(frontendDistPath));
 
-    app.get("*", (req, res) => {
+    app.use((req, res) => {
         res.sendFile(path.join(frontendDistPath, "index.html"));
     });
 }
