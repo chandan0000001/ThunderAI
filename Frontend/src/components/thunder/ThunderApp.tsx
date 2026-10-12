@@ -181,6 +181,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
     if (urlChatId && urlChatId !== currentChatId) {
       setCurrentChatId(urlChatId);
     } else if (!urlChatId && currentChatId) {
+      if (activeStreamChatIdRef.current) return;
       setCurrentChatId(null);
       setMessages([]);
     }
@@ -548,7 +549,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (!sending) {
+        handleSendMessage();
+      }
     }
   };
 
@@ -614,15 +617,21 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
           {/* "+ New chat" Button */}
           <button
-            onClick={handleNewChat}
+            onClick={() => {
+              if (sending) return;
+              handleNewChat();
+            }}
+            disabled={sending}
             className={`w-full flex items-center ${
               sidebarOpen ? 'px-4 py-3 space-x-3 justify-start' : 'p-3 justify-center'
             } rounded-full transition shadow-sm group ${
+              sending ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isDarkMode
                 ? 'bg-[#131314] hover:bg-[#28292a] text-[#e3e3e3] border border-[#2d2e30]'
                 : 'bg-white hover:bg-[#f3f4f6] text-[#1f1f1f] border border-[#d3dbdf]'
             }`}
-            title="Start new chat"
+            title={sending ? 'Waiting for response to complete...' : 'Start new chat'}
           >
             <Plus className="w-4 h-4 text-yellow-500 group-hover:rotate-90 transition-transform" />
             {sidebarOpen && (
@@ -674,6 +683,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 <div
                   key={chat._id}
                   onClick={() => {
+                    if (sending) return;
                     setCurrentChatId(chat._id);
                     navigate(`/chat/${chat._id}`);
                   }}
@@ -1158,8 +1168,15 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Thunder anything, analyze backend models, or write code..."
-              className={`w-full bg-transparent text-sm focus:outline-none resize-none px-2 max-h-36 overflow-y-auto leading-relaxed ${
+              disabled={sending}
+              placeholder={
+                sending
+                  ? 'Thunder is synthesizing response...'
+                  : 'Ask Thunder anything, analyze backend models, or write code...'
+              }
+              className={`w-full bg-transparent text-sm focus:outline-none resize-none px-2 max-h-36 overflow-y-auto leading-relaxed transition-opacity ${
+                sending ? 'cursor-not-allowed opacity-50' : ''
+              } ${
                 isDarkMode
                   ? 'text-[#e3e3e3] placeholder-[#8e918f]'
                   : 'text-[#1f1f1f] placeholder-[#5f6368]'
@@ -1175,7 +1192,10 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 <button
                   type="button"
                   title="Upload attachment"
+                  disabled={sending}
                   className={`p-2 rounded-full transition ${
+                    sending ? 'opacity-40 cursor-not-allowed' : ''
+                  } ${
                     isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
                   }`}
                 >
@@ -1184,7 +1204,10 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 <button
                   type="button"
                   title="Web Search"
+                  disabled={sending}
                   className={`p-2 rounded-full transition ${
+                    sending ? 'opacity-40 cursor-not-allowed' : ''
+                  } ${
                     isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
                   }`}
                 >
@@ -1207,9 +1230,13 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                     ? 'bg-[#2d2e30] text-zinc-600 cursor-not-allowed'
                     : 'bg-[#e1e3e1] text-zinc-400 cursor-not-allowed'
                 }`}
-                title="Send prompt"
+                title={sending ? 'Synthesizing response...' : 'Send prompt'}
               >
-                <Send className="w-4 h-4" />
+                {sending ? (
+                  <span className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>

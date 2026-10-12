@@ -6,6 +6,55 @@ import { AuthModal } from './components/auth/AuthModal';
 import { api } from './services/api';
 import type { User } from './types';
 
+interface ProtectedChatViewProps {
+  currentUser: User | null;
+  sessionChecking: boolean;
+  onLogout: () => Promise<void>;
+  onBackToLanding: () => void;
+  onDeleteAccount: () => Promise<void>;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  onUpdateUser: (u: User) => void;
+  initialProfileOpen?: boolean;
+}
+
+const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
+  currentUser,
+  sessionChecking,
+  onLogout,
+  onBackToLanding,
+  onDeleteAccount,
+  isDarkMode,
+  onToggleTheme,
+  onUpdateUser,
+  initialProfileOpen = false,
+}) => {
+  if (sessionChecking) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-yellow-500 bg-[#090a0f]">
+        VERIFYING SESSION TELEMETRY...
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <ThunderApp
+      currentUser={currentUser}
+      onLogout={onLogout}
+      onBackToLanding={onBackToLanding}
+      onDeleteAccount={onDeleteAccount}
+      isDarkMode={isDarkMode}
+      onToggleTheme={onToggleTheme}
+      onUpdateUser={onUpdateUser}
+      initialProfileOpen={initialProfileOpen}
+    />
+  );
+};
+
 export function App() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -126,34 +175,6 @@ export function App() {
     localStorage.setItem('thunder_cached_user', JSON.stringify(updatedUser));
   };
 
-  // Protected Route wrapper
-  const ProtectedChatView = ({ initialProfileOpen = false }: { initialProfileOpen?: boolean }) => {
-    if (sessionChecking) {
-      return (
-        <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-yellow-500 bg-[#090a0f]">
-          VERIFYING SESSION TELEMETRY...
-        </div>
-      );
-    }
-
-    if (!currentUser) {
-      return <Navigate to="/" replace />;
-    }
-
-    return (
-      <ThunderApp
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onBackToLanding={() => navigate('/')}
-        onDeleteAccount={handleDeleteAccount}
-        isDarkMode={isDarkMode}
-        onToggleTheme={toggleTheme}
-        onUpdateUser={handleUpdateUser}
-        initialProfileOpen={initialProfileOpen}
-      />
-    );
-  };
-
   return (
     <div
       className={`min-h-screen antialiased transition-colors duration-300 ${
@@ -176,14 +197,41 @@ export function App() {
           }
         />
 
-        {/* New Chat Route */}
-        <Route path="/chat" element={<ProtectedChatView initialProfileOpen={false} />} />
-
-        {/* Specific Chat by ID Route */}
-        <Route path="/chat/:chatId" element={<ProtectedChatView initialProfileOpen={false} />} />
+        {/* Unified Chat Route: Handles /chat and /chat/:chatId seamlessly without unmounting */}
+        <Route
+          path="/chat/:chatId?"
+          element={
+            <ProtectedChatView
+              currentUser={currentUser}
+              sessionChecking={sessionChecking}
+              onLogout={handleLogout}
+              onBackToLanding={() => navigate('/')}
+              onDeleteAccount={handleDeleteAccount}
+              isDarkMode={isDarkMode}
+              onToggleTheme={toggleTheme}
+              onUpdateUser={handleUpdateUser}
+              initialProfileOpen={false}
+            />
+          }
+        />
 
         {/* Profile Section Route */}
-        <Route path="/profile" element={<ProtectedChatView initialProfileOpen={true} />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedChatView
+              currentUser={currentUser}
+              sessionChecking={sessionChecking}
+              onLogout={handleLogout}
+              onBackToLanding={() => navigate('/')}
+              onDeleteAccount={handleDeleteAccount}
+              isDarkMode={isDarkMode}
+              onToggleTheme={toggleTheme}
+              onUpdateUser={handleUpdateUser}
+              initialProfileOpen={true}
+            />
+          }
+        />
 
         {/* Fallback to Home */}
         <Route path="*" element={<Navigate to="/" replace />} />
