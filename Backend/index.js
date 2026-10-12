@@ -52,15 +52,31 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
+// Serve Frontend SPA assets in unified production mode
+if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+
+    // Handle direct browser page navigation and refresh for frontend SPA routes (e.g. /chat/:chatId, /profile)
+    app.use((req, res, next) => {
+        if (
+            req.method === "GET" &&
+            req.headers.accept &&
+            req.headers.accept.includes("text/html") &&
+            !req.path.startsWith("/health")
+        ) {
+            return res.sendFile(path.join(frontendDistPath, "index.html"));
+        }
+        next();
+    });
+}
+
 // API Routes
 app.use("/user", userRouter);
 app.use("/msg", messageRouter);
 app.use("/chat", chatRouter);
 
-// Serve Frontend SPA assets in unified production mode
+// Fallback for any other remaining unmatched GET routes in production
 if (fs.existsSync(frontendDistPath)) {
-    app.use(express.static(frontendDistPath));
-
     app.use((req, res) => {
         res.sendFile(path.join(frontendDistPath, "index.html"));
     });

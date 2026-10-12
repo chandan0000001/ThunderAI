@@ -16,6 +16,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      Accept: 'application/json',
       ...(options.headers || {}),
     },
   };

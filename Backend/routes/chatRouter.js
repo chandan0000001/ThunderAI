@@ -11,10 +11,16 @@ chatRouter.use(authUserMiddleware);
 chatRouter.use(authenticatedRateLimiter);
 chatRouter.use(loadUserMiddleware);
 
-chatRouter.post("/createChat",createChat);
-chatRouter.get("/getRecentChat" , getRecentChat);
-chatRouter.get("/:chatId" ,getSingleChat);
-chatRouter.delete("/:chatId" , deleteChat);
+chatRouter.post("/createChat", createChat);
+chatRouter.get("/getRecentChat", getRecentChat);
+chatRouter.get("/details/:chatId", getSingleChat);
+chatRouter.get("/:chatId", (req, res, next) => {
+    if (req.headers.accept && req.headers.accept.includes("text/html")) {
+        return next();
+    }
+    return getSingleChat(req, res);
+});
+chatRouter.delete("/:chatId", deleteChat);
 
 
 export default chatRouter;
