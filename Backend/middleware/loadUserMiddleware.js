@@ -10,6 +10,14 @@ const loadUserMiddleware = async (req, res, next) => {
             });
         }
 
+        if (!existingUser.isVerified) {
+            return res.status(403).json({
+                message: "Your email is not verified. Please verify your email first.",
+                requiresVerification: true,
+                email: existingUser.email
+            });
+        }
+
         req.user = existingUser;
 
         next();

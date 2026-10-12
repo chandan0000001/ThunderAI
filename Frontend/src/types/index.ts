@@ -22,6 +22,7 @@ export interface User {
   email: string;
   age?: number;
   usage?: UserUsage;
+  isVerified?: boolean;
 }
 
 export interface Chat {
@@ -58,10 +59,21 @@ export interface SendMessageResponse {
 
 export interface AuthResponse {
   message: string;
+  name?: string;
+  email: string;
+  age?: number;
+  usage?: TokenUsage;
+  requiresVerification?: boolean;
+  isVerified?: boolean;
+}
+
+export interface VerifyOtpResponse {
+  message: string;
   name: string;
   email: string;
   age?: number;
   usage?: TokenUsage;
+  isVerified: boolean;
 }
 
 export interface AvailableModel {

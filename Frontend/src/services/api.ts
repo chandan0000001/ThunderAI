@@ -1,4 +1,4 @@
-import type { User, Chat, Message, SendMessageResponse, AuthResponse } from '../types';
+import type { User, Chat, Message, SendMessageResponse, AuthResponse, VerifyOtpResponse } from '../types';
 
 const API_BASE = ''; // proxied via Vite to http://localhost:3000
 
@@ -49,6 +49,20 @@ export const api = {
   auth: {
     signup: async (data: { name: string; email: string; password: string; age?: number }): Promise<AuthResponse> => {
       return request<AuthResponse>('/user/signup', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    verifyOTP: async (data: { email: string; otp: string }): Promise<VerifyOtpResponse> => {
+      return request<VerifyOtpResponse>('/user/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    resendOTP: async (data: { email: string }): Promise<{ message: string }> => {
+      return request<{ message: string }>('/user/resend-otp', {
         method: 'POST',
         body: JSON.stringify(data),
       });
