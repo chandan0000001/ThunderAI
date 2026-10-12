@@ -5,7 +5,7 @@
   "main": "Backend/index.js",
   "type": "module",
   "scripts": {
-    "build": "npm --prefix Frontend install && npm --prefix Frontend run build && npm --prefix Backend install",
+    "build": "npm --prefix Frontend install --include=dev && npm --prefix Frontend run build && npm --prefix Backend install",
     "start": "node Backend/index.js",
     "dev:frontend": "npm --prefix Frontend run dev",
     "dev:backend": "npm --prefix Backend run dev"
