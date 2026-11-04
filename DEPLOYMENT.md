@@ -1,8 +1,8 @@
-# 🚀 Modern Cloud Deployment Guide: Cloudflare Pages + Koyeb (Docker)
+# 🚀 Modern Cloud Deployment Guide: Cloudflare Pages + Zeabur / Railway (Docker)
 
-This guide walks you through migrating **Thunder AI** from Render to a high-performance decoupled architecture:
-* 🌐 **Frontend**: **Cloudflare Pages** (100% Free, 0ms Cold Start, Global Edge CDN for Three.js 3D assets).
-* ⚡ **Backend**: **Koyeb** (Free Eco Tier, **Runs 24/7 without sleeping**, Native SSE Streaming, Dockerized).
+This guide walks you through deploying **Thunder AI** using a modern, fast, decoupled cloud architecture:
+* 🌐 **Frontend**: **Cloudflare Pages / Workers** (100% Free, 0ms Cold Start, Global Edge CDN for Three.js 3D assets).
+* ⚡ **Backend**: **Zeabur** or **Railway** (Runs your production [`Dockerfile`](./Dockerfile), **Fast, No 60-Second Sleep**, Native SSE Streaming).
 
 ---
 
@@ -13,10 +13,10 @@ flowchart LR
     User[Browser Client]
     
     subgraph Cloudflare["Cloudflare Global Edge (300+ Cities)"]
-        CF[Cloudflare Pages<br/>React 19 + Three.js 3D Assets]
+        CF[Cloudflare Pages / Workers<br/>React 19 + Three.js 3D Assets]
     end
     
-    subgraph Koyeb["Koyeb Cloud (24/7 Container)"]
+    subgraph CloudContainer["Backend Container (Zeabur / Railway)"]
         Backend[Docker Express 5 Server<br/>SSE Streaming & Gateway]
     end
     
@@ -26,7 +26,7 @@ flowchart LR
         AI[OpenRouter LLM Mesh]
     end
     
-    User -->|Static Assets & 3D Shaders| CF
+    User -->|Static 3D Shaders & Assets| CF
     User -->|API & Real-Time SSE Streams| Backend
     Backend --> Mongo
     Backend --> Redis
@@ -35,21 +35,15 @@ flowchart LR
 
 ---
 
-## 🛠️ Step 1: Deploy Backend to Koyeb (with Docker)
+## 🛠️ Step 1: Deploy Backend to Zeabur (Recommended — Free & No Credit Card)
 
-1. Sign up or log in to **[koyeb.com](https://app.koyeb.com/)**.
-2. Click **Create Service** and select **GitHub**.
-3. Authorize Koyeb and select your repository: **`chandan0000001/ThunderAI`**.
-4. In the **Deployment method** section:
-   * Select **Dockerfile** (Koyeb automatically detects the root `Dockerfile`).
-5. In the **Instance type** section:
-   * Choose **Eco** (Nano / Micro) — runs **24/7 for free without sleeping**.
-   * Select the region closest to you (e.g., Frankfurt, Washington D.C., or Singapore).
-6. In the **Exposed Ports** section:
-   * Port: `3000`
-   * Protocol: `HTTP`
-   * Path: `/health` (Koyeb health check)
-7. In the **Environment Variables** section, add:
+**Zeabur** (`zeabur.com`) is the fastest, easiest replacement for Koyeb/Render:
+
+1. Go to **[zeabur.com](https://zeabur.com)** and log in with your **GitHub** account.
+2. Click **Create Project** (choose region closest to you, e.g., Asia East or US West).
+3. Click **Deploy New Service** > **Deploy from Source Code** > select **`chandan0000001/ThunderAI`**.
+4. Zeabur automatically detects your root **`Dockerfile`**.
+5. In the service settings, go to the **Variables** tab and add your environment variables:
    ```env
    NODE_ENV=production
    PORT=3000
@@ -64,56 +58,65 @@ flowchart LR
    EMAIL_PASS=your_email_app_password
    FRONTEND_URL=https://thunderai.pages.dev
    ```
-   *(You can update `FRONTEND_URL` once Cloudflare Pages gives you your `.pages.dev` URL).*
-8. Click **Deploy**.
-9. Once deployed, Koyeb will assign a public domain like:
-   `https://thunder-ai-<your-username>.koyeb.app`
+6. In the **Networking** tab:
+   * Click **Generate Domain**.
+   * Zeabur will generate a free public HTTPS domain like:
+     `https://thunder-ai.zeabur.app`
+7. Test your backend by visiting: `https://thunder-ai.zeabur.app/health`.
+   It will return:
+   ```json
+   {"status":"healthy","timestamp":"2026-11-04T..."}
+   ```
 
-Test it by visiting `https://thunder-ai-<your-username>.koyeb.app/health` in your browser. It should return:
-```json
-{"status":"healthy","timestamp":"2026-11-04T..."}
-```
+*(Alternative: You can also use **[Railway](https://railway.com)** — click "New Project" > "Deploy from GitHub repo", add environment variables, and click "Generate Domain" under Networking).*
 
 ---
 
 ## 🌐 Step 2: Deploy Frontend to Cloudflare Pages
 
-1. Log in to the **[Cloudflare Dashboard](https://dash.cloudflare.com/)**.
-2. Navigate to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
-3. Select the repository: **`chandan0000001/ThunderAI`** and branch: **`main`**.
-4. Configure the build settings:
+1. Log in to your **[Cloudflare Dashboard](https://dash.cloudflare.com/)**.
+2. Go to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+3. Select repository: **`chandan0000001/ThunderAI`** and branch: **`main`**.
+4. Configure Build settings:
    * **Framework preset**: `Vite`
    * **Root directory**: `Frontend`
    * **Build command**: `npm run build`
    * **Build output directory**: `dist`
 5. Under **Environment variables (Advanced)**, add:
    ```env
-   VITE_API_BASE_URL=https://thunder-ai-<your-username>.koyeb.app
+   VITE_API_BASE_URL=https://thunder-ai.zeabur.app
    ```
-   *(Substitute your actual Koyeb backend URL from Step 1).*
+   *(Paste your actual backend domain from Step 1).*
 6. Click **Save and Deploy**.
-7. Cloudflare will build and publish your site in ~30 seconds, giving you a custom URL like:
-   `https://thunderai.pages.dev`
+7. Cloudflare will deploy your site in ~30 seconds, giving you your public URL like:
+   `https://thunder-ai.pages.dev`
+
+*(Optional CLI Deployment)*:
+You can also deploy directly from your local terminal using Cloudflare's Wrangler CLI:
+```bash
+cd Frontend
+npm run deploy
+```
 
 ---
 
 ## 🔄 Step 3: Link the Domains
 
-1. Go back to your **Koyeb Dashboard** > your service settings > **Environment Variables**.
-2. Set `FRONTEND_URL` to your Cloudflare URL:
+1. Go back to your **Zeabur** dashboard > your service > **Variables**.
+2. Update `FRONTEND_URL` to match your Cloudflare domain:
    ```env
-   FRONTEND_URL=https://thunderai.pages.dev
+   FRONTEND_URL=https://thunder-ai.pages.dev
    ```
-3. Koyeb will automatically trigger a zero-downtime redeploy.
+3. Zeabur will automatically restart in seconds with the updated CORS policy.
 
 ---
 
-## ✨ Why this is 10x better than Render:
+## ✨ Why this setup is superior to Render:
 
-| Feature | Render (Free Tier) | Cloudflare Pages + Koyeb (Docker) |
+| Feature | Render (Free Tier) | Cloudflare Pages + Zeabur (Docker) |
 | :--- | :--- | :--- |
-| **Cold Starts** | 🐢 60–90 seconds sleep | ⚡ **0ms for Frontend, 24/7 alive on Koyeb** |
-| **3D Three.js Performance** | Loaded from single origin container | ⚡ **Served from 300+ global Cloudflare edge locations** |
-| **SSE Streaming** | Occasional proxy buffering | ⚡ **Dedicated HTTP/2 streaming pipeline** |
-| **Portability** | Locked to Render blueprint | 🐳 **Containerized Dockerfile runs anywhere (Koyeb, Fly, Railway, VPS)** |
+| **Cold Starts** | 🐢 60–90 seconds sleep | ⚡ **0ms for Frontend; snappy backend with no long wakeups** |
+| **3D Three.js Performance** | Loaded from single origin container | ⚡ **Cached on 300+ global Cloudflare edge locations** |
+| **SSE Streaming** | Occasional proxy buffering | ⚡ **Native HTTP/2 streaming pipeline** |
+| **Portability** | Locked to Render configuration | 🐳 **Containerized Dockerfile runs anywhere (Zeabur, Railway, Fly, VPS)** |
 | **Bandwidth** | 100 GB cap | ⚡ **Unlimited free static bandwidth on Cloudflare** |

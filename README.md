@@ -97,44 +97,60 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
-## ☁️ Cloud Deployment Options
+## ☁️ Production Cloud Deployment (Cloudflare Pages + Zeabur / Railway)
 
-### ⚡ Option 1: Cloudflare Pages + Koyeb (Recommended — Zero Cold Starts & 24/7 Alive)
-For ultra-fast global performance and zero cold starts, deploy the frontend to **Cloudflare Pages** and the backend to **Koyeb** (or Fly.io / Railway) using Docker:
-- 📖 **[Read the Complete Cloudflare + Koyeb Deployment Guide](./DEPLOYMENT.md)**
-- 🐳 **Includes production multi-stage [`Dockerfile`](./Dockerfile)**
+Thunder AI is fully configured for a high-performance decoupled cloud architecture:
+- 🌐 **Frontend**: **Cloudflare Pages / Workers** (0ms cold start, 300+ global edge locations, free unlimited static bandwidth).
+- ⚡ **Backend**: **Zeabur / Railway** (Dockerized, **No 60-Second Sleep**, Native HTTP/2 Server-Sent Events).
 
-### ☁️ Option 2: Single-Service Render Deployment
-Thunder AI is also preconfigured to build and serve both the React SPA frontend and the Express backend as a single unified service on Render:
+---
 
-### Option 1: Automatic Blueprint (Recommended)
-1. Push your repository to GitHub.
-2. Go to [dashboard.render.com](https://dashboard.render.com).
-3. Click **New +** > **Blueprint**.
-4. Connect `chandan0000001/ThunderAI`. Render reads `render.yaml` automatically.
-5. Fill in your environment variables (`MONGO_URI`, `OPENROUTER_API_KEY`, `REDIS_URL`, `EMAIL_USER`, `EMAIL_PASS`).
-6. Click **Apply**.
+### 1. Deploy Backend to Zeabur (Free & Instant)
+1. Go to [zeabur.com](https://zeabur.com) and log in with **GitHub**.
+2. Click **Create Project** > **Deploy New Service** > select `chandan0000001/ThunderAI`.
+3. Zeabur automatically detects the root [`Dockerfile`](./Dockerfile).
+4. In **Variables**, add your environment variables:
+   ```env
+   NODE_ENV=production
+   PORT=3000
+   MONGO_URI=your_mongodb_atlas_connection_string
+   JWT_SECRET=your_jwt_secret_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   DEFAULT_AI_MODEL=openrouter/free
+   REDIS_URL=your_redis_connection_url
+   TOKEN_LIMIT=10000
+   TOKEN_WINDOW_SECONDS=18000
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASS=your_email_app_password
+   FRONTEND_URL=https://thunder-ai.pages.dev
+   ```
+5. In **Networking**, click **Generate Domain** to get your backend HTTPS URL (e.g. `https://thunder-ai.zeabur.app`).
 
-### Option 2: Manual Web Service
-1. Click **New +** > **Web Service** on Render.
-2. Connect your GitHub repository.
-3. Configure the service:
-   - **Environment**: `Node`
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
-   - **Plan**: `Free`
-   - **Health Check Path**: `/health`
-4. Add the following **Environment Variables**:
-   - `NODE_ENV`: `production`
-   - `MONGO_URI`: Your MongoDB Atlas URI
-   - `JWT_SECRET`: A secure random string
-   - `OPENROUTER_API_KEY`: Your OpenRouter API key
-   - `REDIS_URL`: Your Redis connection URL (e.g., from Upstash)
-   - `EMAIL_USER`: Your Gmail address
-   - `EMAIL_PASS`: Your 16-character Google App Password
-   - `TOKEN_LIMIT`: `10000`
-   - `TOKEN_WINDOW_SECONDS`: `18000`
-5. Click **Create Web Service**.
+*(Alternative: You can also deploy to **[Railway](https://railway.com)** using the same Dockerfile).*
+
+---
+
+### 2. Deploy Frontend to Cloudflare Pages
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com/) > **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+2. Select repository: `chandan0000001/ThunderAI` (branch: `main`).
+3. Build Settings:
+   - **Framework preset**: `Vite`
+   - **Root directory**: `Frontend`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+4. Environment Variables:
+   - `VITE_API_BASE_URL`: `https://thunder-ai.zeabur.app` (your backend URL)
+5. Click **Save and Deploy**.
+
+*(Optional)* Or deploy directly via CLI:
+```bash
+cd Frontend
+npm run deploy
+```
+
+---
+
+📖 **For detailed setup, proxy routing, and troubleshooting, read the full [DEPLOYMENT.md](./DEPLOYMENT.md) guide.**
 
 ---
 

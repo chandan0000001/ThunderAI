@@ -552,21 +552,21 @@ A standout user feature in Thunder AI is the high-voltage account telemetry dash
 
 ## Chapter 9: Cloud Deployment Architecture & DevOps
 
-### 9.1 Unified Single-Service Deployment on Render
-Modern full-stack web applications frequently suffer from deployment fragmentation: the frontend Single Page Application is hosted on a CDN (e.g., Vercel, Netlify) while the backend API is hosted on an independent container service (e.g., AWS ECS, Render). This split-domain topology introduces severe operational friction:
-* **CORS Domain Mismatches:** Browsers block or enforce strict pre-flight OPTIONS requests across domains.
-* **Third-Party Cookie Deprecation:** Modern browsers (Safari ITP, Chrome Privacy Sandbox) block cross-domain HttpOnly session cookies.
-* **Double Billing & Cold Starts:** Maintaining two isolated services doubles free-tier cloud overhead.
+### 9.1 Decoupled Cloud Architecture: Cloudflare Pages & Containerized Backend
+Modern conversational artificial intelligence applications require ultra-fast static asset delivery paired with long-lived streaming backend connections. Monolithic deployments often suffer from resource competition and cold-start sleep states. Thunder AI resolves this by engineering a decoupled cloud deployment pipeline:
+* **Edge Presentation Tier (Cloudflare Pages / Workers):** Distributes the React 19 Single Page Application, Three.js 3D models (`dog.glb`), and WebGL textures across Cloudflare's 300+ global edge data centers with zero cold starts and unlimited free static bandwidth.
+* **Containerized Inference & Governance Tier (Zeabur / Railway):** Executes the Express 5 API and Server-Sent Events engine inside a dedicated Docker container with automated Git synchronization, zero cold-sleep latency, and native HTTP/2 streaming.
 
-### 9.2 Zero-CORS Architecture & Static Single Page App Serving
-Thunder AI solves this elegantly by unifying both the React Vite frontend and the Express backend into a single cohesive service defined in `render.yaml`:
-1. During the build phase (`npm run build`), Vite compiles TypeScript and CSS into static production bundles inside `Frontend/dist`.
-2. The Express server checks if `Frontend/dist` exists, serving static assets via `express.static()`.
-3. Any browser navigation to frontend routes (such as `/chat/:chatId` or `/profile`) is caught by an Express fallback handler that serves `Frontend/dist/index.html`, enabling seamless client-side React Router navigation without 404 errors.
-4. Because the frontend and backend share the identical origin domain, CORS is completely bypassed and HttpOnly cookies function with maximum security.
+### 9.2 Docker Containerization & Dynamic Cross-Origin Governance
+The backend tier is completely containerized via a production `Dockerfile` based on `node:22-bookworm-slim`. This container guarantees deterministic dependency installation and portability across any cloud container platform.
 
-### 9.3 Environment Variable Lifecycle & Health Monitoring
-Cloud secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`, `OPENROUTER_API_KEY`) are injected securely at runtime via environment variables. The server exposes an automated health probe at `GET /health`, returning HTTP 200 with an ISO timestamp. Cloud orchestrators utilize this endpoint for zero-downtime rolling deployments and automated failure restarts.
+Cross-origin communication between Cloudflare Pages (`*.pages.dev`) and the container backend (`*.zeabur.app`) is governed through three architectural safeguards:
+1. **Dynamic Origin Reflection:** The Express CORS middleware automatically validates and allows incoming requests from active Cloudflare Pages deployments.
+2. **Cross-Origin Cookie Credentials:** Session JWT tokens are marked `SameSite=None` and `Secure=true` in production, ensuring cryptographic authentication functions seamlessly across domains.
+3. **Automated Cloudflare SPA Routing:** The `public/_redirects` routing rule instructs Cloudflare edge servers to route all SPA paths directly to `index.html` with HTTP 200, preventing 404 navigation errors.
+
+### 9.3 Health Monitoring & Continuous Delivery
+Cloud secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`, `OPENROUTER_API_KEY`) are injected securely at runtime via environment variables. The server exposes an automated health probe at `GET /health`, which container orchestrators poll periodically for zero-downtime rolling deployments and automated failure recovery.
 
 ---
 

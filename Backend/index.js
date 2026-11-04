@@ -41,7 +41,9 @@ app.use(cors({
             !origin ||
             allowedOrigins.includes(origin) ||
             origin.endsWith(".pages.dev") ||
-            origin.endsWith(".koyeb.app") ||
+            origin.endsWith(".zeabur.app") ||
+            origin.endsWith(".railway.app") ||
+            origin.endsWith(".fly.dev") ||
             origin.includes("localhost") ||
             origin.includes("127.0.0.1")
         ) {
@@ -57,7 +59,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Health check endpoint for Render / monitoring
+// Health check endpoint for Koyeb / uptime monitoring
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
 });

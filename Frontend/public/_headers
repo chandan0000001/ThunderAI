@@ -1,0 +1,17 @@
+# Cloudflare Edge Headers & Caching Configuration
+
+# Aggressive Edge Caching for 3D Assets & Chunks
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/textures/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Security Headers for SPA
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
