@@ -730,8 +730,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* -------------------- SECTION 3: ARCHITECTURE & SECURITY BENTO GRID -------------------- */}
-      <section id="architecture" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]">
-        <div className="max-w-7xl mx-auto space-y-16">
+      <section id="architecture" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
+        {/* Cyber Security Infrastructure WebP Backdrop */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-luminosity"
+          style={{ backgroundImage: `url('/sec-architecture-bg.webp')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-16 relative z-10">
           <LazyReveal>
             <div className="space-y-2">
               <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold">
@@ -855,8 +863,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-3 text-xs font-mono">
-                  <div className="flex items-center justify-between">
+                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-3 text-xs font-mono relative overflow-hidden">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
+                    style={{ backgroundImage: `url('/card-workstation.webp')` }}
+                  />
+                  <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                       <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center">
                         <Laptop className="w-4 h-4" />
@@ -893,19 +905,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-zinc-400">Throughput Waveform</span>
-                    <span className="text-emerald-400 font-bold">48 tokens/sec</span>
-                  </div>
-                  <div className="h-16 flex items-end space-x-1.5 pt-2">
-                    {sparkPoints.map((val, idx) => (
-                      <div
-                        key={idx}
-                        className="flex-1 bg-white/20 hover:bg-white rounded-t transition-all duration-300"
-                        style={{ height: `${val}%` }}
-                      />
-                    ))}
+                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
+                    style={{ backgroundImage: `url('/card-throughput.webp')` }}
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-zinc-400">Throughput Waveform</span>
+                      <span className="text-emerald-400 font-bold">48 tokens/sec</span>
+                    </div>
+                    <div className="h-16 flex items-end space-x-1.5 pt-2">
+                      {sparkPoints.map((val, idx) => (
+                        <div
+                          key={idx}
+                          className="flex-1 bg-white/20 hover:bg-white rounded-t transition-all duration-300"
+                          style={{ height: `${val}%` }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -920,8 +938,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* -------------------- SECTION 4: CUSTOMER FEEDBACK & USE CASES (IMAGE 3 STAGGERED LAYOUT) -------------------- */}
-      <section id="testimonials" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#07080c]">
-        <div className="max-w-7xl mx-auto space-y-16">
+      <section id="testimonials" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#07080c] overflow-hidden">
+        {/* Modern Tech Architecture Night Backdrop */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.16] mix-blend-luminosity"
+          style={{ backgroundImage: `url('/feedback-section-bg.webp')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-16 relative z-10">
           <LazyReveal>
             <div className="max-w-3xl space-y-3">
               <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold">
@@ -1104,8 +1130,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* -------------------- SECTION 5: SUPPORTED AI CHECKPOINTS -------------------- */}
-      <section id="models" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]">
-        <div className="max-w-7xl mx-auto space-y-20">
+      <section id="models" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
+        {/* Neural Network Constellation WebP Backdrop */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.18] mix-blend-screen"
+          style={{ backgroundImage: `url('/models-section-bg.webp')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-20 relative z-10">
           <LazyReveal>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10">
               <div className="space-y-2">
@@ -1129,6 +1163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'OPERATIONAL',
                 latency: '95ms',
                 desc: 'Instant open-weights routing. Zero-cost daily coding and reasoning.',
+                image: '/model-openrouter.webp',
               },
               {
                 name: 'Gemini 2.0 Flash',
@@ -1136,6 +1171,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '78ms',
                 desc: 'High-speed multimodal intelligence core with million-token ingestion.',
+                image: '/model-gemini.webp',
               },
               {
                 name: 'Claude 3.5 Sonnet',
@@ -1143,6 +1179,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '160ms',
                 desc: 'Software architecture and reasoning titan for complex codebases.',
+                image: '/model-claude.webp',
               },
               {
                 name: 'DeepSeek R1',
@@ -1150,13 +1187,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '210ms',
                 desc: 'Recursive chain-of-thought mathematical reasoning Titan.',
+                image: '/model-deepseek.webp',
               },
             ].map((m, idx) => (
-              <LazyReveal key={idx} delay={idx * 75} className="flex">
+              <LazyReveal key={idx} delay={idx * 50} className="flex">
                 <div
                   onMouseMove={handleCardMouseMove}
-                  className="spotlight-card w-full p-6 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between hover:border-white/20 transition cursor-pointer"
+                  className="spotlight-card w-full p-6 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between hover:border-white/20 transition cursor-pointer relative overflow-hidden group"
                 >
+                  {/* Model Visual Header Thumbnail */}
+                  <div className="w-full h-28 rounded-2xl overflow-hidden mb-4 relative bg-black/60 border border-white/10 shrink-0">
+                    <img
+                      src={m.image}
+                      alt={m.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d14] via-transparent to-transparent" />
+                  </div>
+
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-mono">
                       <span className="text-zinc-500 uppercase">{m.tag}</span>
@@ -1170,7 +1220,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         {m.status}
                       </span>
                     </div>
-                    <h4 className="text-lg font-bold text-white">{m.name}</h4>
+                    <h4 className="text-lg font-bold text-white group-hover:text-zinc-200 transition">{m.name}</h4>
                     <p className="text-xs text-zinc-400 font-light leading-relaxed">{m.desc}</p>
                   </div>
 
