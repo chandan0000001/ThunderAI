@@ -17,24 +17,27 @@ import {
 } from 'lucide-react';
 
 /* -------------------- REUSABLE ELEMENT LAZY-REVEAL COMPONENT -------------------- */
-/* Ultra-smooth scroll reveal: triggers 350px in advance so content is pre-rendered with zero lag */
+/* Ultra-smooth reveal: Initial viewport elements are visible immediately (zero reload flicker), off-screen elements gently fade in */
 const LazyReveal: React.FC<{
   children: React.ReactNode;
   className?: string;
   delay?: number;
 }> = ({ children, className = '', delay = 0 }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const domRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Reveal immediately if already near viewport on mount
-    if (domRef.current) {
-      const rect = domRef.current.getBoundingClientRect();
-      if (rect.top <= window.innerHeight + 400) {
-        setIsVisible(true);
-        return;
-      }
+    if (!domRef.current) return;
+
+    const rect = domRef.current.getBoundingClientRect();
+    // If element is already in or near viewport, keep visible immediately without layout shift
+    if (rect.top <= window.innerHeight + 250 && rect.bottom >= -150) {
+      setIsVisible(true);
+      return;
     }
+
+    // Only hide elements that are further down the scroll stream
+    setIsVisible(false);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -47,7 +50,7 @@ const LazyReveal: React.FC<{
     );
 
     const el = domRef.current;
-    if (el) observer.observe(el);
+    observer.observe(el);
 
     return () => {
       if (el) observer.unobserve(el);
@@ -59,12 +62,11 @@ const LazyReveal: React.FC<{
       ref={domRef}
       style={{
         transitionDelay: `${Math.min(delay, 40)}ms`,
-        willChange: 'opacity, transform',
       }}
-      className={`transition-all duration-500 ease-out transform ${
+      className={`transition-opacity duration-400 ease-out ${
         isVisible
-          ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-3 pointer-events-none'
+          ? 'opacity-100'
+          : 'opacity-0 pointer-events-none'
       } ${className}`}
     >
       {children}
@@ -149,12 +151,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           HERO SECTION: MAJESTIC SCENIC MOUNTAIN BACKDROP & FLOATING CAPSULE NAVBAR
           (Full Screen 100vh / min-h-screen Panoramic Alpine Aesthetic)
       ========================================================================= */}
-      <section className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden">
+      <section className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden bg-[#121824]">
         {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend (Local WebP for Instant Zero-Delay Load) */}
         <div
-          className="absolute inset-0 bg-cover bg-center sm:bg-[center_32%] pointer-events-none"
+          className="absolute inset-0 bg-cover bg-center sm:bg-[center_32%] pointer-events-none transition-opacity duration-700 bg-[#141e2e]"
           style={{
             backgroundImage: `url('/hero-mountain.webp')`,
+            backgroundColor: '#141e2e',
           }}
         >
           {/* Ambient Contrast Grade & Seamless Bottom Dark Fade */}
@@ -990,7 +993,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-classical-bust.webp"
+                      src="/usecase-beauty.webp"
                       alt="Beauty & Aesthetics"
                       loading="lazy"
                       decoding="async"
@@ -1021,7 +1024,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-celestial-stairs.webp"
+                      src="/usecase-realestate.webp"
                       alt="Real estate"
                       loading="lazy"
                       decoding="async"
@@ -1053,7 +1056,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-creation-spark.webp"
+                      src="/usecase-homeservices.webp"
                       alt="Home services"
                       loading="lazy"
                       decoding="async"
@@ -1088,7 +1091,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-blue-knight.webp"
+                      src="/usecase-professional.webp"
                       alt="Professional services"
                       loading="lazy"
                       decoding="async"
@@ -1119,7 +1122,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-icarus-rays.webp"
+                      src="/usecase-automotive.webp"
                       alt="Automotive"
                       loading="lazy"
                       decoding="async"
@@ -1183,7 +1186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'OPERATIONAL',
                 latency: '95ms',
                 desc: 'Instant open-weights routing. Zero-cost daily coding and reasoning.',
-                image: '/thumb-scanline-face.webp',
+                image: '/model-openrouter.webp',
               },
               {
                 name: 'Gemini 2.0 Flash',
@@ -1191,7 +1194,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '78ms',
                 desc: 'High-speed multimodal intelligence core with million-token ingestion.',
-                image: '/thumb-celestial-stairs.webp',
+                image: '/model-gemini.webp',
               },
               {
                 name: 'Claude 3.5 Sonnet',
@@ -1199,7 +1202,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '160ms',
                 desc: 'Software architecture and reasoning titan for complex codebases.',
-                image: '/thumb-blue-knight.webp',
+                image: '/model-claude.webp',
               },
               {
                 name: 'DeepSeek R1',
@@ -1207,7 +1210,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '210ms',
                 desc: 'Recursive chain-of-thought mathematical reasoning Titan.',
-                image: '/thumb-icarus-rays.webp',
+                image: '/model-deepseek.webp',
               },
             ].map((m, idx) => (
               <LazyReveal key={idx} delay={idx * 50} className="flex">

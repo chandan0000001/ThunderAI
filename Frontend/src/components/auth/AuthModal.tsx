@@ -558,7 +558,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       theme="filled_black"
                       shape="rectangular"
                       size="large"
-                      width="100%"
+                      width="340"
                       text={mode === 'signup' ? 'signup_with' : 'signin_with'}
                     />
                   </div>
