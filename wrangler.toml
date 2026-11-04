@@ -1,3 +1,12 @@
 name = "thunderai"
 compatibility_date = "2026-11-01"
+
+# Cloudflare Pages build directory
 pages_build_output_dir = "Frontend/dist"
+
+# Cloudflare Workers static asset configuration with SPA routing
+[assets]
+directory = "Frontend/dist"
+binding = "ASSETS"
+html_handling = "single-page-application"
+not_found_handling = "single-page-application"
