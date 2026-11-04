@@ -30,6 +30,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   userName,
 }) => {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
 
   // Clerk Hero Tab Switcher: 'user' | 'org' | 'sso' | 'agent'
   const [activeTab, setActiveTab] = useState<'user' | 'org' | 'sso' | 'agent'>('user');
@@ -93,11 +94,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           (Inspired by Reference Image / macOS Sonoma Shotbase Aesthetic)
       ========================================================================= */}
       <section className="relative w-full overflow-hidden">
-        {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend */}
+        {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend (Local WebP for Instant Zero-Delay Load) */}
         <div
           className="absolute inset-0 bg-cover bg-center sm:bg-[center_28%] pointer-events-none"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2560&auto=format&fit=crop&q=90')`,
+            backgroundImage: `url('/hero-mountain.webp')`,
           }}
         >
           {/* Subtle Contrast Grade & Seamless Bottom Dark Fade */}
@@ -107,7 +108,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* -------------------- FLOATING CAPSULE NAVBAR -------------------- */}
         <div className="sticky top-4 sm:top-6 z-50 px-4 max-w-xl mx-auto pt-2">
-          <header className="w-full px-4 sm:px-5 py-2.5 rounded-full backdrop-blur-2xl bg-black/75 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex items-center justify-between transition-all">
+          <header className="w-full px-4 sm:px-5 py-2.5 rounded-full backdrop-blur-2xl bg-black/75 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex items-center justify-between transition-all relative">
             {/* Logo */}
             <div
               className="flex items-center space-x-2.5 cursor-pointer group"
@@ -122,19 +123,121 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Navigation Dropdowns & Links */}
-            <nav className="flex items-center space-x-4 sm:space-x-6 text-xs font-medium text-zinc-300">
+            <nav className="flex items-center space-x-3.5 sm:space-x-5 text-xs font-medium text-zinc-300">
+              {/* Features with Dropdown on Hover */}
+              <div
+                className="relative py-1"
+                onMouseEnter={() => setFeaturesDropdownOpen(true)}
+                onMouseLeave={() => setFeaturesDropdownOpen(false)}
+              >
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('features');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="hover:text-white transition flex items-center space-x-1 cursor-pointer"
+                >
+                  <span>Features</span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-zinc-400 transition-transform duration-200 ${
+                      featuresDropdownOpen ? 'rotate-180 text-white' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu (Shows when hovered) */}
+                {featuresDropdownOpen && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 sm:w-80 p-3 rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 animate-fadeIn text-left space-y-1">
+                    <a
+                      href="#compute"
+                      onClick={() => setFeaturesDropdownOpen(false)}
+                      className="p-2 rounded-xl hover:bg-white/10 transition flex items-start space-x-2.5 group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400 group-hover:scale-105 transition mt-0.5">
+                        <Cpu className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-white block group-hover:text-emerald-300 transition">
+                          Compute Infrastructure
+                        </span>
+                        <span className="text-[10px] text-zinc-400 leading-tight block">
+                          128-cluster active matrix with sub-100ms latency.
+                        </span>
+                      </div>
+                    </a>
+
+                    <a
+                      href="#features"
+                      onClick={() => setFeaturesDropdownOpen(false)}
+                      className="p-2 rounded-xl hover:bg-white/10 transition flex items-start space-x-2.5 group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center shrink-0 text-purple-400 group-hover:scale-105 transition mt-0.5">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-white block group-hover:text-purple-300 transition">
+                          Identity & Auth Mesh
+                        </span>
+                        <span className="text-[10px] text-zinc-400 leading-tight block">
+                          Google One-Tap OAuth & 7-day stateless JWT.
+                        </span>
+                      </div>
+                    </a>
+
+                    <a
+                      href="#architecture"
+                      onClick={() => setFeaturesDropdownOpen(false)}
+                      className="p-2 rounded-xl hover:bg-white/10 transition flex items-start space-x-2.5 group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0 text-sky-400 group-hover:scale-105 transition mt-0.5">
+                        <Shield className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-white block group-hover:text-sky-300 transition">
+                          Redis Sliding Quota
+                        </span>
+                        <span className="text-[10px] text-zinc-400 leading-tight block">
+                          10,000 free tokens sliding-window limits.
+                        </span>
+                      </div>
+                    </a>
+
+                    <a
+                      href="#models"
+                      onClick={() => setFeaturesDropdownOpen(false)}
+                      className="p-2 rounded-xl hover:bg-white/10 transition flex items-start space-x-2.5 group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition mt-0.5">
+                        <Bot className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-white block group-hover:text-amber-300 transition">
+                          Model Ecosystem
+                        </span>
+                        <span className="text-[10px] text-zinc-400 leading-tight block">
+                          DeepSeek R1, Gemini 2.0 & OpenRouter free tier.
+                        </span>
+                      </div>
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Creative Replacement 1: Architecture */}
+              <a href="#architecture" className="hover:text-white transition">
+                Architecture
+              </a>
+
+              {/* Creative Replacement 2: Changelog badge */}
               <a
                 href="#features"
-                className="hover:text-white transition flex items-center space-x-1 cursor-pointer"
+                className="hover:text-white transition flex items-center space-x-1.5"
+                title="View recent updates"
               >
-                <span>Features</span>
-                <ChevronDown className="w-3 h-3 text-zinc-400" />
-              </a>
-              <a href="#models" className="hover:text-white transition">
-                Pricing
-              </a>
-              <a href="#compute" className="hover:text-white transition">
-                FAQ
+                <span>Changelog</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[9px] font-mono border border-emerald-500/30">
+                  v2.4
+                </span>
               </a>
             </nav>
 
@@ -738,7 +841,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                 <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                   <img
-                    src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80"
+                    src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&fm=webp&q=80"
                     alt="Beauty & Aesthetics"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -765,7 +868,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                 <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                   <img
-                    src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&auto=format&fit=crop&q=80"
+                    src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&auto=format&fit=crop&fm=webp&q=80"
                     alt="Real estate"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -793,7 +896,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                 <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                   <img
-                    src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80"
+                    src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&fm=webp&q=80"
                     alt="Home services"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -824,7 +927,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                 <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                   <img
-                    src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80"
+                    src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&fm=webp&q=80"
                     alt="Professional services"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -851,7 +954,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                 <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                   <img
-                    src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&q=80"
+                    src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&fm=webp&q=80"
                     alt="Automotive"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -1020,7 +1123,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <a href="#compute" className="hover:text-white transition">Compute Grid</a>
               <a href="#architecture" className="hover:text-white transition">Architecture</a>
               <a href="#testimonials" className="hover:text-white transition">Feedback</a>
-              <a href="#models" className="hover:text-white transition">Pricing</a>
+              <a href="#features" className="hover:text-white transition">Changelog</a>
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="hover:text-white underline underline-offset-4 cursor-pointer"

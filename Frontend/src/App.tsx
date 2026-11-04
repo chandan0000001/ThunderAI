@@ -100,20 +100,6 @@ export function App() {
     return () => window.removeEventListener('thunder:auth-expired', handleAuthExpired);
   }, [currentUser, navigate]);
 
-  // Auto-display Login / Signup modal after 13 seconds of landing on the page
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentUser((user) => {
-        if (!user) {
-          setAuthModalOpen(true);
-        }
-        return user;
-      });
-    }, 13000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleLaunchApp = () => {
     if (currentUser) {
       navigate('/chat');
