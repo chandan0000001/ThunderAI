@@ -4,6 +4,27 @@ A high-performance, full-stack AI platform inspired by modern 3D interactive web
 
 ---
 
+## 🎓 Academic Technical Seminar Report (30 Pages)
+
+A comprehensive, publication-grade 30-page engineering technical seminar report is available in this repository:
+- 📄 **[Download / View 30-Page Seminar Report PDF](./ThunderAI_Seminar_Report.pdf)**
+- 📖 **[Read Full Seminar Markdown Documentation](./ThunderAI_Seminar_Report.md)**
+- ⚙️ **[PDF Generator Script (`docs/generate_seminar_pdf.py`)](./docs/generate_seminar_pdf.py)**
+
+The report covers:
+1. Historical Evolution of Conversational Systems & LLM Architectures
+2. Literature Survey: Streaming Protocols (SSE vs. WebSockets) & WebGL Shaders
+3. Three-Tier Decoupled System Architecture & OpenRouter AI Gateway
+4. Interactive 3D WebGL Graphics Engine, Trigonometric Vertex Displacement & PBR Shading
+5. Express 5 Asynchronous Streaming, Proxy Chunk Flushing & Recursive Context Summarization
+6. Distributed Redis In-Memory State Governance, Sliding-Window Quotas & Cryptographic Auth
+7. MongoDB Atlas Document Persistence, Compound Indexing & Cascading Deletion
+8. Empirical Latency (TTFT), Concurrency Stress Testing & GPU Profiling
+9. Single-Service Zero-CORS Cloud Deployment on Render
+10. Conclusion, Future Scope (WebGPU & RAG), and Academic Bibliography (IEEE/ACM citations)
+
+---
+
 ## ✨ Features
 
 - **🌐 Interactive 3D Landing Page**: Three.js iridescent procedural energy orb with dynamic day/night light mode toggle, orbit camera controls, and smooth responsive layout.
