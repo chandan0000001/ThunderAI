@@ -91,39 +91,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div className="min-h-screen bg-[#07080c] text-white font-inter relative overflow-x-hidden selection:bg-white selection:text-black">
       {/* =========================================================================
           HERO SECTION: MAJESTIC SCENIC MOUNTAIN BACKDROP & FLOATING CAPSULE NAVBAR
-          (Inspired by Reference Image / macOS Sonoma Shotbase Aesthetic)
+          (Full Screen 100vh / min-h-screen Panoramic Alpine Aesthetic)
       ========================================================================= */}
-      <section className="relative w-full overflow-hidden">
+      <section className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden">
         {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend (Local WebP for Instant Zero-Delay Load) */}
         <div
-          className="absolute inset-0 bg-cover bg-center sm:bg-[center_28%] pointer-events-none"
+          className="absolute inset-0 bg-cover bg-center sm:bg-[center_32%] pointer-events-none"
           style={{
             backgroundImage: `url('/hero-mountain.webp')`,
           }}
         >
-          {/* Subtle Contrast Grade & Seamless Bottom Dark Fade */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-[#07080c]" />
+          {/* Ambient Contrast Grade & Seamless Bottom Dark Fade */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#07080c] via-70%" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_30%,rgba(0,0,0,0.5)_100%)]" />
         </div>
 
         {/* -------------------- FLOATING CAPSULE NAVBAR -------------------- */}
-        <div className="sticky top-4 sm:top-6 z-50 px-4 max-w-xl mx-auto pt-2">
-          <header className="w-full px-4 sm:px-5 py-2.5 rounded-full backdrop-blur-2xl bg-black/75 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex items-center justify-between transition-all relative">
+        <div className="sticky top-4 sm:top-6 z-50 px-4 w-full max-w-4xl mx-auto pt-2">
+          <header className="w-full px-4 sm:px-6 py-2.5 rounded-full backdrop-blur-2xl bg-black/80 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex items-center justify-between gap-3 sm:gap-6 transition-all relative">
             {/* Logo */}
             <div
-              className="flex items-center space-x-2.5 cursor-pointer group"
+              className="flex items-center space-x-2.5 cursor-pointer group shrink-0 mr-1 sm:mr-3"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <div className="w-6 h-6 rounded-md bg-white text-black flex items-center justify-center transition group-hover:scale-105 shadow-[0_0_12px_rgba(255,255,255,0.4)]">
                 <Zap className="w-3.5 h-3.5 fill-black text-black" />
               </div>
-              <span className="text-xs font-bold tracking-tight uppercase font-mono text-white">
+              <span className="text-xs font-bold tracking-tight uppercase font-mono text-white whitespace-nowrap">
                 Thunder
               </span>
             </div>
 
             {/* Navigation Dropdowns & Links */}
-            <nav className="flex items-center space-x-3.5 sm:space-x-5 text-xs font-medium text-zinc-300">
+            <nav className="flex items-center space-x-4 sm:space-x-6 text-xs font-medium text-zinc-300 shrink-0">
               {/* Features with Dropdown on Hover */}
               <div
                 className="relative py-1"
@@ -135,7 +135,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     const el = document.getElementById('features');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="hover:text-white transition flex items-center space-x-1 cursor-pointer"
+                  className="hover:text-white transition flex items-center space-x-1 cursor-pointer whitespace-nowrap"
                 >
                   <span>Features</span>
                   <ChevronDown
@@ -224,14 +224,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               {/* Creative Replacement 1: Architecture */}
-              <a href="#architecture" className="hover:text-white transition">
+              <a href="#architecture" className="hover:text-white transition whitespace-nowrap">
                 Architecture
               </a>
 
               {/* Creative Replacement 2: Changelog badge */}
               <a
                 href="#features"
-                className="hover:text-white transition flex items-center space-x-1.5"
+                className="hover:text-white transition flex items-center space-x-1.5 whitespace-nowrap"
                 title="View recent updates"
               >
                 <span>Changelog</span>
@@ -242,18 +242,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </nav>
 
             {/* Right Actions: Log In + Vibrant Sky Blue Pill Button */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
               {isLoggedIn ? (
                 <button
                   onClick={onLaunchApp}
-                  className="text-xs font-mono px-3 py-1 rounded-full border border-white/15 bg-white/10 text-zinc-200 font-medium hover:bg-white/20 transition cursor-pointer"
+                  className="text-xs font-mono px-3 py-1 rounded-full border border-white/15 bg-white/10 text-zinc-200 font-medium hover:bg-white/20 transition cursor-pointer whitespace-nowrap max-w-[150px] sm:max-w-[180px] truncate"
+                  title={userName || 'User'}
                 >
                   {userName || 'User'}
                 </button>
               ) : (
                 <button
                   onClick={() => onOpenAuth('login')}
-                  className="text-xs font-medium text-zinc-300 hover:text-white transition cursor-pointer"
+                  className="text-xs font-medium text-zinc-300 hover:text-white transition cursor-pointer whitespace-nowrap"
                 >
                   Log in
                 </button>
@@ -261,7 +262,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <button
                 onClick={onLaunchApp}
-                className="px-3.5 py-1.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-[0_0_20px_rgba(0,145,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-[0_0_20px_rgba(0,145,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
                 <Zap className="w-3 h-3 fill-white text-white" />
                 <span>Launch</span>
@@ -270,8 +271,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </header>
         </div>
 
-        {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION -------------------- */}
-        <div className="relative z-10 pt-16 sm:pt-24 pb-20 sm:pb-28 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-6">
+        {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION (Vertically Centered in 100vh) -------------------- */}
+        <div className="relative z-10 my-auto py-12 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-6">
           {/* Main 2-Line Headline Matching Reference Layout */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] drop-shadow-[0_4px_25px_rgba(0,0,0,0.65)]">
             Conversational AI, auth, <br />
@@ -298,6 +299,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>💳 No card required</span>
             </div>
           </div>
+        </div>
+
+        {/* Scroll Cue at bottom of the Full-Screen Hero */}
+        <div className="relative z-10 pb-6 flex justify-center">
+          <a
+            href="#features"
+            className="text-xs font-mono text-zinc-400 hover:text-white transition flex flex-col items-center space-y-1 animate-bounce cursor-pointer opacity-80 hover:opacity-100"
+          >
+            <span className="text-[10px] tracking-widest uppercase font-semibold">Explore Platform</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </a>
         </div>
       </section>
 
@@ -403,7 +415,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <input
                         type="email"
                         readOnly
-                        value="kumardalaichandan803@gmail.com"
+                        value="alice@thunder.ai"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-black/40 text-xs font-mono text-zinc-200 outline-none"
                       />
                     </div>
