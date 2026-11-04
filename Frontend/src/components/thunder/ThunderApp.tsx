@@ -682,9 +682,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 <div className="px-3 py-4 my-2 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent space-y-3 text-left">
                   <div className="relative w-full h-24 rounded-xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group">
                     <img
-                      src="/sidebar-empty.webp"
+                      src="/thumb-hermes-creation-spark.webp"
                       alt="Thunder AI Assistant"
-                      className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0e0f14] via-transparent to-transparent" />
                     <div className="absolute bottom-2 left-2 flex items-center space-x-1 px-2 py-0.5 rounded-full bg-black/60 border border-white/15 text-[10px] font-mono text-zinc-300 backdrop-blur-md">

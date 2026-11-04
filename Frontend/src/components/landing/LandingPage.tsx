@@ -374,10 +374,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 1: AUTHENTICATION & IDENTITY MESH (CLERK STYLE) -------------------- */}
       <section id="features" className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10 overflow-hidden">
-        {/* Atmospheric Server Mesh WebP Background */}
+        {/* Hermes Classical Dithered Bust WebP Background */}
         <div
-          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.16] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/auth-mesh-bg.webp')` }}
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-luminosity"
+          style={{ backgroundImage: `url('/hermes-classical-bust.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
@@ -565,6 +565,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* TAB 4: Agent Authentication Card */}
               {activeTab === 'agent' && (
                 <div className="space-y-4 animate-fadeIn">
+                  <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-white/10 bg-black/60 group">
+                    <img
+                      src="/thumb-hermes-creation-spark.webp"
+                      alt="Hermes AI Creation Spark"
+                      className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d14] via-transparent to-transparent" />
+                    <div className="absolute bottom-2.5 left-3 flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-black/70 border border-white/15 text-[10px] font-mono text-zinc-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>HERMES // NEURAL PROTOCOL</span>
+                    </div>
+                  </div>
                   <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.02] space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="font-bold text-white">Cursor / Coding Agent</span>
@@ -601,10 +613,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         id="compute"
         className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden"
       >
-        {/* High-Tech GPU Supercompute Cluster WebP Backdrop */}
+        {/* Hermes Icarus Dithered Radial Energy WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-screen"
-          style={{ backgroundImage: `url('/compute-bg.webp')` }}
+          style={{ backgroundImage: `url('/hermes-icarus-rays.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_30%,#090a10_90%)] pointer-events-none" />
@@ -731,10 +743,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 3: ARCHITECTURE & SECURITY BENTO GRID -------------------- */}
       <section id="architecture" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
-        {/* Cyber Security Infrastructure WebP Backdrop */}
+        {/* Hermes Celestial Stairs & Sphere WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/sec-architecture-bg.webp')` }}
+          style={{ backgroundImage: `url('/hermes-celestial-stairs.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
@@ -756,9 +768,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <LazyReveal delay={50} className="md:col-span-7 flex">
               <div
                 onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
+                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
               >
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-10">
                   <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">01 // IDENTITY HUB</span>
                   <h4 className="text-xl font-bold text-white">Social Sign-On & Provider Mesh</h4>
                   <p className="text-xs text-zinc-400 font-light leading-relaxed max-w-md">
@@ -767,8 +779,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                {/* Animated Connected Nodes */}
-                <div className="my-8 py-6 px-4 sm:px-6 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between relative overflow-hidden">
+                {/* Animated Connected Nodes with Hermes Creation Spark Emblem */}
+                <div className="my-6 py-6 px-4 sm:px-6 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between relative overflow-hidden z-10">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none group-hover:opacity-20 transition duration-700"
+                    style={{ backgroundImage: `url('/thumb-hermes-creation-spark.webp')` }}
+                  />
                   {/* Node 1: Google OAuth */}
                   <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-20">
                     <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center">
@@ -809,7 +825,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between">
+                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
                   <span>STATELESS 7-DAY JWT</span>
                   <span className="text-white font-semibold">SAME-SITE COOKIES</span>
                 </div>
@@ -820,9 +836,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <LazyReveal delay={150} className="md:col-span-5 flex">
               <div
                 onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
+                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
               >
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-10">
                   <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">02 // AUDIT FEED</span>
                   <h4 className="text-xl font-bold text-white">Live Security Telemetry</h4>
                   <p className="text-xs text-zinc-400 font-light leading-relaxed">
@@ -830,19 +846,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono">
-                  <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10">
+                <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono relative overflow-hidden z-10">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none group-hover:opacity-25 transition duration-700"
+                    style={{ backgroundImage: `url('/thumb-hermes-scanline-face.webp')` }}
+                  />
+                  <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10 relative z-10">
                     <span>SECURITY TAPE</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   {telemetryLogs.map((log, i) => (
-                    <div key={i} className="truncate text-zinc-300">
+                    <div key={i} className="truncate text-zinc-300 relative z-10">
                       {log}
                     </div>
                   ))}
                 </div>
 
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between">
+                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
                   <span>RATE LIMIT: 60 REQ/MIN</span>
                   <span className="text-emerald-400 font-semibold">STREAM ACTIVE</span>
                 </div>
@@ -853,9 +873,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <LazyReveal delay={100} className="md:col-span-6 flex">
               <div
                 onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
+                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
               >
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-10">
                   <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">03 // DEVICE GOVERNANCE</span>
                   <h4 className="text-xl font-bold text-white">Active Session Telemetry</h4>
                   <p className="text-xs text-zinc-400 font-light leading-relaxed">
@@ -863,10 +883,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-3 text-xs font-mono relative overflow-hidden">
+                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-3 text-xs font-mono relative overflow-hidden z-10">
                   <div
-                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
-                    style={{ backgroundImage: `url('/card-workstation.webp')` }}
+                    className="absolute inset-0 bg-cover bg-center opacity-25 pointer-events-none group-hover:scale-105 transition duration-700"
+                    style={{ backgroundImage: `url('/thumb-hermes-blue-knight.webp')` }}
                   />
                   <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
@@ -884,7 +904,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between">
+                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
                   <span>EXPIRATION: 7 DAYS</span>
                   <span className="text-white font-semibold">INSTANT REVOCATION</span>
                 </div>
@@ -895,9 +915,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <LazyReveal delay={200} className="md:col-span-6 flex">
               <div
                 onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
+                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
               >
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-10">
                   <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">04 // OBSERVABILITY</span>
                   <h4 className="text-xl font-bold text-white">Live Stream Throughput</h4>
                   <p className="text-xs text-zinc-400 font-light leading-relaxed">
@@ -905,10 +925,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden">
+                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden z-10">
                   <div
-                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
-                    style={{ backgroundImage: `url('/card-throughput.webp')` }}
+                    className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none group-hover:scale-105 transition duration-700"
+                    style={{ backgroundImage: `url('/thumb-hermes-icarus-rays.webp')` }}
                   />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between text-xs font-mono">
@@ -927,7 +947,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between">
+                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
                   <span>MEDIAN LATENCY: 104MS</span>
                   <span className="text-white font-semibold">SLIDING TOKENS: 10,000</span>
                 </div>
@@ -939,10 +959,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 4: CUSTOMER FEEDBACK & USE CASES (IMAGE 3 STAGGERED LAYOUT) -------------------- */}
       <section id="testimonials" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#07080c] overflow-hidden">
-        {/* Modern Tech Architecture Night Backdrop */}
+        {/* Hermes Scanline Celestial Profile WebP Backdrop */}
         <div
-          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.16] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/feedback-section-bg.webp')` }}
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.12] mix-blend-luminosity"
+          style={{ backgroundImage: `url('/hermes-scanline-face.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
@@ -970,7 +990,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/feedback-01.webp"
+                      src="/thumb-hermes-classical-bust.webp"
                       alt="Beauty & Aesthetics"
                       loading="lazy"
                       decoding="async"
@@ -1001,7 +1021,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/feedback-02.webp"
+                      src="/thumb-hermes-celestial-stairs.webp"
                       alt="Real estate"
                       loading="lazy"
                       decoding="async"
@@ -1033,7 +1053,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/feedback-03.webp"
+                      src="/thumb-hermes-creation-spark.webp"
                       alt="Home services"
                       loading="lazy"
                       decoding="async"
@@ -1068,7 +1088,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/feedback-04.webp"
+                      src="/thumb-hermes-blue-knight.webp"
                       alt="Professional services"
                       loading="lazy"
                       decoding="async"
@@ -1099,7 +1119,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/feedback-05.webp"
+                      src="/thumb-hermes-icarus-rays.webp"
                       alt="Automotive"
                       loading="lazy"
                       decoding="async"
@@ -1131,10 +1151,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 5: SUPPORTED AI CHECKPOINTS -------------------- */}
       <section id="models" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
-        {/* Neural Network Constellation WebP Backdrop */}
+        {/* Hermes Celestial Stairs WebP Backdrop */}
         <div
-          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.18] mix-blend-screen"
-          style={{ backgroundImage: `url('/models-section-bg.webp')` }}
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.15] mix-blend-screen"
+          style={{ backgroundImage: `url('/hermes-celestial-stairs.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
@@ -1163,7 +1183,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'OPERATIONAL',
                 latency: '95ms',
                 desc: 'Instant open-weights routing. Zero-cost daily coding and reasoning.',
-                image: '/model-openrouter.webp',
+                image: '/thumb-hermes-scanline-face.webp',
               },
               {
                 name: 'Gemini 2.0 Flash',
@@ -1171,7 +1191,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '78ms',
                 desc: 'High-speed multimodal intelligence core with million-token ingestion.',
-                image: '/model-gemini.webp',
+                image: '/thumb-hermes-celestial-stairs.webp',
               },
               {
                 name: 'Claude 3.5 Sonnet',
@@ -1179,7 +1199,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '160ms',
                 desc: 'Software architecture and reasoning titan for complex codebases.',
-                image: '/model-claude.webp',
+                image: '/thumb-hermes-blue-knight.webp',
               },
               {
                 name: 'DeepSeek R1',
@@ -1187,7 +1207,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '210ms',
                 desc: 'Recursive chain-of-thought mathematical reasoning Titan.',
-                image: '/model-deepseek.webp',
+                image: '/thumb-hermes-icarus-rays.webp',
               },
             ].map((m, idx) => (
               <LazyReveal key={idx} delay={idx * 50} className="flex">
@@ -1234,13 +1254,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <LazyReveal delay={50}>
-            <div className="relative p-10 sm:p-16 rounded-3xl border border-white/10 overflow-hidden text-center space-y-6 max-w-3xl mx-auto shadow-2xl bg-[#0b0c14]">
-              {/* Cosmic Nebula WebP Background */}
+            <div className="relative p-10 sm:p-16 rounded-3xl border border-white/10 overflow-hidden text-center space-y-6 max-w-3xl mx-auto shadow-2xl bg-[#0b0c14] group">
+              {/* Hermes Creation Spark WebP Background */}
               <div
-                className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-30 mix-blend-screen"
-                style={{ backgroundImage: `url('/cta-nebula.webp')` }}
+                className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-25 mix-blend-screen group-hover:scale-105 transition duration-700"
+                style={{ backgroundImage: `url('/hermes-creation-spark.webp')` }}
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#0b0c14]/90 via-transparent to-[#0b0c14]/95 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0b0c14]/90 via-[#0b0c14]/60 to-[#0b0c14]/95 pointer-events-none" />
               <div className="absolute inset-0 bg-radial-gradient from-transparent to-[#0b0c14]/90 pointer-events-none" />
 
               <div className="relative z-10 space-y-6">
