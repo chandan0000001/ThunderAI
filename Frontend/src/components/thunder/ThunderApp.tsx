@@ -29,6 +29,8 @@ import {
   Terminal,
   Cpu,
   Layers,
+  Home,
+  Sparkles,
 } from 'lucide-react';
 
 interface ThunderAppProps {
@@ -676,9 +678,53 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             </div>
           ) : filteredChats.length === 0 ? (
             sidebarOpen && (
-              <div className="px-4 py-6 text-center text-xs text-zinc-500 font-mono">
-                {chats.length === 0 ? 'No chats yet. Say hi!' : 'No chats match filter.'}
-              </div>
+              chats.length === 0 ? (
+                <div className="px-3 py-4 my-2 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent space-y-3 text-left">
+                  <div className="relative w-full h-24 rounded-xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group">
+                    <img
+                      src="/sidebar-empty.webp"
+                      alt="Thunder AI Assistant"
+                      className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0e0f14] via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2 flex items-center space-x-1 px-2 py-0.5 rounded-full bg-black/60 border border-white/15 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                      <span>Ready to assist</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 px-1">
+                    <h4 className="text-xs font-semibold text-white">Start a new thread</h4>
+                    <p className="text-[11px] text-zinc-400 font-normal leading-relaxed">
+                      Choose an idea below or ask Thunder AI anything.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    {[
+                      { icon: '⚡', label: 'Write a Python script', prompt: 'Write a Python script that scrapes and cleans API JSON data.' },
+                      { icon: '🧠', label: 'Explain Redis rate limits', prompt: 'Explain the Redis sliding-window log rate limiting algorithm with code examples.' },
+                      { icon: '✨', label: 'Design a Three.js shader', prompt: 'Write a GLSL vertex and fragment shader with morphing sphere animations.' },
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setInputPrompt(item.prompt);
+                          textareaRef.current?.focus();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/15 transition flex items-center space-x-2 text-[11px] text-zinc-300 hover:text-white cursor-pointer group"
+                      >
+                        <span className="text-xs">{item.icon}</span>
+                        <span className="truncate group-hover:text-white transition">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center text-xs text-zinc-500 font-mono">
+                  No chats match filter.
+                </div>
+              )
             )
           ) : (
             filteredChats.map((chat) => {
@@ -859,11 +905,18 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         }`}>
           {/* Thunder Title & Model Selector Dropdown */}
           <div className="flex items-center space-x-3 relative">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 flex items-center justify-center shadow-md">
+            <div
+              onClick={() => {
+                onBackToLanding();
+                navigate('/');
+              }}
+              className="flex items-center space-x-2 cursor-pointer group select-none"
+              title="Return to Home"
+            >
+              <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 flex items-center justify-center shadow-md group-hover:scale-105 transition">
                 <Zap className="w-3.5 h-3.5 text-black" />
               </div>
-              <span className={`font-semibold text-base tracking-tight font-mono uppercase ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+              <span className={`font-semibold text-base tracking-tight font-mono uppercase group-hover:text-amber-400 transition ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
                 Thunder
               </span>
             </div>
@@ -964,10 +1017,11 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 onBackToLanding();
                 navigate('/');
               }}
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-xs font-mono transition"
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 hover:text-white text-xs font-medium transition cursor-pointer group shadow-sm"
+              aria-label="Return to Home"
             >
-              <span>Landing Page</span>
-              <ArrowLeft className="w-3 h-3 rotate-180" />
+              <Home className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition" />
+              <span>Home</span>
             </button>
 
             {/* Profile Avatar Button (Navigates to /profile) */}
@@ -976,8 +1030,8 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 setProfileModalOpen(true);
                 navigate('/profile');
               }}
-              className="w-8 h-8 rounded-full border border-white/20 hover:border-white/40 bg-white/10 p-[1.5px] overflow-hidden transition cursor-pointer"
-              title="Profile & Telemetry"
+              className="w-8 h-8 rounded-full border border-white/20 hover:border-white/40 bg-white/10 p-[1.5px] overflow-hidden transition cursor-pointer hover:scale-105 active:scale-95"
+              aria-label="Profile and Settings"
             >
               <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold overflow-hidden bg-[#131314] text-white">
                 {currentUser?.avatar ? (

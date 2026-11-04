@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 /* -------------------- REUSABLE ELEMENT LAZY-REVEAL COMPONENT -------------------- */
-/* Reveals text & elements with a smooth fade-in + slide-up as they enter viewport */
+/* Ultra-smooth scroll reveal: triggers 350px in advance so content is pre-rendered with zero lag */
 const LazyReveal: React.FC<{
   children: React.ReactNode;
   className?: string;
@@ -27,6 +27,15 @@ const LazyReveal: React.FC<{
   const domRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Reveal immediately if already near viewport on mount
+    if (domRef.current) {
+      const rect = domRef.current.getBoundingClientRect();
+      if (rect.top <= window.innerHeight + 400) {
+        setIsVisible(true);
+        return;
+      }
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -34,7 +43,7 @@ const LazyReveal: React.FC<{
           if (domRef.current) observer.unobserve(domRef.current);
         }
       },
-      { rootMargin: '0px 0px -40px 0px', threshold: 0.08 }
+      { rootMargin: '350px 0px 150px 0px', threshold: 0.01 }
     );
 
     const el = domRef.current;
@@ -49,13 +58,13 @@ const LazyReveal: React.FC<{
     <div
       ref={domRef}
       style={{
-        transitionDelay: `${delay}ms`,
+        transitionDelay: `${Math.min(delay, 40)}ms`,
         willChange: 'opacity, transform',
       }}
-      className={`transition-all duration-700 ease-out transform ${
+      className={`transition-all duration-500 ease-out transform ${
         isVisible
           ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-8 pointer-events-none'
+          : 'opacity-0 translate-y-3 pointer-events-none'
       } ${className}`}
     >
       {children}
@@ -364,8 +373,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
       {/* -------------------- SECTION 1: AUTHENTICATION & IDENTITY MESH (CLERK STYLE) -------------------- */}
-      <section id="features" className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10">
-        <div className="max-w-5xl mx-auto text-center space-y-6">
+      <section id="features" className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10 overflow-hidden">
+        {/* Atmospheric Server Mesh WebP Background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.16] mix-blend-luminosity"
+          style={{ backgroundImage: `url('/auth-mesh-bg.webp')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
+
+        <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
           <LazyReveal>
             {/* Copy Prompt Pill */}
             <div className="flex items-center justify-center">
@@ -582,9 +599,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* -------------------- SECTION 2: COMPUTE CLUSTERS & MATRIX -------------------- */}
       <section
         id="compute"
-        className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]"
+        className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto space-y-24">
+        {/* High-Tech GPU Supercompute Cluster WebP Backdrop */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-screen"
+          style={{ backgroundImage: `url('/compute-bg.webp')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_30%,#090a10_90%)] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-24 relative z-10">
           <LazyReveal>
             <div className="max-w-3xl space-y-3">
               <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold">
@@ -919,7 +944,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&fm=webp&q=80"
+                      src="/feedback-01.webp"
                       alt="Beauty & Aesthetics"
                       loading="lazy"
                       decoding="async"
@@ -946,11 +971,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </LazyReveal>
 
               {/* Item 02 */}
-              <LazyReveal delay={150} className="h-full">
+              <LazyReveal delay={100} className="h-full">
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&auto=format&fit=crop&fm=webp&q=80"
+                      src="/feedback-02.webp"
                       alt="Real estate"
                       loading="lazy"
                       decoding="async"
@@ -978,11 +1003,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Row 2: 03 Centered in layout */}
             <div className="max-w-2xl mx-auto w-full">
-              <LazyReveal delay={100}>
+              <LazyReveal delay={50}>
                 <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&fm=webp&q=80"
+                      src="/feedback-03.webp"
                       alt="Home services"
                       loading="lazy"
                       decoding="async"
@@ -1017,7 +1042,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&fm=webp&q=80"
+                      src="/feedback-04.webp"
                       alt="Professional services"
                       loading="lazy"
                       decoding="async"
@@ -1044,11 +1069,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </LazyReveal>
 
               {/* Item 05 */}
-              <LazyReveal delay={150} className="h-full">
+              <LazyReveal delay={100} className="h-full">
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&fm=webp&q=80"
+                      src="/feedback-05.webp"
                       alt="Automotive"
                       loading="lazy"
                       decoding="async"
@@ -1158,30 +1183,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             ))}
           </div>
 
-          <LazyReveal delay={150}>
-            <div className="p-10 sm:p-16 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent text-center space-y-6 max-w-3xl mx-auto shadow-2xl">
-              <h3 className="text-3xl sm:text-5xl font-bold tracking-tight text-white">
-                Step into the Thunder workspace.
-              </h3>
-              <p className="text-xs sm:text-sm text-zinc-400 font-light max-w-lg mx-auto leading-relaxed">
-                Experience conversational intelligence with real-time sliding-window rate limiting,
-                automatic context summarization, and Google OAuth.
-              </p>
-              <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={onLaunchApp}
-                  className="px-8 py-3.5 rounded-full bg-white text-black font-mono text-xs font-bold hover:bg-zinc-200 transition shadow-[0_0_25px_rgba(255,255,255,0.3)] cursor-pointer"
-                >
-                  ENTER THUNDER WORKSPACE
-                </button>
-                {!isLoggedIn && (
+          <LazyReveal delay={50}>
+            <div className="relative p-10 sm:p-16 rounded-3xl border border-white/10 overflow-hidden text-center space-y-6 max-w-3xl mx-auto shadow-2xl bg-[#0b0c14]">
+              {/* Cosmic Nebula WebP Background */}
+              <div
+                className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-30 mix-blend-screen"
+                style={{ backgroundImage: `url('/cta-nebula.webp')` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0b0c14]/90 via-transparent to-[#0b0c14]/95 pointer-events-none" />
+              <div className="absolute inset-0 bg-radial-gradient from-transparent to-[#0b0c14]/90 pointer-events-none" />
+
+              <div className="relative z-10 space-y-6">
+                <h3 className="text-3xl sm:text-5xl font-bold tracking-tight text-white">
+                  Step into the Thunder workspace.
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-300 font-light max-w-lg mx-auto leading-relaxed">
+                  Experience conversational intelligence with real-time sliding-window rate limiting,
+                  automatic context summarization, and Google OAuth.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
                   <button
-                    onClick={() => onOpenAuth('signup')}
-                    className="px-7 py-3.5 rounded-full border border-white/20 text-white font-mono text-xs hover:border-white/40 transition cursor-pointer"
+                    onClick={onLaunchApp}
+                    className="px-8 py-3.5 rounded-full bg-white text-black font-mono text-xs font-bold hover:bg-zinc-200 transition shadow-[0_0_25px_rgba(255,255,255,0.4)] cursor-pointer hover:scale-105 active:scale-95"
                   >
-                    CREATE ACCOUNT
+                    ENTER THUNDER WORKSPACE
                   </button>
-                )}
+                  {!isLoggedIn && (
+                    <button
+                      onClick={() => onOpenAuth('signup')}
+                      className="px-7 py-3.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 text-white font-mono text-xs hover:border-white/40 transition cursor-pointer"
+                    >
+                      CREATE ACCOUNT
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </LazyReveal>
