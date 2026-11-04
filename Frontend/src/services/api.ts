@@ -1,6 +1,8 @@
 import type { User, Chat, Message, SendMessageResponse, AuthResponse, VerifyOtpResponse } from '../types';
 
-const API_BASE = ''; // proxied via Vite to http://localhost:3000
+// In production with decoupled deployment (Cloudflare Pages + Koyeb), set VITE_API_BASE_URL in Cloudflare Pages dashboard
+// (e.g. VITE_API_BASE_URL=https://your-backend.koyeb.app). In local dev or unified mode, defaults to empty string.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 class ApiError extends Error {
   status: number;
@@ -159,7 +161,7 @@ export const api = {
       },
       callbacks: StreamMessageCallbacks = {}
     ): Promise<SendMessageResponse> => {
-      const endpoint = params.chatId ? `/msg/${params.chatId}/stream` : '/msg/stream';
+      const endpoint = `${API_BASE}${params.chatId ? `/msg/${params.chatId}/stream` : '/msg/stream'}`;
       const bodyPayload: any = { content: params.content };
       if (!params.chatId && params.model) {
         bodyPayload.model = params.model;

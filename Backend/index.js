@@ -29,12 +29,22 @@ const allowedOrigins = [
 ];
 
 if (process.env.FRONTEND_URL) {
-    allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+    process.env.FRONTEND_URL.split(",").forEach(url => {
+        const trimmed = url.trim().replace(/\/$/, "");
+        if (trimmed) allowedOrigins.push(trimmed);
+    });
 }
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            origin.endsWith(".pages.dev") ||
+            origin.endsWith(".koyeb.app") ||
+            origin.includes("localhost") ||
+            origin.includes("127.0.0.1")
+        ) {
             return callback(null, true);
         }
         callback(null, true);

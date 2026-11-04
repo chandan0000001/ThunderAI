@@ -97,9 +97,15 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
-## ☁️ Deploying to Render (Free Single-Service Deployment)
+## ☁️ Cloud Deployment Options
 
-Thunder AI is preconfigured to build and serve both the React SPA frontend and the Express backend as a single unified service on Render's free tier with zero CORS or cookie domain issues.
+### ⚡ Option 1: Cloudflare Pages + Koyeb (Recommended — Zero Cold Starts & 24/7 Alive)
+For ultra-fast global performance and zero cold starts, deploy the frontend to **Cloudflare Pages** and the backend to **Koyeb** (or Fly.io / Railway) using Docker:
+- 📖 **[Read the Complete Cloudflare + Koyeb Deployment Guide](./DEPLOYMENT.md)**
+- 🐳 **Includes production multi-stage [`Dockerfile`](./Dockerfile)**
+
+### ☁️ Option 2: Single-Service Render Deployment
+Thunder AI is also preconfigured to build and serve both the React SPA frontend and the Express backend as a single unified service on Render:
 
 ### Option 1: Automatic Blueprint (Recommended)
 1. Push your repository to GitHub.

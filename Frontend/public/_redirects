@@ -1,0 +1,3 @@
+# Cloudflare Pages SPA Routing Rule
+# Redirect all client routes to index.html with a 200 HTTP status code
+/*    /index.html   200

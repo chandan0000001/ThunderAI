@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+Backend/.env
+Backend/node_modules
+Frontend/node_modules
+Frontend/dist
+docs/
+ThunderAI_Seminar_Report.pdf
+ThunderAI_Seminar_Report.md
+*.log
