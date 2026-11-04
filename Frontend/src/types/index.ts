@@ -21,6 +21,7 @@ export interface User {
   name: string;
   email: string;
   age?: number;
+  avatar?: string;
   usage?: UserUsage;
   isVerified?: boolean;
 }
@@ -62,6 +63,7 @@ export interface AuthResponse {
   name?: string;
   email: string;
   age?: number;
+  avatar?: string;
   usage?: TokenUsage;
   requiresVerification?: boolean;
   isVerified?: boolean;

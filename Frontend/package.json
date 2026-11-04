@@ -11,6 +11,7 @@
     "deploy": "tsc -b && vite build && npx wrangler pages deploy dist"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "@tailwindcss/vite": "^4.3.3",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.13.3",

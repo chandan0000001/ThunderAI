@@ -2,11 +2,14 @@ import User from "../model/userSchema.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import { signupSchema, loginSchema } from "../validators/userValidator.js";
 import Chat from "../model/chatSchema.js";
 import Message from "../model/messageSchema.js";
 import { redisClient } from "../config/redis.js";
 import { sendVerificationOTP } from "../services/emailService.js";
+
+const googleClient = new OAuth2Client();
 
 // login
 // logout
@@ -425,3 +428,94 @@ export const deleteAccount = async(req,res)=>{
        })
     }
 }
+
+export const googleAuth = async (req, res) => {
+    try {
+        const { credential } = req.body;
+
+        if (!credential) {
+            return res.status(400).json({
+                message: "Google credential token is required"
+            });
+        }
+
+        let payload = null;
+
+        // Verify ID token with google-auth-library
+        try {
+            const googleClientId = process.env.GOOGLE_CLIENT_ID;
+            const ticket = await googleClient.verifyIdToken({
+                idToken: credential,
+                audience: googleClientId || undefined,
+            });
+            payload = ticket.getPayload();
+        } catch (verifyError) {
+            // Fallback: verify via Google tokeninfo endpoint
+            try {
+                const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+                if (response.ok) {
+                    payload = await response.json();
+                } else {
+                    throw new Error("Tokeninfo check failed");
+                }
+            } catch (fallbackError) {
+                console.error("Google token verification failed:", verifyError.message, fallbackError.message);
+                return res.status(401).json({
+                    message: "Invalid or expired Google credential"
+                });
+            }
+        }
+
+        if (!payload || !payload.email) {
+            return res.status(400).json({
+                message: "Unable to retrieve email from Google profile"
+            });
+        }
+
+        const normalizedEmail = payload.email.trim().toLowerCase();
+        const googleId = payload.sub;
+        const name = payload.name || payload.given_name || normalizedEmail.split("@")[0] || "Thunder User";
+        const avatar = payload.picture || "";
+
+        // Check if user already exists by googleId or email
+        let user = await User.findOne({
+            $or: [{ googleId: googleId }, { email: normalizedEmail }]
+        });
+
+        if (user) {
+            // Update Google link and verify if not already
+            if (!user.googleId) user.googleId = googleId;
+            if (!user.avatar && avatar) user.avatar = avatar;
+            user.isVerified = true;
+            await user.save();
+        } else {
+            // Create new Google-authenticated user
+            user = await User.create({
+                name: name.slice(0, 50),
+                email: normalizedEmail,
+                googleId: googleId,
+                avatar: avatar,
+                authProvider: "google",
+                isVerified: true
+            });
+        }
+
+        const token = createToken(user._id, user.email);
+        res.cookie("token", token, cookiesOption);
+
+        return res.status(200).json({
+            message: "Google login successful",
+            name: user.name,
+            age: user.age,
+            email: user.email,
+            avatar: user.avatar,
+            usage: user.usage,
+            isVerified: true
+        });
+    } catch (err) {
+        console.error("Google auth error:", err);
+        return res.status(500).json({
+            message: "Internal Server Error during Google authentication"
+        });
+    }
+};

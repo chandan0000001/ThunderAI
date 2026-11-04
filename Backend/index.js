@@ -1,3 +1,4 @@
+import "dotenv/config";
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
@@ -8,7 +9,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendDistPath = path.resolve(__dirname, "../Frontend/dist");
 
-dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 import connectionDB from "./config/database.js";

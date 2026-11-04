@@ -83,6 +83,13 @@ export const api = {
       });
     },
 
+    googleLogin: async (credential: string): Promise<AuthResponse> => {
+      return request<AuthResponse>('/user/google-login', {
+        method: 'POST',
+        body: JSON.stringify({ credential }),
+      });
+    },
+
     logout: async (): Promise<{ message: string }> => {
       return request<{ message: string }>('/user/logout', {
         method: 'POST',

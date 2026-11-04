@@ -1,5 +1,5 @@
 import express from "express"
-import { login, signup, profile, logout, deleteAccount, verifyOTP, resendOTP } from "../controllers/userController.js";
+import { login, signup, profile, logout, deleteAccount, verifyOTP, resendOTP, googleAuth } from "../controllers/userController.js";
 import authUserMiddleware from '../middleware/authUserMiddleware.js';
 import unauthenticatedRateLimiter from '../middleware/unauthenticatedRateLimiter.js';
 import authenticatedRateLimiter from "../middleware/authenticatedRateLimiter.js";
@@ -8,6 +8,7 @@ import loadUserMiddleware from "../middleware/loadUserMiddleware.js";
 
 const userRouter = express.Router();
 userRouter.post("/login", unauthenticatedRateLimiter, login);
+userRouter.post("/google-login", unauthenticatedRateLimiter, googleAuth);
 userRouter.post("/logout", authUserMiddleware, logout);
 userRouter.post("/signup", unauthenticatedRateLimiter, signup);
 userRouter.post("/verify-otp", unauthenticatedRateLimiter, verifyOTP);
