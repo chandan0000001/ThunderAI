@@ -41,8 +41,9 @@ app.use(cors({
             !origin ||
             allowedOrigins.includes(origin) ||
             origin.endsWith(".pages.dev") ||
-            origin.endsWith(".zeabur.app") ||
             origin.endsWith(".railway.app") ||
+            origin.endsWith(".onrender.com") ||
+            origin.endsWith(".vercel.app") ||
             origin.endsWith(".fly.dev") ||
             origin.includes("localhost") ||
             origin.includes("127.0.0.1")
@@ -112,3 +113,5 @@ const startServer = async () => {
 };
 
 startServer();
+
+export default app;

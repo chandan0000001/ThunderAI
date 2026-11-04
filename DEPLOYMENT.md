@@ -1,8 +1,8 @@
-# 🚀 Modern Cloud Deployment Guide: Cloudflare Pages + Zeabur / Railway (Docker)
+# 🚀 Cloud Deployment Guide: Cloudflare Pages + Backend
 
-This guide walks you through deploying **Thunder AI** using a modern, fast, decoupled cloud architecture:
+This guide walks you through deploying **Thunder AI** using a decoupled cloud architecture:
 * 🌐 **Frontend**: **Cloudflare Pages / Workers** (100% Free, 0ms Cold Start, Global Edge CDN for Three.js 3D assets).
-* ⚡ **Backend**: **Zeabur** or **Railway** (Runs your production [`Dockerfile`](./Dockerfile), **Fast, No 60-Second Sleep**, Native SSE Streaming).
+* ⚡ **Backend**: **Railway** or **Render (Lightweight Backend-Only)** (Runs your production [`Dockerfile`](./Dockerfile) with fast builds and native SSE streaming).
 
 ---
 
@@ -13,10 +13,10 @@ flowchart LR
     User[Browser Client]
     
     subgraph Cloudflare["Cloudflare Global Edge (300+ Cities)"]
-        CF[Cloudflare Pages / Workers<br/>React 19 + Three.js 3D Assets]
+        CF[Cloudflare Pages<br/>React 19 + Three.js 3D Assets]
     end
     
-    subgraph CloudContainer["Backend Container (Zeabur / Railway)"]
+    subgraph CloudBackend["Backend Host (Railway / Render)"]
         Backend[Docker Express 5 Server<br/>SSE Streaming & Gateway]
     end
     
@@ -35,15 +35,38 @@ flowchart LR
 
 ---
 
-## 🛠️ Step 1: Deploy Backend to Zeabur (Recommended — Free & No Credit Card)
+## 🌐 Step 1: Deploy Frontend to Cloudflare Pages
 
-**Zeabur** (`zeabur.com`) is the fastest, easiest replacement for Koyeb/Render:
+### In your Cloudflare Dashboard:
+1. Log in to **[dash.cloudflare.com](https://dash.cloudflare.com/)**.
+2. Click on **Workers & Pages** in the left sidebar.
+3. Click **Create application** > Select the **Pages** tab (not Worker).
+4. Click **Connect to Git** > select your **GitHub account** under `Git account` (if not connected, click `Add account`).
+5. Select the repository: **`chandan0000001/ThunderAI`** and branch: **`main`**.
+6. Set the build configuration:
+   * **Framework preset**: `Vite`
+   * **Root directory**: `Frontend`
+   * **Build command**: `npm run build`
+   * **Build output directory**: `dist`
+7. Under **Environment variables (Advanced)**, add:
+   ```env
+   VITE_API_BASE_URL=https://your-backend-url.up.railway.app
+   ```
+   *(Paste your actual backend domain from Step 2).*
+8. Click **Save and Deploy**. Cloudflare gives you an instant global URL:
+   `https://thunder-ai.pages.dev`
 
-1. Go to **[zeabur.com](https://zeabur.com)** and log in with your **GitHub** account.
-2. Click **Create Project** (choose region closest to you, e.g., Asia East or US West).
-3. Click **Deploy New Service** > **Deploy from Source Code** > select **`chandan0000001/ThunderAI`**.
-4. Zeabur automatically detects your root **`Dockerfile`**.
-5. In the service settings, go to the **Variables** tab and add your environment variables:
+*(Note: The root `wrangler.toml` and `wrangler.jsonc` in the repository ensure Cloudflare automatically detects the project configuration).*
+
+---
+
+## ⚡ Step 2: Deploy Backend (Choose Option A or Option B)
+
+### Option A: [Railway](https://railway.com) (Recommended — Free Trial, Fast Docker)
+1. Go to **[railway.com](https://railway.com)** and log in with **GitHub**.
+2. Click **New Project** > **Deploy from GitHub repo** > select `chandan0000001/ThunderAI`.
+3. Railway automatically detects the root [`Dockerfile`](./Dockerfile).
+4. Go to the **Variables** tab and add your environment variables:
    ```env
    NODE_ENV=production
    PORT=3000
@@ -56,67 +79,42 @@ flowchart LR
    TOKEN_WINDOW_SECONDS=18000
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_email_app_password
-   FRONTEND_URL=https://thunderai.pages.dev
+   FRONTEND_URL=https://thunder-ai.pages.dev
    ```
-6. In the **Networking** tab:
-   * Click **Generate Domain**.
-   * Zeabur will generate a free public HTTPS domain like:
-     `https://thunder-ai.zeabur.app`
-7. Test your backend by visiting: `https://thunder-ai.zeabur.app/health`.
-   It will return:
-   ```json
-   {"status":"healthy","timestamp":"2026-11-04T..."}
-   ```
-
-*(Alternative: You can also use **[Railway](https://railway.com)** — click "New Project" > "Deploy from GitHub repo", add environment variables, and click "Generate Domain" under Networking).*
+5. In the **Settings** or **Networking** tab, click **Generate Domain** (gives you `https://thunder-ai-production.up.railway.app`).
+6. Test your backend: `https://thunder-ai-production.up.railway.app/health`.
 
 ---
 
-## 🌐 Step 2: Deploy Frontend to Cloudflare Pages
+### Option B: Render as a Pure Backend (NO Heavy Frontend Build!)
+Render only felt slow before because it was trying to compile the entire 3D React frontend on a 512MB RAM container. When running **only the backend**, it starts in **3 seconds** and uses only **50MB RAM**!
 
-1. Log in to your **[Cloudflare Dashboard](https://dash.cloudflare.com/)**.
-2. Go to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
-3. Select repository: **`chandan0000001/ThunderAI`** and branch: **`main`**.
-4. Configure Build settings:
-   * **Framework preset**: `Vite`
-   * **Root directory**: `Frontend`
-   * **Build command**: `npm run build`
-   * **Build output directory**: `dist`
-5. Under **Environment variables (Advanced)**, add:
-   ```env
-   VITE_API_BASE_URL=https://thunder-ai.zeabur.app
-   ```
-   *(Paste your actual backend domain from Step 1).*
-6. Click **Save and Deploy**.
-7. Cloudflare will deploy your site in ~30 seconds, giving you your public URL like:
-   `https://thunder-ai.pages.dev`
-
-*(Optional CLI Deployment)*:
-You can also deploy directly from your local terminal using Cloudflare's Wrangler CLI:
-```bash
-cd Frontend
-npm run deploy
-```
+1. Go to **[dashboard.render.com](https://dashboard.render.com)** > **New +** > **Web Service**.
+2. Connect `chandan0000001/ThunderAI`.
+3. Configure settings:
+   * **Root Directory**: `Backend` *(Important: this ensures it only builds the backend!)*
+   * **Environment**: `Node`
+   * **Build Command**: `npm install --omit=dev` *(Takes 5 seconds!)*
+   * **Start Command**: `npm start`
+   * **Plan**: `Free`
+   * **Health Check Path**: `/health`
+4. Add your **Environment Variables** (`MONGO_URI`, `OPENROUTER_API_KEY`, `REDIS_URL`, `JWT_SECRET`, etc.).
+5. Click **Create Web Service**.
+6. **To prevent Render from ever sleeping (Zero Cold Starts)**:
+   * Sign up for free at **[cron-job.org](https://cron-job.org)** or **[uptimerobot.com](https://uptimerobot.com)**.
+   * Create a free HTTP ping to `https://your-backend.onrender.com/health` every **10 minutes**.
+   * Render will **stay awake 24/7 with 0s cold starts**, completely free!
 
 ---
 
-## 🔄 Step 3: Link the Domains
+## 🔄 Step 3: Connect Frontend and Backend
 
-1. Go back to your **Zeabur** dashboard > your service > **Variables**.
-2. Update `FRONTEND_URL` to match your Cloudflare domain:
+1. In your **Backend** environment variables (on Railway or Render), set:
    ```env
    FRONTEND_URL=https://thunder-ai.pages.dev
    ```
-3. Zeabur will automatically restart in seconds with the updated CORS policy.
-
----
-
-## ✨ Why this setup is superior to Render:
-
-| Feature | Render (Free Tier) | Cloudflare Pages + Zeabur (Docker) |
-| :--- | :--- | :--- |
-| **Cold Starts** | 🐢 60–90 seconds sleep | ⚡ **0ms for Frontend; snappy backend with no long wakeups** |
-| **3D Three.js Performance** | Loaded from single origin container | ⚡ **Cached on 300+ global Cloudflare edge locations** |
-| **SSE Streaming** | Occasional proxy buffering | ⚡ **Native HTTP/2 streaming pipeline** |
-| **Portability** | Locked to Render configuration | 🐳 **Containerized Dockerfile runs anywhere (Zeabur, Railway, Fly, VPS)** |
-| **Bandwidth** | 100 GB cap | ⚡ **Unlimited free static bandwidth on Cloudflare** |
+2. In your **Cloudflare Pages** environment variables, set:
+   ```env
+   VITE_API_BASE_URL=https://your-backend-url.up.railway.app
+   ```
+3. Your full-stack platform is live, lightning fast, and completely free!

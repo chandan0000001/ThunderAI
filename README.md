@@ -97,50 +97,33 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
-## ☁️ Production Cloud Deployment (Cloudflare Pages + Zeabur / Railway)
+## ☁️ Production Cloud Deployment (Cloudflare Pages + Backend)
 
 Thunder AI is fully configured for a high-performance decoupled cloud architecture:
 - 🌐 **Frontend**: **Cloudflare Pages / Workers** (0ms cold start, 300+ global edge locations, free unlimited static bandwidth).
-- ⚡ **Backend**: **Zeabur / Railway** (Dockerized, **No 60-Second Sleep**, Native HTTP/2 Server-Sent Events).
+- ⚡ **Backend**: **Railway** or **Render (Lightweight Backend-Only)** (Fast Docker/Node builds, Native HTTP/2 Server-Sent Events).
 
 ---
 
-### 1. Deploy Backend to Zeabur (Free & Instant)
-1. Go to [zeabur.com](https://zeabur.com) and log in with **GitHub**.
-2. Click **Create Project** > **Deploy New Service** > select `chandan0000001/ThunderAI`.
-3. Zeabur automatically detects the root [`Dockerfile`](./Dockerfile).
-4. In **Variables**, add your environment variables:
-   ```env
-   NODE_ENV=production
-   PORT=3000
-   MONGO_URI=your_mongodb_atlas_connection_string
-   JWT_SECRET=your_jwt_secret_key
-   OPENROUTER_API_KEY=your_openrouter_api_key
-   DEFAULT_AI_MODEL=openrouter/free
-   REDIS_URL=your_redis_connection_url
-   TOKEN_LIMIT=10000
-   TOKEN_WINDOW_SECONDS=18000
-   EMAIL_USER=your_email@gmail.com
-   EMAIL_PASS=your_email_app_password
-   FRONTEND_URL=https://thunder-ai.pages.dev
-   ```
-5. In **Networking**, click **Generate Domain** to get your backend HTTPS URL (e.g. `https://thunder-ai.zeabur.app`).
-
-*(Alternative: You can also deploy to **[Railway](https://railway.com)** using the same Dockerfile).*
-
----
-
-### 2. Deploy Frontend to Cloudflare Pages
+### 1. Deploy Frontend to Cloudflare Pages
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com/) > **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
-2. Select repository: `chandan0000001/ThunderAI` (branch: `main`).
+2. Select your repository: `chandan0000001/ThunderAI` (branch: `main`).
 3. Build Settings:
    - **Framework preset**: `Vite`
    - **Root directory**: `Frontend`
    - **Build command**: `npm run build`
    - **Build output directory**: `dist`
 4. Environment Variables:
-   - `VITE_API_BASE_URL`: `https://thunder-ai.zeabur.app` (your backend URL)
+   - `VITE_API_BASE_URL`: Your backend URL (e.g. from Railway or Render)
 5. Click **Save and Deploy**.
+
+---
+
+### 2. Deploy Backend
+- **Option A (Railway)**: Deploy from GitHub repo using root [`Dockerfile`](./Dockerfile) in 1 click.
+- **Option B (Render Backend-Only)**: Set Root Directory to `Backend`, Build Command to `npm install --omit=dev`, and ping `/health` with [cron-job.org](https://cron-job.org) to keep it awake 24/7 with zero cold starts.
+
+📖 **For full step-by-step instructions with environment variables, read the [DEPLOYMENT.md](./DEPLOYMENT.md) guide.**
 
 *(Optional)* Or deploy directly via CLI:
 ```bash
