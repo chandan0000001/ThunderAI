@@ -831,13 +831,31 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
       {/* -------------------- MAIN THUNDER CHAT AREA -------------------- */}
       <main className={`flex-1 flex flex-col h-full relative overflow-hidden ${
-        isDarkMode ? 'bg-[#131314]' : 'bg-[#ffffff]'
+        isDarkMode ? 'bg-[#0e0f14]' : 'bg-[#ffffff]'
       }`}>
+        {/* Atmospheric Mountain Background Image with Low Opacity (Matches User Request) */}
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-700"
+          style={{
+            backgroundImage: `url('/workspace-bg.webp')`,
+            opacity: isDarkMode ? 0.22 : 0.08,
+          }}
+        />
+
+        {/* Ambient Gradient Overlay for 100% Crisp Contrast and Focus */}
+        <div
+          className={`absolute inset-0 pointer-events-none ${
+            isDarkMode
+              ? 'bg-gradient-to-b from-[#0e0f14]/85 via-[#0e0f14]/30 to-[#0e0f14]/95'
+              : 'bg-gradient-to-b from-white/85 via-white/30 to-white/95'
+          }`}
+        />
+
         {/* Top Header Bar */}
         <header className={`h-14 px-6 flex items-center justify-between border-b backdrop-blur-md z-10 ${
           isDarkMode
-            ? 'border-[#2d2e30]/60 bg-[#131314]/90'
-            : 'border-[#e1e3e1] bg-[#ffffff]/90'
+            ? 'border-[#2d2e30]/60 bg-[#0e0f14]/80'
+            : 'border-[#e1e3e1] bg-[#ffffff]/80'
         }`}>
           {/* Thunder Title & Model Selector Dropdown */}
           <div className="flex items-center space-x-3 relative">
@@ -1023,7 +1041,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                         setInputPrompt(s.prompt);
                         handleSendMessage(s.prompt);
                       }}
-                      className="p-4.5 rounded-2xl border border-white/10 bg-[#121319] hover:bg-[#181922] hover:border-white/25 text-left transition-all duration-200 flex flex-col justify-between h-36 group cursor-pointer shadow-sm"
+                      className="p-4.5 rounded-2xl border border-white/10 bg-[#121319]/80 backdrop-blur-md hover:bg-[#181922]/95 hover:border-white/25 text-left transition-all duration-200 flex flex-col justify-between h-36 group cursor-pointer shadow-lg"
                     >
                       <div className="space-y-1">
                         <span className="text-xs font-semibold text-white leading-snug block">
@@ -1169,10 +1187,10 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
         {/* -------------------- FLOATING THUNDER BOTTOM PROMPT BAR -------------------- */}
         <div className="p-4 md:pb-6 max-w-3xl w-full mx-auto relative z-20">
-          <div className={`rounded-3xl border shadow-xl transition-all p-3 space-y-2 ${
+          <div className={`rounded-3xl border shadow-2xl backdrop-blur-xl transition-all p-3 space-y-2 ${
             isDarkMode
-              ? 'bg-[#1e1f20] border-[#2d2e30] focus-within:border-yellow-500/50 focus-within:bg-[#28292a]'
-              : 'bg-[#f0f4f9] border-[#d3dbdf] focus-within:border-yellow-500 focus-within:bg-white'
+              ? 'bg-[#1e1f20]/85 border-white/10 focus-within:border-yellow-500/50 focus-within:bg-[#28292a]/95'
+              : 'bg-[#f0f4f9]/85 border-[#d3dbdf] focus-within:border-yellow-500 focus-within:bg-white/95'
           }`}>
             <textarea
               ref={textareaRef}
