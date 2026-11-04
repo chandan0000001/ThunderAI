@@ -10,9 +10,6 @@ import {
   Copy,
   ChevronRight,
   ChevronDown,
-  Play,
-  Folder,
-  Sparkles,
   Users,
   Building2,
   Bot,
@@ -171,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION -------------------- */}
-        <div className="relative z-10 pt-16 sm:pt-24 pb-12 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-6">
+        <div className="relative z-10 pt-16 sm:pt-24 pb-20 sm:pb-28 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-6">
           {/* Main 2-Line Headline Matching Reference Layout */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] drop-shadow-[0_4px_25px_rgba(0,0,0,0.65)]">
             Conversational AI, auth, <br />
@@ -199,78 +196,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
         </div>
-
-        {/* -------------------- FLOATING SHOWCASE MOCKUP WITH PLAY BUTTON -------------------- */}
-        {/* Exactly matches the reference image: window with desktop wallpaper, folders on right, and center Play button */}
-        <div className="relative z-20 max-w-4xl mx-auto px-4 -mb-16 sm:-mb-24">
-          <div
-            onClick={onLaunchApp}
-            className="relative rounded-3xl border border-white/25 bg-black/60 backdrop-blur-md shadow-[0_30px_90px_rgba(0,0,0,0.85)] overflow-hidden group cursor-pointer aspect-[16/10] max-h-[520px] transition-transform duration-300 hover:border-white/40"
-          >
-            {/* Desktop Redwood / Sequoia Forest Background */}
-            <img
-              src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=1600&auto=format&fit=crop&q=80"
-              alt="Thunder AI Workspace Showcase"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90"
-            />
-
-            {/* macOS Window Title Bar */}
-            <div className="absolute top-0 inset-x-0 h-10 bg-black/40 backdrop-blur-md border-b border-white/10 px-4 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-              </div>
-              <div className="text-[11px] font-mono text-white/70 flex items-center space-x-1.5">
-                <Zap className="w-3 h-3 text-[#0091ff]" />
-                <span>Thunder AI Operator Workspace</span>
-              </div>
-              <div className="w-12" />
-            </div>
-
-            {/* Desktop Folder Icons (Matches Reference Image Layout) */}
-            <div className="absolute top-14 right-6 flex flex-col items-center space-y-4 pointer-events-none select-none">
-              <div className="flex flex-col items-center space-y-1">
-                <div className="w-11 h-10 rounded-lg bg-sky-500/80 backdrop-blur-md border border-white/25 shadow-lg flex items-center justify-center">
-                  <Folder className="w-5 h-5 text-white fill-white/40" />
-                </div>
-                <span className="text-[10px] font-medium text-white drop-shadow-md">folders</span>
-              </div>
-
-              <div className="flex flex-col items-center space-y-1">
-                <div className="w-11 h-10 rounded-lg bg-gradient-to-br from-indigo-500/90 to-blue-600/90 backdrop-blur-md border border-white/25 shadow-lg flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-[10px] font-medium text-white drop-shadow-md text-center leading-tight">
-                  Thunder<br />Projectfiles
-                </span>
-              </div>
-            </div>
-
-            {/* Center Frosted Glass Circular Play Button */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-full bg-black/40 backdrop-blur-2xl border border-white/40 flex items-center justify-center text-white shadow-[0_15px_45px_rgba(0,0,0,0.7)] group-hover:scale-110 group-hover:bg-black/60 group-hover:border-white/70 transition-all duration-300">
-                <Play className="w-8 h-8 sm:w-9 sm:h-9 fill-white text-white translate-x-0.5 drop-shadow-lg" />
-              </div>
-            </div>
-
-            {/* Bottom Status Overlay */}
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between px-6 pb-4">
-              <div className="flex items-center space-x-2 text-xs font-mono text-white/90">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Active Routing: DeepSeek R1 · Gemini 2.0 · OpenRouter</span>
-              </div>
-              <span className="text-[11px] font-mono text-white/70">Click to launch workspace →</span>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Background Architectural Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
       {/* -------------------- SECTION 1: AUTHENTICATION & IDENTITY MESH (CLERK STYLE) -------------------- */}
-      <section id="features" className="relative pt-32 sm:pt-40 pb-24 px-4 sm:px-8 border-b border-white/10">
+      <section id="features" className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10">
         <div className="max-w-5xl mx-auto text-center space-y-6">
           {/* Copy Prompt Pill */}
           <div className="flex items-center justify-center">
