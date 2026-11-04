@@ -374,10 +374,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 1: AUTHENTICATION & IDENTITY MESH (CLERK STYLE) -------------------- */}
       <section id="features" className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10 overflow-hidden">
-        {/* Hermes Classical Dithered Bust WebP Background */}
+        {/* Thunder Classical Dithered Bust WebP Background */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/hermes-classical-bust.webp')` }}
+          style={{ backgroundImage: `url('/dither-classical-bust.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
@@ -567,14 +567,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="space-y-4 animate-fadeIn">
                   <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-white/10 bg-black/60 group">
                     <img
-                      src="/thumb-hermes-creation-spark.webp"
-                      alt="Hermes AI Creation Spark"
+                      src="/thumb-creation-spark.webp"
+                      alt="Neural Creation Spark"
                       className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d14] via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-3 flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-black/70 border border-white/15 text-[10px] font-mono text-zinc-300">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>HERMES // NEURAL PROTOCOL</span>
+                      <span>THUNDER // NEURAL PROTOCOL</span>
                     </div>
                   </div>
                   <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.02] space-y-2">
@@ -613,10 +613,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         id="compute"
         className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden"
       >
-        {/* Hermes Icarus Dithered Radial Energy WebP Backdrop */}
+        {/* Thunder Icarus Dithered Radial Energy WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-screen"
-          style={{ backgroundImage: `url('/hermes-icarus-rays.webp')` }}
+          style={{ backgroundImage: `url('/dither-icarus-rays.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_30%,#090a10_90%)] pointer-events-none" />
@@ -743,10 +743,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 3: ARCHITECTURE & SECURITY BENTO GRID -------------------- */}
       <section id="architecture" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
-        {/* Hermes Celestial Stairs & Sphere WebP Backdrop */}
+        {/* Thunder Celestial Stairs & Sphere WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.14] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/hermes-celestial-stairs.webp')` }}
+          style={{ backgroundImage: `url('/dither-celestial-stairs.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
@@ -779,11 +779,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </p>
                 </div>
 
-                {/* Animated Connected Nodes with Hermes Creation Spark Emblem */}
+                {/* Animated Connected Nodes with Thunder Creation Spark Emblem */}
                 <div className="my-6 py-6 px-4 sm:px-6 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between relative overflow-hidden z-10">
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none group-hover:opacity-20 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-hermes-creation-spark.webp')` }}
+                    style={{ backgroundImage: `url('/thumb-creation-spark.webp')` }}
                   />
                   {/* Node 1: Google OAuth */}
                   <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-20">
@@ -849,7 +849,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono relative overflow-hidden z-10">
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none group-hover:opacity-25 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-hermes-scanline-face.webp')` }}
+                    style={{ backgroundImage: `url('/thumb-scanline-face.webp')` }}
                   />
                   <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10 relative z-10">
                     <span>SECURITY TAPE</span>
@@ -886,7 +886,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-3 text-xs font-mono relative overflow-hidden z-10">
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-25 pointer-events-none group-hover:scale-105 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-hermes-blue-knight.webp')` }}
+                    style={{ backgroundImage: `url('/thumb-blue-knight.webp')` }}
                   />
                   <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
@@ -928,7 +928,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden z-10">
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none group-hover:scale-105 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-hermes-icarus-rays.webp')` }}
+                    style={{ backgroundImage: `url('/thumb-icarus-rays.webp')` }}
                   />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between text-xs font-mono">
@@ -959,10 +959,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 4: CUSTOMER FEEDBACK & USE CASES (IMAGE 3 STAGGERED LAYOUT) -------------------- */}
       <section id="testimonials" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#07080c] overflow-hidden">
-        {/* Hermes Scanline Celestial Profile WebP Backdrop */}
+        {/* Thunder Scanline Celestial Profile WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.12] mix-blend-luminosity"
-          style={{ backgroundImage: `url('/hermes-scanline-face.webp')` }}
+          style={{ backgroundImage: `url('/dither-scanline-face.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#07080c] via-transparent to-[#07080c] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#07080c_85%)] pointer-events-none" />
@@ -990,7 +990,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-hermes-classical-bust.webp"
+                      src="/thumb-classical-bust.webp"
                       alt="Beauty & Aesthetics"
                       loading="lazy"
                       decoding="async"
@@ -1021,7 +1021,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-hermes-celestial-stairs.webp"
+                      src="/thumb-celestial-stairs.webp"
                       alt="Real estate"
                       loading="lazy"
                       decoding="async"
@@ -1053,7 +1053,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-hermes-creation-spark.webp"
+                      src="/thumb-creation-spark.webp"
                       alt="Home services"
                       loading="lazy"
                       decoding="async"
@@ -1088,7 +1088,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-hermes-blue-knight.webp"
+                      src="/thumb-blue-knight.webp"
                       alt="Professional services"
                       loading="lazy"
                       decoding="async"
@@ -1119,7 +1119,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="h-full p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0e0f16] hover:border-white/20 transition-all duration-300 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-6 group">
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
-                      src="/thumb-hermes-icarus-rays.webp"
+                      src="/thumb-icarus-rays.webp"
                       alt="Automotive"
                       loading="lazy"
                       decoding="async"
@@ -1151,10 +1151,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* -------------------- SECTION 5: SUPPORTED AI CHECKPOINTS -------------------- */}
       <section id="models" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10] overflow-hidden">
-        {/* Hermes Celestial Stairs WebP Backdrop */}
+        {/* Thunder Celestial Stairs WebP Backdrop */}
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-[0.15] mix-blend-screen"
-          style={{ backgroundImage: `url('/hermes-celestial-stairs.webp')` }}
+          style={{ backgroundImage: `url('/dither-celestial-stairs.webp')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#090a10] via-transparent to-[#090a10] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,#090a10_85%)] pointer-events-none" />
@@ -1183,7 +1183,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'OPERATIONAL',
                 latency: '95ms',
                 desc: 'Instant open-weights routing. Zero-cost daily coding and reasoning.',
-                image: '/thumb-hermes-scanline-face.webp',
+                image: '/thumb-scanline-face.webp',
               },
               {
                 name: 'Gemini 2.0 Flash',
@@ -1191,7 +1191,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '78ms',
                 desc: 'High-speed multimodal intelligence core with million-token ingestion.',
-                image: '/thumb-hermes-celestial-stairs.webp',
+                image: '/thumb-celestial-stairs.webp',
               },
               {
                 name: 'Claude 3.5 Sonnet',
@@ -1199,7 +1199,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '160ms',
                 desc: 'Software architecture and reasoning titan for complex codebases.',
-                image: '/thumb-hermes-blue-knight.webp',
+                image: '/thumb-blue-knight.webp',
               },
               {
                 name: 'DeepSeek R1',
@@ -1207,7 +1207,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 status: 'COMING SOON',
                 latency: '210ms',
                 desc: 'Recursive chain-of-thought mathematical reasoning Titan.',
-                image: '/thumb-hermes-icarus-rays.webp',
+                image: '/thumb-icarus-rays.webp',
               },
             ].map((m, idx) => (
               <LazyReveal key={idx} delay={idx * 50} className="flex">
@@ -1255,10 +1255,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <LazyReveal delay={50}>
             <div className="relative p-10 sm:p-16 rounded-3xl border border-white/10 overflow-hidden text-center space-y-6 max-w-3xl mx-auto shadow-2xl bg-[#0b0c14] group">
-              {/* Hermes Creation Spark WebP Background */}
+              {/* Thunder Creation Spark WebP Background */}
               <div
                 className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-25 mix-blend-screen group-hover:scale-105 transition duration-700"
-                style={{ backgroundImage: `url('/hermes-creation-spark.webp')` }}
+                style={{ backgroundImage: `url('/dither-creation-spark.webp')` }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-[#0b0c14]/90 via-[#0b0c14]/60 to-[#0b0c14]/95 pointer-events-none" />
               <div className="absolute inset-0 bg-radial-gradient from-transparent to-[#0b0c14]/90 pointer-events-none" />
