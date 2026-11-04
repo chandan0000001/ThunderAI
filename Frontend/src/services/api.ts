@@ -2,7 +2,7 @@ import type { User, Chat, Message, SendMessageResponse, AuthResponse, VerifyOtpR
 
 // In production with decoupled deployment (Cloudflare Pages + Koyeb), set VITE_API_BASE_URL in Cloudflare Pages dashboard
 // (e.g. VITE_API_BASE_URL=https://your-backend.koyeb.app). In local dev or unified mode, defaults to empty string.
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
 
 class ApiError extends Error {
   status: number;

@@ -285,6 +285,8 @@ export const login = async (req, res) => {
             name: existingUser.name,
             age: existingUser.age,
             email: existingUser.email,
+            avatar: existingUser.avatar || "",
+            role: existingUser.role || "user",
             usage: existingUser.usage,
             isVerified: true
         });
@@ -356,14 +358,17 @@ export const profile = async(req,res)=>{
         res.status(200).json({
             name: req.user.name,
             age: req.user.age,
+            email: req.user.email,
+            avatar: req.user.avatar || "",
+            role: req.user.role || "user",
+            authProvider: req.user.authProvider || "local",
             usage: {
                 totalTokenUsed: req.user.usage?.totalTokenUsed || 0,
                 tokenUsed: redisTokens,
                 tokenLimit: Number(process.env.TOKEN_LIMIT || 10000),
                 windowSeconds: Number(process.env.TOKEN_WINDOW_SECONDS || 18000),
                 ttl: ttl > 0 ? ttl : 0
-            },
-            email: req.user.email
+            }
         });
     }
     catch(err){
@@ -474,7 +479,11 @@ export const googleAuth = async (req, res) => {
 
         const normalizedEmail = payload.email.trim().toLowerCase();
         const googleId = payload.sub;
-        const name = payload.name || payload.given_name || normalizedEmail.split("@")[0] || "Thunder User";
+        let name = (payload.name || payload.given_name || normalizedEmail.split("@")[0] || "Thunder User").trim();
+        if (name.length < 3) {
+            name = `${name} User`;
+        }
+        name = name.slice(0, 50);
         const avatar = payload.picture || "";
 
         // Check if user already exists by googleId or email
@@ -509,6 +518,7 @@ export const googleAuth = async (req, res) => {
             age: user.age,
             email: user.email,
             avatar: user.avatar,
+            role: user.role || "user",
             usage: user.usage,
             isVerified: true
         });

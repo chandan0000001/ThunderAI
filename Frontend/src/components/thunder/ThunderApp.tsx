@@ -23,10 +23,12 @@ import {
   ThumbsDown,
   X,
   AlertTriangle,
-  Sun,
-  Moon,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Code2,
+  Terminal,
+  Cpu,
+  Layers,
 } from 'lucide-react';
 
 interface ThunderAppProps {
@@ -35,7 +37,6 @@ interface ThunderAppProps {
   onBackToLanding: () => void;
   onDeleteAccount: () => void;
   isDarkMode?: boolean;
-  onToggleTheme?: () => void;
   onUpdateUser?: (user: User) => void;
   initialProfileOpen?: boolean;
 }
@@ -91,23 +92,27 @@ const AVAILABLE_MODELS: AvailableModel[] = [
 const SUGGESTIONS = [
   {
     title: 'Explain Token Rate Limiting',
+    desc: 'Redis sliding-window rate limit deep dive',
     prompt: 'Explain how the Redis sliding-window token rate limiter works in this backend architecture.',
-    icon: '⚡',
+    icon: Terminal,
   },
   {
     title: 'Write a Three.js Shader',
+    desc: 'GLSL vertex and morphing sphere shaders',
     prompt: 'Write a GLSL vertex and fragment shader for an iridescent organic morphing sphere in Three.js.',
-    icon: '✨',
+    icon: Code2,
   },
   {
-    title: 'Compare AI Reasoning Titans',
+    title: 'Compare Reasoning Titans',
+    desc: 'DeepSeek R1 vs Claude 3.5 Sonnet benchmarks',
     prompt: 'Compare the reasoning strengths of DeepSeek R1, Claude 3.5 Sonnet, and Gemini 2.0 Flash.',
-    icon: '🧠',
+    icon: Cpu,
   },
   {
-    title: 'Architect a Microservice',
+    title: 'Architect an AI Microservice',
+    desc: 'Context summarization & Redis caching layer',
     prompt: 'Design a scalable AI agent workflow with automated context summarization and Redis caching.',
-    icon: '🏗️',
+    icon: Layers,
   },
 ];
 
@@ -117,7 +122,6 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   onBackToLanding,
   onDeleteAccount,
   isDarkMode = true,
-  onToggleTheme,
   onUpdateUser,
   initialProfileOpen = false,
 }) => {
@@ -725,21 +729,17 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         </div>
 
         {/* Sidebar Bottom: LIVE Token Meter, Settings, Profile */}
-        <div className={`p-3 border-t space-y-2 ${isDarkMode ? 'border-[#2d2e30]' : 'border-[#e1e3e1]'}`}>
+        <div className="p-3 border-t border-white/10 space-y-2">
           {sidebarOpen && (
-            <div className={`p-3 rounded-2xl border space-y-2 text-xs font-mono transition-all ${
-              isDarkMode
-                ? 'bg-[#131314] border-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.04)]'
-                : 'bg-white border-yellow-500/30 shadow-sm'
-            }`}>
+            <div className="p-3 rounded-2xl border border-white/10 bg-[#121319] space-y-2 text-xs font-mono shadow-sm">
               <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center space-x-1.5 text-zinc-400">
-                  <Zap className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
-                  <span className="font-bold tracking-wider">TOKEN QUOTA</span>
+                  <Zap className="w-3.5 h-3.5 text-white" />
+                  <span className="font-bold tracking-wider text-zinc-300">TOKEN QUOTA</span>
                   <button
                     onClick={refreshLiveTokens}
                     disabled={syncingTokens}
-                    className="p-0.5 rounded hover:text-yellow-400 text-zinc-500 transition"
+                    className="p-0.5 rounded hover:text-white text-zinc-500 transition cursor-pointer"
                     title="Live sync token quota from backend"
                   >
                     <RefreshCw className={`w-3 h-3 ${syncingTokens ? 'animate-spin' : ''}`} />
@@ -748,20 +748,20 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
                 <div className="flex items-center space-x-1.5">
                   {lastTokenDelta && (
-                    <span className="px-1.5 py-0.2 rounded bg-yellow-400/20 text-yellow-400 font-mono text-[9px] font-bold animate-bounce">
+                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-white font-mono text-[9px] font-bold">
                       +{lastTokenDelta}
                     </span>
                   )}
-                  <span className={isDarkMode ? 'text-yellow-400 font-bold' : 'text-yellow-700 font-bold'}>
+                  <span className="text-white font-bold">
                     {tokenStats.used.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {/* Live Progress Bar */}
-              <div className="w-full h-1.5 rounded-full bg-zinc-700/30 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-200 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                  className="h-full bg-white rounded-full transition-all duration-300"
                   style={{
                     width: `${Math.min(100, (tokenStats.used / (tokenStats.limit || 10000)) * 100)}%`,
                   }}
@@ -770,7 +770,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
               <div className="flex justify-between items-center text-[9px] text-zinc-500">
                 <span>LIMIT: {(tokenStats.limit || 10000).toLocaleString()}</span>
-                <span className="text-emerald-400 font-semibold">● LIVE UPDATED</span>
+                <span className="text-emerald-400 font-semibold">● ACTIVE</span>
               </div>
             </div>
           )}
@@ -783,24 +783,40 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             }}
             className={`flex items-center ${
               sidebarOpen ? 'px-3 py-2 justify-between' : 'p-2 justify-center'
-            } rounded-full cursor-pointer transition ${
-              isDarkMode ? 'hover:bg-[#28292a]' : 'hover:bg-[#e4ebf5]'
-            }`}
+            } rounded-full cursor-pointer transition hover:bg-white/5`}
             title="User Profile & Live Telemetry"
           >
             <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 p-[1.5px] shrink-0">
-                <div className={`w-full h-full rounded-full flex items-center justify-center font-bold text-xs ${
-                  isDarkMode ? 'bg-[#1e1f20] text-white' : 'bg-white text-zinc-900'
-                }`}>
+              <div className="w-7 h-7 rounded-full border border-white/20 bg-white/10 p-[1px] shrink-0 overflow-hidden flex items-center justify-center">
+                {currentUser?.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextElementSibling) {
+                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
+                <span className={`${currentUser?.avatar ? 'hidden' : 'flex'} w-full h-full items-center justify-center font-bold text-xs text-white`}>
                   {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                </div>
+                </span>
               </div>
               {sidebarOpen && (
                 <div className="overflow-hidden">
-                  <p className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
-                    {currentUser?.name || 'Operator'}
-                  </p>
+                  <div className="text-xs font-medium truncate text-white flex items-center space-x-1">
+                    <span>{currentUser?.name || 'Operator'}</span>
+                    {currentUser?.role === 'admin' && (
+                      <span className="px-1.5 py-0.2 rounded bg-white text-black text-[8px] font-bold">
+                        ADMIN
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[10px] text-zinc-500 truncate font-mono">
                     {currentUser?.email || 'operator@thunder.ai'}
                   </p>
@@ -925,33 +941,14 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
           {/* Right Header Controls */}
           <div className="flex items-center space-x-3">
-            {/* Day / Night Theme Toggle */}
-            {onToggleTheme && (
-              <button
-                onClick={onToggleTheme}
-                className={`p-2 rounded-full border transition ${
-                  isDarkMode
-                    ? 'border-white/10 hover:border-white/30 text-yellow-400 hover:text-yellow-300'
-                    : 'border-black/10 hover:border-black/20 text-zinc-700 hover:text-black'
-                }`}
-                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Night Mode'}
-              >
-                {isDarkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-zinc-700" />}
-              </button>
-            )}
-
             <button
               onClick={() => {
                 onBackToLanding();
                 navigate('/');
               }}
-              className={`hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition ${
-                isDarkMode
-                  ? 'border-white/10 hover:border-white/20 text-zinc-300 hover:text-white'
-                  : 'border-zinc-300 hover:border-zinc-400 text-zinc-700 hover:text-black'
-              }`}
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-xs font-mono transition"
             >
-              <span>3D STUDIO</span>
+              <span>Landing Page</span>
               <ArrowLeft className="w-3 h-3 rotate-180" />
             </button>
 
@@ -961,13 +958,28 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 setProfileModalOpen(true);
                 navigate('/profile');
               }}
-              className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 p-[1.5px]"
+              className="w-8 h-8 rounded-full border border-white/20 hover:border-white/40 bg-white/10 p-[1.5px] overflow-hidden transition cursor-pointer"
               title="Profile & Telemetry"
             >
-              <div className={`w-full h-full rounded-full flex items-center justify-center text-xs font-bold ${
-                isDarkMode ? 'bg-[#131314] text-white' : 'bg-white text-black'
-              }`}>
-                {(currentUser?.name || 'U').charAt(0).toUpperCase()}
+              <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold overflow-hidden bg-[#131314] text-white">
+                {currentUser?.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextElementSibling) {
+                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
+                <span className={`${currentUser?.avatar ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
+                  {(currentUser?.name || 'U').charAt(0).toUpperCase()}
+                </span>
               </div>
             </button>
           </div>
@@ -992,46 +1004,46 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             /* Thunder Empty State Greeting */
             <div className="max-w-3xl mx-auto h-full flex flex-col justify-center py-12 space-y-10">
               <div className="space-y-3">
-                <h1 className="font-syne text-4xl sm:text-6xl font-bold tracking-tight text-yellow-400">
-                  Hello, {currentUser?.name?.split(' ')[0] || 'User'}
+                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white font-inter">
+                  Hello, {currentUser?.name?.split(' ')[0] || 'Operator'}
                 </h1>
-                <p className={`font-syne text-3xl sm:text-5xl font-light ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                  How can Thunder assist you today?
+                <p className="text-xl sm:text-3xl font-light text-zinc-400 font-inter">
+                  How can Thunder assist your workflow today?
                 </p>
               </div>
 
               {/* Suggestion prompt cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
-                {SUGGESTIONS.map((s, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setInputPrompt(s.prompt);
-                      handleSendMessage(s.prompt);
-                    }}
-                    className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between h-36 group ${
-                      isDarkMode
-                        ? 'bg-[#1e1f20] hover:bg-[#28292a] border-[#2d2e30]'
-                        : 'bg-[#f0f4f9] hover:bg-[#e4ebf5] border-[#d3dbdf]'
-                    }`}
-                  >
-                    <span className={`text-sm font-medium leading-snug ${
-                      isDarkMode ? 'text-[#e3e3e3] group-hover:text-white' : 'text-[#1f1f1f] group-hover:text-black'
-                    }`}>
-                      {s.title}
-                    </span>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xl">{s.icon}</span>
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
-                        isDarkMode
-                          ? 'bg-[#131314] text-zinc-400 group-hover:text-black group-hover:bg-yellow-400'
-                          : 'bg-white text-zinc-600 group-hover:text-black group-hover:bg-yellow-400 shadow-sm'
-                      }`}>
-                        <Send className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
+                {SUGGESTIONS.map((s, idx) => {
+                  const Icon = s.icon;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setInputPrompt(s.prompt);
+                        handleSendMessage(s.prompt);
+                      }}
+                      className="p-4.5 rounded-2xl border border-white/10 bg-[#121319] hover:bg-[#181922] hover:border-white/25 text-left transition-all duration-200 flex flex-col justify-between h-36 group cursor-pointer shadow-sm"
+                    >
+                      <div className="space-y-1">
+                        <span className="text-xs font-semibold text-white leading-snug block">
+                          {s.title}
+                        </span>
+                        <span className="text-[11px] text-zinc-400 block line-clamp-2 font-normal">
+                          {s.desc}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                        <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-zinc-300 group-hover:text-white transition">
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center bg-white/5 text-zinc-400 group-hover:text-black group-hover:bg-white transition">
+                          <Send className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : (

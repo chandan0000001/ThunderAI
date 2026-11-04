@@ -12,8 +12,6 @@ interface ProtectedChatViewProps {
   onLogout: () => Promise<void>;
   onBackToLanding: () => void;
   onDeleteAccount: () => Promise<void>;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
   onUpdateUser: (u: User) => void;
   initialProfileOpen?: boolean;
 }
@@ -24,14 +22,12 @@ const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
   onLogout,
   onBackToLanding,
   onDeleteAccount,
-  isDarkMode,
-  onToggleTheme,
   onUpdateUser,
   initialProfileOpen = false,
 }) => {
   if (sessionChecking) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-yellow-500 bg-[#090a0f]">
+      <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
         VERIFYING SESSION TELEMETRY...
       </div>
     );
@@ -47,8 +43,6 @@ const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
       onLogout={onLogout}
       onBackToLanding={onBackToLanding}
       onDeleteAccount={onDeleteAccount}
-      isDarkMode={isDarkMode}
-      onToggleTheme={onToggleTheme}
       onUpdateUser={onUpdateUser}
       initialProfileOpen={initialProfileOpen}
     />
@@ -61,23 +55,10 @@ export function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'signup'>('login');
   const [sessionChecking, setSessionChecking] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('thunder_theme');
-    return saved !== null ? saved === 'dark' : true;
-  });
-
   useEffect(() => {
-    localStorage.setItem('thunder_theme', isDarkMode ? 'dark' : 'light');
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => {
-    setIsDarkMode((prev) => !prev);
-  };
+    localStorage.setItem('thunder_theme', 'dark');
+    document.documentElement.classList.add('dark');
+  }, []);
 
   // Check existing session strictly with backend on mount
   useEffect(() => {
@@ -152,6 +133,7 @@ export function App() {
       name: userData.name || 'User',
       email: userData.email,
       age: userData.age,
+      avatar: userData.avatar,
       usage: userData.usage || {
         tokenUsed: 0,
         tokenLimit: 10000,
@@ -192,11 +174,7 @@ export function App() {
   };
 
   return (
-    <div
-      className={`min-h-screen antialiased transition-colors duration-300 ${
-        isDarkMode ? 'bg-[#090a0f] text-[#f4f4f5]' : 'bg-[#f8f9fa] text-[#0f172a]'
-      }`}
-    >
+    <div className="min-h-screen antialiased bg-[#090a0f] text-[#f4f4f5]">
       <Routes>
         {/* Landing Page Route */}
         <Route
@@ -207,8 +185,6 @@ export function App() {
               onOpenAuth={handleOpenAuth}
               isLoggedIn={!!currentUser}
               userName={currentUser?.name}
-              isDarkMode={isDarkMode}
-              onToggleTheme={toggleTheme}
             />
           }
         />
@@ -223,8 +199,6 @@ export function App() {
               onLogout={handleLogout}
               onBackToLanding={() => navigate('/')}
               onDeleteAccount={handleDeleteAccount}
-              isDarkMode={isDarkMode}
-              onToggleTheme={toggleTheme}
               onUpdateUser={handleUpdateUser}
               initialProfileOpen={false}
             />
@@ -241,8 +215,6 @@ export function App() {
               onLogout={handleLogout}
               onBackToLanding={() => navigate('/')}
               onDeleteAccount={handleDeleteAccount}
-              isDarkMode={isDarkMode}
-              onToggleTheme={toggleTheme}
               onUpdateUser={handleUpdateUser}
               initialProfileOpen={true}
             />

@@ -107,6 +107,33 @@ const startServer = async () => {
 
         // Test email configuration asynchronously in background (never blocks port binding)
         verifyEmailConfiguration().catch(() => {});
+
+        // Auto-bootstrap Admin account from environment variables if provided
+        if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+            import("./model/userSchema.js").then(async ({ default: User }) => {
+                const bcrypt = (await import("bcrypt")).default;
+                const adminEmail = process.env.ADMIN_EMAIL.trim().toLowerCase();
+                const existing = await User.findOne({ email: adminEmail });
+                const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+                if (existing) {
+                    existing.role = "admin";
+                    existing.password = hash;
+                    existing.isVerified = true;
+                    await existing.save();
+                    console.log(`⚡ Admin user ensured: ${adminEmail} (Role: admin)`);
+                } else {
+                    await User.create({
+                        name: "Thunder Admin",
+                        email: adminEmail,
+                        password: hash,
+                        role: "admin",
+                        isVerified: true,
+                        authProvider: "local"
+                    });
+                    console.log(`⚡ Admin user created: ${adminEmail} (Role: admin)`);
+                }
+            }).catch(e => console.warn("Admin bootstrap note:", e.message));
+        }
     } catch (error) {
         console.error("Failed to connect. Please try again. ERROR:", error);
     }

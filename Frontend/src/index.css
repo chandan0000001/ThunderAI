@@ -117,3 +117,51 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* Traveling beam particles */
+@keyframes beamFlow {
+  0% { stroke-dashoffset: 40; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-beam-flow {
+  stroke-dasharray: 4 8;
+  animation: beamFlow 1.2s linear infinite;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float-slow {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+/* Card mouse spotlight glow */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    500px circle at var(--mouse-x, -500px) var(--mouse-y, -500px),
+    rgba(255, 255, 255, 0.09),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
