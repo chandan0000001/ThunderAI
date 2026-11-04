@@ -1065,36 +1065,150 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* -------------------- CLEAN FOOTER -------------------- */}
-      <footer className="bg-[#040406] text-zinc-500 py-12 px-4 sm:px-8 border-t border-white/10 text-xs font-mono">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center space-x-2">
-            <span className="text-white font-bold">THUNDER AI</span>
-            <span>·</span>
-            <span>CONVERSATIONAL INTELLIGENCE & AUTH LAYER</span>
+      {/* -------------------- SKYDIVE-STYLE MEGA STATEMENT FOOTER -------------------- */}
+      <footer className="bg-[#0b0c10] text-zinc-400 pt-20 pb-12 px-6 sm:px-12 border-t border-white/10 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Top Row: Brand & Socials on Left, 3 Navigation Columns on Right */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 justify-between items-start">
+            {/* Left Column: Brand Icon & Socials */}
+            <div className="md:col-span-5 space-y-6">
+              {/* Colorful Geometric Flower / Starburst Icon */}
+              <div className="flex items-center space-x-3">
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <svg className="w-10 h-10" viewBox="0 0 40 40" fill="none">
+                    <circle cx="20" cy="11" r="5.5" fill="#F87171" />
+                    <circle cx="27.8" cy="15.5" r="5.5" fill="#FBBF24" />
+                    <circle cx="27.8" cy="24.5" r="5.5" fill="#34D399" />
+                    <circle cx="20" cy="29" r="5.5" fill="#60A5FA" />
+                    <circle cx="12.2" cy="24.5" r="5.5" fill="#A78BFA" />
+                    <circle cx="12.2" cy="15.5" r="5.5" fill="#F472B6" />
+                    <circle cx="20" cy="20" r="4.5" fill="#FFFFFF" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Social Media Links */}
+              <div className="flex items-center space-x-5 text-zinc-400">
+                {/* X / Twitter */}
+                <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition" title="X">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
+                {/* LinkedIn */}
+                <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-white transition" title="LinkedIn">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.79v8.37H6.46v-8.37M7.86 6.55a1.62 1.62 0 1 0 0 3.24 1.62 1.62 0 0 0 0-3.24z" />
+                  </svg>
+                </a>
+                {/* YouTube */}
+                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-white transition" title="YouTube">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                </a>
+                {/* Instagram */}
+                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition" title="Instagram">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+                  </svg>
+                </a>
+                {/* TikTok / GitHub */}
+                <a href="https://github.com/chandan0000001/ThunderAI" target="_blank" rel="noreferrer" className="hover:text-white transition" title="TikTok">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.28 1.77-.23.95-.08 2.01.44 2.84.53.86 1.49 1.42 2.5 1.52 1.05.11 2.14-.23 2.88-.98.71-.7 1.08-1.68 1.08-2.67V.02h-.01z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            {/* Right: 3 Columns (PRODUCT, EXPLORE, COMPANY) */}
+            <div className="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8 text-xs font-mono">
+              {/* Column 1: PRODUCT */}
+              <div className="space-y-4">
+                <span className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold block">
+                  PRODUCT
+                </span>
+                <ul className="space-y-2.5 text-zinc-400">
+                  <li><a href="#showcase" className="hover:text-white transition">Slack</a></li>
+                  <li><a href="#showcase" className="hover:text-white transition">Email</a></li>
+                  <li><a href="#showcase" className="hover:text-white transition">iMessage</a></li>
+                  <li><a href="#compute" className="hover:text-white transition">Web</a></li>
+                  <li><a href="#compute" className="hover:text-white transition">Desktop</a></li>
+                  <li><a href="#orbital" className="hover:text-white transition">CLI</a></li>
+                  <li><a href="#bento" className="hover:text-white transition">API</a></li>
+                  <li><a href="#models" className="hover:text-white transition">Claude Code, Cursor, Codex</a></li>
+                </ul>
+              </div>
+
+              {/* Column 2: EXPLORE */}
+              <div className="space-y-4">
+                <span className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold block">
+                  EXPLORE
+                </span>
+                <ul className="space-y-2.5 text-zinc-400">
+                  <li><a href="#models" className="hover:text-white transition">Pricing</a></li>
+                  <li><a href="#orbital" className="hover:text-white transition">Integrations</a></li>
+                  <li><a href="#bento" className="hover:text-white transition">Templates</a></li>
+                  <li><a href="#bento" className="hover:text-white transition">Docs</a></li>
+                  <li><a href="#bento" className="hover:text-white transition">Security</a></li>
+                  <li><a href="#testimonials" className="hover:text-white transition">Partnerships</a></li>
+                </ul>
+              </div>
+
+              {/* Column 3: COMPANY */}
+              <div className="space-y-4">
+                <span className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold block">
+                  COMPANY
+                </span>
+                <ul className="space-y-2.5 text-zinc-400">
+                  <li><a href="#testimonials" className="hover:text-white transition">Blog</a></li>
+                  <li><a href="#testimonials" className="hover:text-white transition">Careers</a></li>
+                  <li><a href="mailto:kumardalaichandan803@gmail.com" className="hover:text-white transition">Contact</a></li>
+                  <li><a href="#showcase" className="hover:text-white transition">Brand</a></li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-6">
-            <a href="#showcase" className="hover:text-white transition">
-              Showcase
-            </a>
-            <a href="#compute" className="hover:text-white transition">
-              Compute
-            </a>
-            <a href="#orbital" className="hover:text-white transition">
-              Orbital
-            </a>
-            <a href="#bento" className="hover:text-white transition">
-              Architecture
-            </a>
-            <a href="#models" className="hover:text-white transition">
-              Models
-            </a>
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="hover:text-white underline underline-offset-4 cursor-pointer"
-            >
-              Back to top ↑
-            </button>
+
+          {/* MASSIVE STATEMENT LOGO: "Thunder AI" */}
+          <div className="pt-10 sm:pt-16 pb-4 select-none overflow-hidden text-left">
+            <h1 className="text-[14.5vw] font-bold tracking-tight text-white leading-[0.85] font-inter hover:opacity-95 transition-opacity">
+              Thunder AI
+            </h1>
+          </div>
+
+          {/* Bottom Bar: Copyright on Left, Badges & Legal on Right */}
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-zinc-500">
+            <div>
+              <span>© 2026 Thunder AI</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6">
+              {/* Compliance Badges (SOC 2 & CASA) */}
+              <div className="flex items-center space-x-3">
+                <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded border border-white/10 bg-white/[0.02] text-[10px] text-zinc-400">
+                  <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                  <span>SOC 2</span>
+                </div>
+
+                <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded border border-white/10 bg-white/[0.02] text-[10px] text-zinc-400">
+                  <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <span>CASA</span>
+                </div>
+              </div>
+
+              {/* Legal Links */}
+              <div className="flex items-center space-x-4">
+                <a href="#bento" className="hover:text-zinc-300 transition">Privacy Policy</a>
+                <a href="#bento" className="hover:text-zinc-300 transition">Terms of Service</a>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
