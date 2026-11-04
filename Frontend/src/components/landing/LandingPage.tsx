@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   Zap,
@@ -38,8 +38,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [activeTab, setActiveTab] = useState<'user' | 'org' | 'sso' | 'agent'>('user');
 
   // Modal Matrix interactive mouse proximity
-  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: -1000, y: -1000 });
-  const matrixContainerRef = useRef<HTMLDivElement>(null);
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
 
   // Live Security Stream Telemetry (Clerk style)
@@ -112,15 +110,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
-  // Modal Matrix proximity calculation
-  const handleMatrixMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!matrixContainerRef.current) return;
-    const rect = matrixContainerRef.current.getBoundingClientRect();
-    setMousePos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
+
 
 
 
@@ -492,8 +482,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Right: Interactive Matrix Grid (Modal Frame 023 style) */}
             <div className="lg:col-span-7">
               <div
-                ref={matrixContainerRef}
-                onMouseMove={handleMatrixMouseMove}
                 className="relative p-6 sm:p-8 rounded-3xl border border-white/10 bg-[#0d0e14] shadow-2xl overflow-hidden select-none"
               >
                 {/* Header status */}
@@ -505,16 +493,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[10px] text-zinc-400">MOVE MOUSE OVER CELLS</span>
                 </div>
 
-                {/* 128 Matrix Cells with Proximity Glow */}
-                <div className="py-6 grid grid-cols-16 gap-1.5 sm:gap-2">
+                {/* 128 Matrix Cells with Real-Time Direct Cursor Tracking */}
+                <div
+                  onMouseLeave={() => setHoveredCell(null)}
+                  className="py-6 grid grid-cols-16 gap-1.5 sm:gap-2"
+                >
                   {Array.from({ length: 128 }).map((_, idx) => {
                     const col = idx % 16;
                     const row = Math.floor(idx / 16);
-                    const cellX = col * 26 + 13;
-                    const cellY = row * 26 + 13;
-                    const dist = Math.hypot(cellX - mousePos.x, cellY - mousePos.y);
-                    const isNear = dist < 75;
-                    const isVeryNear = dist < 38;
+                    const hoveredCol = hoveredCell !== null ? hoveredCell % 16 : -999;
+                    const hoveredRow = hoveredCell !== null ? Math.floor(hoveredCell / 16) : -999;
+                    const gridDist = Math.hypot(col - hoveredCol, row - hoveredRow);
+                    const isDirect = gridDist === 0;
+                    const isNear = gridDist <= 1.5;
+                    const isMid = gridDist <= 2.6;
 
                     return (
                       <div
@@ -523,11 +515,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           setHoveredCell(idx);
                           if (idx % 12 === 0) playChime();
                         }}
-                        className={`aspect-square rounded-sm transition-all duration-150 cursor-pointer ${
-                          isVeryNear
-                            ? 'bg-white scale-125 z-10 shadow-[0_0_12px_#ffffff]'
+                        className={`aspect-square rounded-sm transition-all duration-75 cursor-pointer ${
+                          isDirect
+                            ? 'bg-white scale-125 z-20 shadow-[0_0_18px_#ffffff]'
                             : isNear
-                            ? 'bg-purple-400/80 scale-110'
+                            ? 'bg-purple-400/90 scale-110 shadow-[0_0_10px_rgba(192,132,252,0.6)]'
+                            : isMid
+                            ? 'bg-purple-600/40 scale-105'
                             : idx % 11 === 0
                             ? 'bg-emerald-500/35'
                             : 'bg-white/[0.06] hover:bg-white/40'
@@ -583,10 +577,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              {/* Animated Connected Nodes with SVG laser lines */}
-              <div className="my-8 py-6 px-4 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-around relative">
-                {/* Google Node */}
-                <div className="flex flex-col items-center space-y-1.5 z-10">
+              {/* Animated Connected Nodes */}
+              <div className="my-8 py-6 px-4 sm:px-6 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between relative overflow-hidden">
+                {/* Node 1: Google OAuth */}
+                <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-20">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -598,44 +592,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[10px] font-mono text-zinc-400">Google OAuth</span>
                 </div>
 
-                {/* Connecting Animated SVG Line */}
-                <svg className="flex-1 h-6 mx-2 overflow-visible">
-                  <line x1="0" y1="12" x2="100%" y2="12" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                  <line
-                    x1="0"
-                    y1="12"
-                    x2="100%"
-                    y2="12"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    className="animate-beam-flow"
-                  />
-                </svg>
+                {/* Connecting Line 1 */}
+                <div className="flex-1 h-0.5 mx-2 sm:mx-4 relative min-w-[20px] max-w-[90px] overflow-hidden bg-white/10 rounded-full">
+                  <div className="w-full h-full border-t border-dashed border-white/30" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-beam-slide" />
+                </div>
 
-                {/* Central Thunder Node */}
-                <div className="flex flex-col items-center space-y-1.5 z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-white text-black flex items-center justify-center font-bold shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-                    <Zap className="w-7 h-7 fill-black text-black" />
+                {/* Node 2: Central Thunder Core */}
+                <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-24">
+                  <div className="w-13 h-13 rounded-2xl bg-white text-black flex items-center justify-center font-bold shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                    <Zap className="w-6 h-6 fill-black text-black" />
                   </div>
                   <span className="text-[10px] font-mono font-bold text-white">Thunder Core</span>
                 </div>
 
-                {/* Connecting Animated SVG Line */}
-                <svg className="flex-1 h-6 mx-2 overflow-visible">
-                  <line x1="0" y1="12" x2="100%" y2="12" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                  <line
-                    x1="0"
-                    y1="12"
-                    x2="100%"
-                    y2="12"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    className="animate-beam-flow"
-                  />
-                </svg>
+                {/* Connecting Line 2 */}
+                <div className="flex-1 h-0.5 mx-2 sm:mx-4 relative min-w-[20px] max-w-[90px] overflow-hidden bg-white/10 rounded-full">
+                  <div className="w-full h-full border-t border-dashed border-white/30" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-beam-slide" />
+                </div>
 
-                {/* Redis / Database Node */}
-                <div className="flex flex-col items-center space-y-1.5 z-10">
+                {/* Node 3: Redis Cache (Always visible & properly aligned!) */}
+                <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-20">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center text-white">
                     <Server className="w-5 h-5 text-zinc-300" />
                   </div>
@@ -1029,11 +1007,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* -------------------- MINIMAL STATEMENT FOOTER ("THUNDER") -------------------- */}
       <footer className="bg-[#050608] text-zinc-500 pt-16 sm:pt-24 pb-12 px-6 sm:px-12 border-t border-white/10 relative overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-12">
-          {/* MASSIVE STATEMENT LOGO: ONLY "THUNDER" */}
-          <div className="text-center select-none overflow-hidden py-4 sm:py-8">
-            <h1 className="text-[17vw] sm:text-[18.5vw] font-black tracking-tighter text-white leading-none font-inter uppercase hover:text-zinc-200 transition-colors duration-300">
-              THUNDER
-            </h1>
+          {/* MASSIVE STATEMENT LOGO: ONLY "THUNDER" (Zero Clipping, 100% Edge-to-Edge Responsive) */}
+          <div className="w-full select-none overflow-hidden py-6 sm:py-10 flex items-center justify-center">
+            <svg
+              viewBox="0 0 1000 160"
+              className="w-full h-auto max-h-[220px]"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <text
+                x="50%"
+                y="50%"
+                dominantBaseline="central"
+                textAnchor="middle"
+                fontSize="165"
+                fontWeight="900"
+                letterSpacing="-0.04em"
+                fill="#ffffff"
+                className="font-inter uppercase select-none"
+              >
+                THUNDER
+              </text>
+            </svg>
+            <h1 className="sr-only">THUNDER</h1>
           </div>
 
           {/* Minimal Bottom Bar */}
