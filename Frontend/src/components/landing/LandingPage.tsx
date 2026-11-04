@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowRight,
   Zap,
   Shield,
   Cpu,
@@ -10,8 +9,10 @@ import {
   Terminal,
   Copy,
   ChevronRight,
-  Volume2,
-  VolumeX,
+  ChevronDown,
+  Play,
+  Folder,
+  Sparkles,
   Users,
   Building2,
   Bot,
@@ -31,7 +32,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   isLoggedIn,
   userName,
 }) => {
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   // Clerk Hero Tab Switcher: 'user' | 'org' | 'sso' | 'agent'
@@ -74,30 +74,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const playChime = () => {
-    if (!soundEnabled) return;
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(580, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1160, audioCtx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.18);
-    } catch {
-      // Audio policy
-    }
-  };
-
   const handleCopyPrompt = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedPrompt(true);
-    playChime();
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
@@ -110,98 +89,190 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
-
-
-
-
   return (
     <div className="min-h-screen bg-[#07080c] text-white font-inter relative overflow-x-hidden selection:bg-white selection:text-black">
+      {/* =========================================================================
+          HERO SECTION: MAJESTIC SCENIC MOUNTAIN BACKDROP & FLOATING CAPSULE NAVBAR
+          (Inspired by Reference Image / macOS Sonoma Shotbase Aesthetic)
+      ========================================================================= */}
+      <section className="relative w-full overflow-hidden">
+        {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend */}
+        <div
+          className="absolute inset-0 bg-cover bg-center sm:bg-[center_28%] pointer-events-none"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2560&auto=format&fit=crop&q=90')`,
+          }}
+        >
+          {/* Subtle Contrast Grade & Seamless Bottom Dark Fade */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-[#07080c]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_30%,rgba(0,0,0,0.5)_100%)]" />
+        </div>
+
+        {/* -------------------- FLOATING CAPSULE NAVBAR -------------------- */}
+        <div className="sticky top-4 sm:top-6 z-50 px-4 max-w-xl mx-auto pt-2">
+          <header className="w-full px-4 sm:px-5 py-2.5 rounded-full backdrop-blur-2xl bg-black/75 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex items-center justify-between transition-all">
+            {/* Logo */}
+            <div
+              className="flex items-center space-x-2.5 cursor-pointer group"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <div className="w-6 h-6 rounded-md bg-white text-black flex items-center justify-center transition group-hover:scale-105 shadow-[0_0_12px_rgba(255,255,255,0.4)]">
+                <Zap className="w-3.5 h-3.5 fill-black text-black" />
+              </div>
+              <span className="text-xs font-bold tracking-tight uppercase font-mono text-white">
+                Thunder
+              </span>
+            </div>
+
+            {/* Navigation Dropdowns & Links */}
+            <nav className="flex items-center space-x-4 sm:space-x-6 text-xs font-medium text-zinc-300">
+              <a
+                href="#features"
+                className="hover:text-white transition flex items-center space-x-1 cursor-pointer"
+              >
+                <span>Features</span>
+                <ChevronDown className="w-3 h-3 text-zinc-400" />
+              </a>
+              <a href="#models" className="hover:text-white transition">
+                Pricing
+              </a>
+              <a href="#compute" className="hover:text-white transition">
+                FAQ
+              </a>
+            </nav>
+
+            {/* Right Actions: Log In + Vibrant Sky Blue Pill Button */}
+            <div className="flex items-center space-x-3">
+              {isLoggedIn ? (
+                <button
+                  onClick={onLaunchApp}
+                  className="text-xs font-mono px-3 py-1 rounded-full border border-white/15 bg-white/10 text-zinc-200 font-medium hover:bg-white/20 transition cursor-pointer"
+                >
+                  {userName || 'User'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onOpenAuth('login')}
+                  className="text-xs font-medium text-zinc-300 hover:text-white transition cursor-pointer"
+                >
+                  Log in
+                </button>
+              )}
+
+              <button
+                onClick={onLaunchApp}
+                className="px-3.5 py-1.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-[0_0_20px_rgba(0,145,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <Zap className="w-3 h-3 fill-white text-white" />
+                <span>Launch</span>
+              </button>
+            </div>
+          </header>
+        </div>
+
+        {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION -------------------- */}
+        <div className="relative z-10 pt-16 sm:pt-24 pb-12 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-6">
+          {/* Main 2-Line Headline Matching Reference Layout */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] drop-shadow-[0_4px_25px_rgba(0,0,0,0.65)]">
+            Conversational AI, auth, <br />
+            and compute in one place
+          </h1>
+
+          {/* Clean Subtitle */}
+          <p className="text-sm sm:text-lg font-normal text-white/90 max-w-xl mx-auto leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
+            Stateless JWT sessions, Redis sliding-window quotas, and multi-model AI routing designed for modern web apps.
+          </p>
+
+          {/* Primary CTA Button & Micro-Guarantee Chip */}
+          <div className="pt-2 flex flex-col items-center space-y-3">
+            <button
+              onClick={onLaunchApp}
+              className="px-7 py-3 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-sm font-semibold flex items-center space-x-2.5 shadow-[0_10px_35px_rgba(0,145,255,0.45)] hover:shadow-[0_14px_45px_rgba(0,145,255,0.65)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              <Zap className="w-4 h-4 fill-white text-white" />
+              <span>Try free with Thunder</span>
+            </button>
+            <div className="flex items-center space-x-2.5 text-xs text-white/80 font-medium drop-shadow-md">
+              <span>🎁 Includes 10,000 free tokens</span>
+              <span className="text-white/40">·</span>
+              <span>💳 No card required</span>
+            </div>
+          </div>
+        </div>
+
+        {/* -------------------- FLOATING SHOWCASE MOCKUP WITH PLAY BUTTON -------------------- */}
+        {/* Exactly matches the reference image: window with desktop wallpaper, folders on right, and center Play button */}
+        <div className="relative z-20 max-w-4xl mx-auto px-4 -mb-16 sm:-mb-24">
+          <div
+            onClick={onLaunchApp}
+            className="relative rounded-3xl border border-white/25 bg-black/60 backdrop-blur-md shadow-[0_30px_90px_rgba(0,0,0,0.85)] overflow-hidden group cursor-pointer aspect-[16/10] max-h-[520px] transition-transform duration-300 hover:border-white/40"
+          >
+            {/* Desktop Redwood / Sequoia Forest Background */}
+            <img
+              src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=1600&auto=format&fit=crop&q=80"
+              alt="Thunder AI Workspace Showcase"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90"
+            />
+
+            {/* macOS Window Title Bar */}
+            <div className="absolute top-0 inset-x-0 h-10 bg-black/40 backdrop-blur-md border-b border-white/10 px-4 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+              </div>
+              <div className="text-[11px] font-mono text-white/70 flex items-center space-x-1.5">
+                <Zap className="w-3 h-3 text-[#0091ff]" />
+                <span>Thunder AI Operator Workspace</span>
+              </div>
+              <div className="w-12" />
+            </div>
+
+            {/* Desktop Folder Icons (Matches Reference Image Layout) */}
+            <div className="absolute top-14 right-6 flex flex-col items-center space-y-4 pointer-events-none select-none">
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-11 h-10 rounded-lg bg-sky-500/80 backdrop-blur-md border border-white/25 shadow-lg flex items-center justify-center">
+                  <Folder className="w-5 h-5 text-white fill-white/40" />
+                </div>
+                <span className="text-[10px] font-medium text-white drop-shadow-md">folders</span>
+              </div>
+
+              <div className="flex flex-col items-center space-y-1">
+                <div className="w-11 h-10 rounded-lg bg-gradient-to-br from-indigo-500/90 to-blue-600/90 backdrop-blur-md border border-white/25 shadow-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-[10px] font-medium text-white drop-shadow-md text-center leading-tight">
+                  Thunder<br />Projectfiles
+                </span>
+              </div>
+            </div>
+
+            {/* Center Frosted Glass Circular Play Button */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-full bg-black/40 backdrop-blur-2xl border border-white/40 flex items-center justify-center text-white shadow-[0_15px_45px_rgba(0,0,0,0.7)] group-hover:scale-110 group-hover:bg-black/60 group-hover:border-white/70 transition-all duration-300">
+                <Play className="w-8 h-8 sm:w-9 sm:h-9 fill-white text-white translate-x-0.5 drop-shadow-lg" />
+              </div>
+            </div>
+
+            {/* Bottom Status Overlay */}
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between px-6 pb-4">
+              <div className="flex items-center space-x-2 text-xs font-mono text-white/90">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Active Routing: DeepSeek R1 · Gemini 2.0 · OpenRouter</span>
+              </div>
+              <span className="text-[11px] font-mono text-white/70">Click to launch workspace →</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Background Architectural Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
-      {/* Atmospheric Overhead Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-b from-white/[0.08] via-purple-500/[0.02] to-transparent blur-3xl pointer-events-none" />
-
-      {/* -------------------- FLOATING NAVIGATION (Frosted Dark Obsidian Glass) -------------------- */}
-      <header className="sticky top-4 z-40 px-4 sm:px-8 max-w-7xl mx-auto pt-2">
-        <div className="w-full px-5 py-3 rounded-full backdrop-blur-xl bg-black/60 border border-white/10 shadow-2xl flex items-center justify-between transition-all">
-          {/* Logo */}
-          <div
-            className="flex items-center space-x-2.5 cursor-pointer group"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <div className="w-7 h-7 rounded-lg bg-white text-black flex items-center justify-center transition group-hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-              <Zap className="w-4 h-4 fill-black text-black" />
-            </div>
-            <span className="text-sm font-bold tracking-tight uppercase font-mono text-white">
-              Thunder AI
-            </span>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-8 text-xs font-medium text-zinc-400">
-            <a href="#showcase" className="hover:text-white transition">
-              Authentication
-            </a>
-            <a href="#compute" className="hover:text-white transition">
-              Compute Grid
-            </a>
-            <a href="#bento" className="hover:text-white transition">
-              Architecture
-            </a>
-            <a href="#testimonials" className="hover:text-white transition">
-              Feedback
-            </a>
-            <a href="#models" className="hover:text-white transition">
-              Models
-            </a>
-          </nav>
-
-          {/* Actions */}
-          <div className="flex items-center space-x-2.5">
-            {/* Sound toggle */}
-            <button
-              onClick={() => {
-                setSoundEnabled(!soundEnabled);
-                playChime();
-              }}
-              className="p-2 rounded-full border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition"
-              title="Toggle audio feedback"
-            >
-              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            </button>
-
-            {isLoggedIn ? (
-              <button
-                onClick={onLaunchApp}
-                className="text-xs font-mono px-3.5 py-1.5 rounded-full border border-white/15 bg-white/5 text-zinc-200 font-medium hover:bg-white/10 transition"
-              >
-                Hi, {userName || 'User'}
-              </button>
-            ) : (
-              <button
-                onClick={() => onOpenAuth('login')}
-                className="text-xs font-medium px-4 py-2 rounded-full text-zinc-300 hover:text-white transition"
-              >
-                Sign In
-              </button>
-            )}
-
-            <button
-              onClick={onLaunchApp}
-              className="px-4 py-2 rounded-full bg-white hover:bg-zinc-200 text-black text-xs font-semibold transition flex items-center space-x-1.5 shadow-[0_0_20px_rgba(255,255,255,0.25)] cursor-pointer"
-            >
-              <span>Launch App</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* -------------------- SECTION 1: CLERK-INSPIRED OBSIDIAN HERO -------------------- */}
-      <section className="relative pt-20 sm:pt-28 pb-24 px-4 sm:px-8 border-b border-white/10">
+      {/* -------------------- SECTION 1: AUTHENTICATION & IDENTITY MESH (CLERK STYLE) -------------------- */}
+      <section id="features" className="relative pt-32 sm:pt-40 pb-24 px-4 sm:px-8 border-b border-white/10">
         <div className="max-w-5xl mx-auto text-center space-y-6">
-          {/* Copy Prompt Pill (Directly from Clerk's UI) */}
+          {/* Copy Prompt Pill */}
           <div className="flex items-center justify-center">
             <div className="inline-flex items-center space-x-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-inner text-xs font-mono text-zinc-300">
               <span className="flex items-center space-x-1.5">
@@ -218,21 +289,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Stark Crisp White Title */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
-            Everything you need for <br />
+          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-tight">
+            Authentication, roles, <br />
             <span className="bg-gradient-to-b from-white via-white to-zinc-400 bg-clip-text text-transparent">
-              AI intelligence & auth.
+              and identity mesh built for AI.
             </span>
-          </h1>
+          </h2>
 
-          {/* Clean Subtitle */}
-          <p className="text-base sm:text-xl font-normal text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            More than APIs. The complete conversational AI and user layer for modern web apps. Multi-model routing,
-            Redis sliding-window rate limits, and one-tap Google authentication.
+          <p className="text-sm sm:text-base font-normal text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+            More than basic login. The complete conversational AI and identity layer for modern engineering teams.
+            Google One-Tap OAuth, Redis sliding-window rate limits, and stateless 7-day JWT sessions.
           </p>
 
-          {/* Segmented Navigation Tabs (Clerk Style) */}
+          {/* Segmented Navigation Tabs */}
           <div id="showcase" className="pt-8 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
             {[
               { id: 'user', label: 'User Authentication', icon: Lock },
@@ -245,10 +314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as any);
-                    playChime();
-                  }}
+                  onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center space-x-2 cursor-pointer ${
                     active
                       ? 'bg-white text-black font-semibold shadow-[0_0_20px_rgba(255,255,255,0.3)]'
@@ -262,14 +328,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             })}
           </div>
 
-          {/* Interactive Live Component Showcase Card (Obsidian Dark Glass) */}
+          {/* Interactive Live Component Showcase Card */}
           <div className="pt-6 max-w-xl mx-auto">
             <div className="p-7 sm:p-8 rounded-3xl border border-white/10 bg-[#0c0d14] shadow-[0_20px_60px_rgba(0,0,0,0.8)] text-left space-y-6 relative overflow-hidden backdrop-blur-xl">
               {/* TAB 1: User Authentication Card */}
               {activeTab === 'user' && (
                 <div className="space-y-5 animate-fadeIn">
                   <div className="text-center space-y-1">
-                    <h3 className="text-xl font-bold text-white font-syne">Create your account</h3>
+                    <h3 className="text-xl font-bold text-white">Create your account</h3>
                     <p className="text-xs text-zinc-400 font-normal">Welcome! Please fill in the details to get started.</p>
                   </div>
 
@@ -297,7 +363,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <div>
                       <div className="flex justify-between text-xs text-zinc-300 mb-1 font-medium">
                         <span>Email address</span>
-                        <span className="text-zinc-500 text-[10px]">Last used</span>
+                        <span className="text-zinc-500 text-[10px]">Verified domain</span>
                       </div>
                       <input
                         type="email"
@@ -415,13 +481,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* -------------------- SECTION 2: MODAL-INSPIRED COMPUTE CLUSTERS -------------------- */}
+      {/* -------------------- SECTION 2: COMPUTE CLUSTERS & MATRIX -------------------- */}
       <section
         id="compute"
         className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]"
       >
         <div className="max-w-7xl mx-auto space-y-24">
-          {/* Section Header: Clean high-contrast white & subtle gray */}
           <div className="max-w-3xl space-y-3">
             <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold">
               [ COMPUTE INFRASTRUCTURE // AGENT RUNTIME ]
@@ -436,7 +501,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
           </div>
 
-          {/* Modal-style Interactive Matrix Grid with Cursor Proximity Trail */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Left Specs List */}
             <div className="lg:col-span-5 space-y-6">
@@ -479,12 +543,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </button>
             </div>
 
-            {/* Right: Interactive Matrix Grid (Modal Frame 023 style) */}
+            {/* Right: Interactive Matrix Grid with Direct Cursor Tracking */}
             <div className="lg:col-span-7">
-              <div
-                className="relative p-6 sm:p-8 rounded-3xl border border-white/10 bg-[#0d0e14] shadow-2xl overflow-hidden select-none"
-              >
-                {/* Header status */}
+              <div className="relative p-6 sm:p-8 rounded-3xl border border-white/10 bg-[#0d0e14] shadow-2xl overflow-hidden select-none">
                 <div className="flex items-center justify-between text-xs font-mono pb-4 border-b border-white/10 text-zinc-400">
                   <div className="flex items-center space-x-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -493,7 +554,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[10px] text-zinc-400">MOVE MOUSE OVER CELLS</span>
                 </div>
 
-                {/* 128 Matrix Cells with Real-Time Direct Cursor Tracking */}
                 <div
                   onMouseLeave={() => setHoveredCell(null)}
                   className="py-6 grid grid-cols-16 gap-1.5 sm:gap-2"
@@ -511,10 +571,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     return (
                       <div
                         key={idx}
-                        onMouseEnter={() => {
-                          setHoveredCell(idx);
-                          if (idx % 12 === 0) playChime();
-                        }}
+                        onMouseEnter={() => setHoveredCell(idx)}
                         className={`aspect-square rounded-sm transition-all duration-75 cursor-pointer ${
                           isDirect
                             ? 'bg-white scale-125 z-20 shadow-[0_0_18px_#ffffff]'
@@ -531,7 +588,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   })}
                 </div>
 
-                {/* Center Floating Status Badge (Modal style) */}
                 <div className="p-3 rounded-xl border border-white/10 bg-black/80 flex items-center justify-between text-xs font-mono">
                   <div className="flex items-center space-x-2">
                     <Terminal className="w-3.5 h-3.5 text-emerald-400" />
@@ -548,10 +604,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-
-
-      {/* -------------------- SECTION 4: CLERK-STYLE DARK BENTO GRID -------------------- */}
-      <section id="bento" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]">
+      {/* -------------------- SECTION 3: ARCHITECTURE & SECURITY BENTO GRID -------------------- */}
+      <section id="architecture" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]">
         <div className="max-w-7xl mx-auto space-y-16">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold">
@@ -563,7 +617,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Card 1: Connected Provider Hub (Spans 7 cols) with animated beam particles */}
+            {/* Card 1: Connected Provider Hub */}
             <div
               onMouseMove={handleCardMouseMove}
               className="spotlight-card md:col-span-7 p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
@@ -592,7 +646,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[10px] font-mono text-zinc-400">Google OAuth</span>
                 </div>
 
-                {/* Connecting Line 1 */}
                 <div className="flex-1 h-0.5 mx-2 sm:mx-4 relative min-w-[20px] max-w-[90px] overflow-hidden bg-white/10 rounded-full">
                   <div className="w-full h-full border-t border-dashed border-white/30" />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-beam-slide" />
@@ -606,13 +659,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[10px] font-mono font-bold text-white">Thunder Core</span>
                 </div>
 
-                {/* Connecting Line 2 */}
                 <div className="flex-1 h-0.5 mx-2 sm:mx-4 relative min-w-[20px] max-w-[90px] overflow-hidden bg-white/10 rounded-full">
                   <div className="w-full h-full border-t border-dashed border-white/30" />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-beam-slide" />
                 </div>
 
-                {/* Node 3: Redis Cache (Always visible & properly aligned!) */}
+                {/* Node 3: Redis Cache */}
                 <div className="flex flex-col items-center space-y-1.5 z-10 shrink-0 w-20">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center text-white">
                     <Server className="w-5 h-5 text-zinc-300" />
@@ -627,7 +679,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Card 2: Live Security Feed (Spans 5 cols) */}
+            {/* Card 2: Live Security Feed */}
             <div
               onMouseMove={handleCardMouseMove}
               className="spotlight-card md:col-span-5 p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
@@ -640,7 +692,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              {/* Live Terminal Log */}
               <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono">
                 <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10">
                   <span>SECURITY TAPE</span>
@@ -659,7 +710,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Card 3: Session & Device Management (Spans 6 cols) */}
+            {/* Card 3: Session & Device Management */}
             <div
               onMouseMove={handleCardMouseMove}
               className="spotlight-card md:col-span-6 p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
@@ -695,7 +746,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Card 4: Modal Observability & Live GPU/Token Sparkline (Spans 6 cols) */}
+            {/* Card 4: Modal Observability & Live GPU/Token Sparkline */}
             <div
               onMouseMove={handleCardMouseMove}
               className="spotlight-card md:col-span-6 p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between"
@@ -708,7 +759,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              {/* Animated Waveform Chart */}
               <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-zinc-400">Throughput Waveform</span>
@@ -734,7 +784,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* -------------------- SECTION 4: CUSTOMER FEEDBACK & USE CASES (IMAGE 3 LAYOUT) -------------------- */}
+      {/* -------------------- SECTION 4: CUSTOMER FEEDBACK & USE CASES (IMAGE 3 STAGGERED LAYOUT) -------------------- */}
       <section id="testimonials" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#07080c]">
         <div className="max-w-7xl mx-auto space-y-16">
           <div className="max-w-3xl space-y-3">
@@ -749,7 +799,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
           </div>
 
-          {/* Staggered Offset Grid (Exact Image 3 Layout) */}
           <div className="space-y-8">
             {/* Row 1: 01 Left, 02 Right */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -897,7 +946,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* -------------------- SECTION 6: SUPPORTED AI CHECKPOINTS -------------------- */}
+      {/* -------------------- SECTION 5: SUPPORTED AI CHECKPOINTS -------------------- */}
       <section id="models" className="relative py-28 px-4 sm:px-8 border-b border-white/10 bg-[#090a10]">
         <div className="max-w-7xl mx-auto space-y-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10">
@@ -913,7 +962,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Model Cards in Stark Black and White */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
@@ -975,7 +1023,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             ))}
           </div>
 
-          {/* Final Workspace CTA */}
           <div className="p-10 sm:p-16 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent text-center space-y-6 max-w-3xl mx-auto shadow-2xl">
             <h3 className="text-3xl sm:text-5xl font-bold tracking-tight text-white">
               Step into the Thunder workspace.
@@ -1031,18 +1078,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <h1 className="sr-only">THUNDER</h1>
           </div>
 
-          {/* Minimal Bottom Bar */}
           <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-zinc-500">
             <div>
               <span>© 2026 Thunder AI. All rights reserved.</span>
             </div>
 
             <div className="flex items-center space-x-6">
-              <a href="#showcase" className="hover:text-white transition">Authentication</a>
+              <a href="#features" className="hover:text-white transition">Features</a>
               <a href="#compute" className="hover:text-white transition">Compute Grid</a>
-              <a href="#bento" className="hover:text-white transition">Architecture</a>
+              <a href="#architecture" className="hover:text-white transition">Architecture</a>
               <a href="#testimonials" className="hover:text-white transition">Feedback</a>
-              <a href="#models" className="hover:text-white transition">Models</a>
+              <a href="#models" className="hover:text-white transition">Pricing</a>
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="hover:text-white underline underline-offset-4 cursor-pointer"
