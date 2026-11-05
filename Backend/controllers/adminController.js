@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { redisClient } from "../config/redis.js";
 import { sendVerificationOTP } from "../services/emailService.js";
+import { isAdminEmail } from "../utils/adminUtils.js";
 
 // GET /admin/users - List all users with telemetry
 export const getAllUsers = async (req, res) => {
@@ -188,6 +189,10 @@ export const deleteUser = async (req, res) => {
         const userToDelete = await User.findById(userId);
         if (!userToDelete) {
             return res.status(404).json({ message: "Target user not found" });
+        }
+
+        if (userToDelete.role === "admin" || (userToDelete.email && isAdminEmail(userToDelete.email))) {
+            return res.status(403).json({ message: "Security error: Administrator accounts are protected and cannot be deleted." });
         }
 
         // Cascade delete user's chats and messages

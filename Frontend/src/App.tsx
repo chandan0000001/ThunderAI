@@ -116,15 +116,20 @@ export function App() {
   };
 
   const handleAuthSuccess = (userData: any) => {
+    const isAdmin = userData.role === 'admin' || userData.isUnlimited || userData.usage?.isUnlimited;
     const user: User = {
+      _id: userData._id,
       name: userData.name || 'User',
       email: userData.email,
       age: userData.age,
       avatar: userData.avatar,
+      role: userData.role || (isAdmin ? 'admin' : 'user'),
+      isUnlimited: isAdmin,
       usage: userData.usage || {
         tokenUsed: 0,
-        tokenLimit: 10000,
+        tokenLimit: isAdmin ? -1 : 10000,
         totalTokenUsed: 0,
+        isUnlimited: isAdmin,
       },
     };
     setCurrentUser(user);
@@ -145,6 +150,10 @@ export function App() {
   };
 
   const handleDeleteAccount = async () => {
+    if (currentUser?.role === 'admin' || currentUser?.isUnlimited) {
+      console.warn('Blocked: Administrator accounts are protected and cannot be deleted.');
+      return;
+    }
     try {
       await api.auth.deleteAccount();
       setCurrentUser(null);

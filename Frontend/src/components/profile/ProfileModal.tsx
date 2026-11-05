@@ -395,30 +395,39 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <span>SIGN OUT</span>
             </button>
 
-            <button
-              onClick={() => setDeleteModalOpen(true)}
-              className="px-3 sm:px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-mono text-xs flex items-center space-x-2 transition cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>DELETE ACCOUNT</span>
-            </button>
+            {!isAdmin ? (
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="px-3 sm:px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-mono text-xs flex items-center space-x-2 transition cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>DELETE ACCOUNT</span>
+              </button>
+            ) : (
+              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[10px] sm:text-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>PROTECTED ROOT ADMIN</span>
+              </div>
+            )}
           </div>
         </div>
         )}
       </div>
 
-      {/* Delete Account Modal Confirmation */}
-      <DeleteAccountModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirmDelete={async () => {
-          setDeleteModalOpen(false);
-          await onDeleteAccount();
-        }}
-        userEmail={currentUser?.email}
-        userName={currentUser?.name}
-        isDarkMode={true}
-      />
+      {/* Delete Account Modal Confirmation - Non-admin only */}
+      {!isAdmin && (
+        <DeleteAccountModal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirmDelete={async () => {
+            setDeleteModalOpen(false);
+            await onDeleteAccount();
+          }}
+          userEmail={currentUser?.email}
+          userName={currentUser?.name}
+          isDarkMode={true}
+        />
+      )}
     </div>
   );
 };

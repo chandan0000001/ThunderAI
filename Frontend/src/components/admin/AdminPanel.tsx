@@ -178,6 +178,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
   // Delete User
   const handleDeleteUser = async () => {
     if (!confirmDeleteUser) return;
+    if (confirmDeleteUser.role === 'admin') {
+      showNotice('error', 'Administrator accounts are protected and cannot be deleted.');
+      setConfirmDeleteUser(null);
+      return;
+    }
     try {
       setActionLoading(`del-${confirmDeleteUser._id}`);
       await api.admin.deleteUser(confirmDeleteUser._id);
@@ -476,17 +481,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
                             </button>
                           )}
 
-                          {/* Delete User */}
-                          <button
-                            onClick={() => setConfirmDeleteUser(user)}
-                            disabled={isCurrent}
-                            className={`p-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 transition cursor-pointer ${
-                              isCurrent ? 'opacity-30 cursor-not-allowed' : ''
-                            }`}
-                            title={isCurrent ? 'Cannot delete own account' : 'Delete user account'}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {/* Delete User (Blocked for Admins) */}
+                          {!isAdmin ? (
+                            <button
+                              onClick={() => setConfirmDeleteUser(user)}
+                              disabled={isCurrent}
+                              className={`p-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 transition cursor-pointer ${
+                                isCurrent ? 'opacity-30 cursor-not-allowed' : ''
+                              }`}
+                              title={isCurrent ? 'Cannot delete own account' : 'Delete user account'}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          ) : (
+                            <span
+                              className="p-1.5 text-zinc-500 cursor-not-allowed inline-flex items-center"
+                              title="Administrator accounts are protected from deletion"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-amber-500/60" />
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>

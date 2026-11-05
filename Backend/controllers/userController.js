@@ -319,17 +319,30 @@ export const login = async (req, res) => {
             });
         }
 
+        if (isAdminEmail(existingUser.email) && existingUser.role !== "admin") {
+            existingUser.role = "admin";
+            await existingUser.save();
+        }
+        const isAdmin = existingUser.role === "admin";
+
         const token = createToken(existingUser._id, existingUser.email);
         res.cookie("token", token, cookiesOption);
 
         res.status(200).json({
             message: "User Logged in Successfully",
+            _id: existingUser._id,
             name: existingUser.name,
             age: existingUser.age,
             email: existingUser.email,
             avatar: existingUser.avatar || "",
             role: existingUser.role || "user",
-            usage: existingUser.usage,
+            isUnlimited: isAdmin,
+            usage: {
+                totalTokenUsed: existingUser.usage?.totalTokenUsed || 0,
+                tokenUsed: 0,
+                tokenLimit: isAdmin ? -1 : Number(process.env.TOKEN_LIMIT || 10000),
+                isUnlimited: isAdmin
+            },
             isVerified: true
         });
     } catch (err) {
@@ -434,6 +447,12 @@ export const profile = async(req,res)=>{
 
 export const deleteAccount = async(req,res)=>{
     try{
+        if (req.user?.role === "admin" || (req.user?.email && isAdminEmail(req.user.email))) {
+            return res.status(403).json({
+                message: "Administrator accounts are protected and cannot be deleted."
+            });
+        }
+
         //find all the chat ID which belongs to the user 
 
         //delete all the message whic belongs to chat ID 
@@ -560,17 +579,30 @@ export const googleAuth = async (req, res) => {
             });
         }
 
+        if (isAdminEmail(user.email) && user.role !== "admin") {
+            user.role = "admin";
+            await user.save();
+        }
+        const isAdmin = user.role === "admin";
+
         const token = createToken(user._id, user.email);
         res.cookie("token", token, cookiesOption);
 
         return res.status(200).json({
             message: "Google login successful",
+            _id: user._id,
             name: user.name,
             age: user.age,
             email: user.email,
             avatar: user.avatar,
             role: user.role || "user",
-            usage: user.usage,
+            isUnlimited: isAdmin,
+            usage: {
+                totalTokenUsed: user.usage?.totalTokenUsed || 0,
+                tokenUsed: 0,
+                tokenLimit: isAdmin ? -1 : Number(process.env.TOKEN_LIMIT || 10000),
+                isUnlimited: isAdmin
+            },
             isVerified: true
         });
     } catch (err) {
