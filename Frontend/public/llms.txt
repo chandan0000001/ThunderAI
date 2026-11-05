@@ -1,0 +1,18 @@
+# Thunder AI
+
+> Next-generation conversational intelligence platform with Google Gemini, OpenRouter multi-model synthesis, Redis rate governance, and developer BYOK round-robin routing.
+
+## Overview
+Thunder AI provides autonomous reasoning, high-throughput model synthesis, and enterprise-grade identity controls.
+
+## Capabilities
+- Multi-Model Neural Router: Google Gemini 2.5 Flash, Claude 3.5 Sonnet, DeepSeek V3, and OpenRouter Free Tier.
+- BYOK (Bring Your Own API Key): Multi-key support with comma separation, automatic round-robin rotation, and automated 3-hour cleanup leases for security.
+- Sliding Window Quotas: High-speed sliding token rate limiter governed by Upstash/Redis (10,000 tokens / 5 hours for community users; bypass for system administrators).
+- Memory Condensation: Adaptive semantic context summarization preserving conversation continuity across long sessions.
+
+## Endpoints & Routes
+- `/`: Interactive landing page and public architecture telemetry.
+- `/chat`: Main conversation and agent workspace.
+- `/profile`: Live telemetry console and sliding window token tracker.
+- `/reset-password`: Stateless secure token credential update interface.

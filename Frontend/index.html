@@ -2,8 +2,14 @@
 <html lang="en" class="dark" style="background-color: #07080c; color-scheme: dark;">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#07080c" />
+    <meta name="application-name" content="Thunder AI" />
+    <meta name="apple-mobile-web-app-title" content="Thunder AI" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
     <style>
       :root, html, body {
         background-color: #07080c !important;
@@ -18,14 +24,59 @@
         min-height: 100vh;
       }
     </style>
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Thunder AI // Conversational Intelligence Platform</title>
-    <meta name="description" content="Next-gen AI platform powered by OpenRouter multi-model synthesis, Redis token governance, and Google Gemini chat architecture.">
+    <title>Thunder AI // Conversational Intelligence & Compute Platform</title>
+    <meta name="description" content="Next-generation conversational AI platform powered by OpenRouter multi-model synthesis, Redis sliding-window token governance, and Google Gemini chat architecture." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://thunder-ai-mu.vercel.app/" />
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Thunder AI" />
+    <meta property="og:url" content="https://thunder-ai-mu.vercel.app/" />
+    <meta property="og:title" content="Thunder AI // Conversational Intelligence & Compute Platform" />
+    <meta property="og:description" content="Next-generation conversational AI platform powered by multi-model synthesis, stateless JWT, and Redis rate-limiting governance." />
+    <meta property="og:image" content="https://thunder-ai-mu.vercel.app/hero-mountain.webp" />
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://thunder-ai-mu.vercel.app/" />
+    <meta name="twitter:title" content="Thunder AI // Conversational Intelligence Platform" />
+    <meta name="twitter:description" content="Next-generation conversational AI platform powered by multi-model synthesis and Redis rate-limiting governance." />
+    <meta name="twitter:image" content="https://thunder-ai-mu.vercel.app/hero-mountain.webp" />
+
+    <!-- Agentic Browsing & Schema.org Structured Data -->
+    <meta name="ai-agent" content="enabled" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Thunder AI",
+      "operatingSystem": "Web, iOS, Android, Cloud",
+      "applicationCategory": "DeveloperApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Next-generation conversational AI platform with multi-model synthesis, Redis token governance, and BYOK round-robin routing.",
+      "url": "https://thunder-ai-mu.vercel.app/"
+    }
+    </script>
+
+    <!-- Preconnect & Responsive Hero Image Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="image" href="/hero-mountain.webp" type="image/webp" fetchpriority="high">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800;900&display=swap">
+    <link rel="preload" as="image" href="/hero-mountain-mobile.webp" media="(max-width: 640px)" type="image/webp" fetchpriority="high">
+    <link rel="preload" as="image" href="/hero-mountain.webp" media="(min-width: 641px)" type="image/webp" fetchpriority="high">
+
+    <!-- High Performance Asynchronous Font Loading (Zero Render Blocking) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+    </noscript>
   </head>
   <body style="background-color: #07080c; color-scheme: dark;" class="bg-[#07080c] text-[#eaeaea] antialiased selection:bg-white/20 selection:text-white overflow-x-hidden">
     <div id="root"></div>

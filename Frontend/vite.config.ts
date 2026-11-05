@@ -11,6 +11,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['three'],
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+  },
   server: {
     port: 5173,
     proxy: {

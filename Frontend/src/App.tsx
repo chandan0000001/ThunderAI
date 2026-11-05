@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { LandingPage } from './components/landing/LandingPage';
-import { ThunderApp } from './components/thunder/ThunderApp';
-import { AuthModal } from './components/auth/AuthModal';
-import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { api } from './services/api';
 import type { User } from './types';
+
+const ThunderApp = lazy(() =>
+  import('./components/thunder/ThunderApp').then((m) => ({ default: m.ThunderApp }))
+);
+const AuthModal = lazy(() =>
+  import('./components/auth/AuthModal').then((m) => ({ default: m.AuthModal }))
+);
+const ResetPasswordPage = lazy(() =>
+  import('./components/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
+);
 
 interface ProtectedChatViewProps {
   currentUser: User | null;
@@ -39,14 +46,22 @@ const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
   }
 
   return (
-    <ThunderApp
-      currentUser={currentUser}
-      onLogout={onLogout}
-      onBackToLanding={onBackToLanding}
-      onDeleteAccount={onDeleteAccount}
-      onUpdateUser={onUpdateUser}
-      initialProfileOpen={initialProfileOpen}
-    />
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
+          INITIALIZING WORKSPACE...
+        </div>
+      }
+    >
+      <ThunderApp
+        currentUser={currentUser}
+        onLogout={onLogout}
+        onBackToLanding={onBackToLanding}
+        onDeleteAccount={onDeleteAccount}
+        onUpdateUser={onUpdateUser}
+        initialProfileOpen={initialProfileOpen}
+      />
+    </Suspense>
   );
 };
 
@@ -221,13 +236,21 @@ export function App() {
         <Route
           path="/reset-password"
           element={
-            <ResetPasswordPage
-              onPasswordResetSuccess={() => {
-                setAuthInitialMode('login');
-                setAuthModalOpen(true);
-                navigate('/');
-              }}
-            />
+            <Suspense
+              fallback={
+                <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
+                  LOADING SECURITY CONSOLE...
+                </div>
+              }
+            >
+              <ResetPasswordPage
+                onPasswordResetSuccess={() => {
+                  setAuthInitialMode('login');
+                  setAuthModalOpen(true);
+                  navigate('/');
+                }}
+              />
+            </Suspense>
           }
         />
 
@@ -235,13 +258,17 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Auth Modal for Sign in / Sign up */}
-      <AuthModal
-        isOpen={authModalOpen}
-        initialMode={authInitialMode}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={handleAuthSuccess}
-      />
+      {/* Auth Modal for Sign in / Sign up - lazy loaded on demand */}
+      {authModalOpen && (
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={authModalOpen}
+            initialMode={authInitialMode}
+            onClose={() => setAuthModalOpen(false)}
+            onSuccess={handleAuthSuccess}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

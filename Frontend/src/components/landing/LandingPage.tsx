@@ -150,19 +150,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen bg-[#07080c] text-white font-inter relative overflow-x-hidden selection:bg-white selection:text-black">
+      <main id="main-content" className="relative">
       {/* =========================================================================
           HERO SECTION: MAJESTIC SCENIC MOUNTAIN BACKDROP & FLOATING CAPSULE NAVBAR
           (Full Screen 100vh / min-h-screen Panoramic Alpine Aesthetic)
       ========================================================================= */}
       <section className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden bg-[#121824]">
-        {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend (Local WebP for Instant Zero-Delay Load) */}
-        <div
-          className="absolute inset-0 bg-cover bg-center sm:bg-[center_32%] pointer-events-none transition-opacity duration-700 bg-[#141e2e]"
-          style={{
-            backgroundImage: `url('/hero-mountain.webp')`,
-            backgroundColor: '#141e2e',
-          }}
-        >
+        {/* Background Alpine Twilight Image with Soft Bottom Gradient Blend (Responsive Picture) */}
+        <div className="absolute inset-0 pointer-events-none bg-[#141e2e] overflow-hidden -z-0">
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/hero-mountain-mobile.webp" type="image/webp" />
+            <img
+              src="/hero-mountain.webp"
+              alt="Thunder AI Alpine Panoramic Mountain Landscape"
+              fetchPriority="high"
+              decoding="async"
+              width={1920}
+              height={1280}
+              className="absolute inset-0 w-full h-full object-cover object-center sm:object-[center_32%] select-none"
+            />
+          </picture>
           {/* Ambient Contrast Grade & Seamless Bottom Dark Fade */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#07080c] via-70%" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_30%,rgba(0,0,0,0.5)_100%)]" />
@@ -175,6 +182,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div
               className="flex items-center space-x-2 cursor-pointer group shrink-0"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              aria-label="Thunder AI home"
             >
               <div className="w-6 h-6 rounded-md bg-white text-black flex items-center justify-center transition group-hover:scale-105 shadow-[0_0_12px_rgba(255,255,255,0.4)]">
                 <Zap className="w-3.5 h-3.5 fill-black text-black" />
@@ -185,7 +193,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Desktop Navigation Dropdowns & Links */}
-            <nav className="hidden md:flex items-center space-x-5 lg:space-x-6 text-xs font-medium text-zinc-300 shrink-0">
+            <nav aria-label="Main Navigation" className="hidden md:flex items-center space-x-5 lg:space-x-6 text-xs font-medium text-zinc-300 shrink-0">
               {/* Features with Dropdown on Hover */}
               <div
                 className="relative py-1"
@@ -197,6 +205,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     const el = document.getElementById('features');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
+                  aria-expanded={featuresDropdownOpen}
+                  aria-haspopup="true"
+                  aria-label="Features navigation dropdown"
                   className="hover:text-white transition flex items-center space-x-1 cursor-pointer whitespace-nowrap"
                 >
                   <span>Features</span>
@@ -308,6 +319,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {isLoggedIn ? (
                 <button
                   onClick={onLaunchApp}
+                  aria-label="Open Thunder chat workspace"
                   className="text-[11px] sm:text-xs font-mono px-2.5 sm:px-3 py-1 rounded-full border border-white/15 bg-white/10 text-zinc-200 font-medium hover:bg-white/20 transition cursor-pointer whitespace-nowrap max-w-[100px] sm:max-w-[180px] truncate"
                   title={userName || 'User'}
                 >
@@ -316,6 +328,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ) : (
                 <button
                   onClick={() => onOpenAuth('login')}
+                  aria-label="Log in to Thunder AI"
                   className="text-xs font-medium text-zinc-300 hover:text-white transition cursor-pointer whitespace-nowrap px-1"
                 >
                   Log in
@@ -324,6 +337,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <button
                 onClick={onLaunchApp}
+                aria-label="Launch Thunder AI application"
                 className="px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold flex items-center space-x-1 sm:space-x-1.5 shadow-[0_0_20px_rgba(0,145,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
                 <Zap className="w-3 h-3 fill-white text-white" />
@@ -335,6 +349,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-1.5 rounded-full text-zinc-300 hover:text-white bg-white/5 border border-white/10 transition cursor-pointer"
                 aria-label="Toggle navigation menu"
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </button>
@@ -403,6 +418,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="pt-2 flex flex-col items-center space-y-3">
             <button
               onClick={onLaunchApp}
+              aria-label="Try free with Thunder AI"
               className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2.5 shadow-[0_10px_35px_rgba(0,145,255,0.45)] hover:shadow-[0_14px_45px_rgba(0,145,255,0.65)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
             >
               <Zap className="w-4 h-4 fill-white text-white" />
@@ -420,7 +436,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="relative z-10 pb-6 flex justify-center">
           <a
             href="#features"
-            className="text-xs font-mono text-zinc-400 hover:text-white transition flex flex-col items-center space-y-1 animate-bounce cursor-pointer opacity-80 hover:opacity-100"
+            aria-label="Explore platform features"
+            className="text-xs font-mono text-zinc-300 hover:text-white transition flex flex-col items-center space-y-1 animate-bounce cursor-pointer opacity-90 hover:opacity-100"
           >
             <span className="text-[10px] tracking-widest uppercase font-semibold">Explore Platform</span>
             <ChevronDown className="w-3.5 h-3.5" />
@@ -475,7 +492,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <LazyReveal delay={150}>
             {/* Segmented Navigation Tabs */}
-            <div id="showcase" className="pt-8 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
+            <div id="showcase" role="tablist" aria-label="Identity and Auth mesh showcases" className="pt-8 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
             {[
               { id: 'user', label: 'User Authentication', icon: Lock },
               { id: 'org', label: 'Multi-tenancy', icon: Building2 },
@@ -487,6 +504,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               return (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={active}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center space-x-2 cursor-pointer ${
                     active
@@ -515,6 +534,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   {/* Google OAuth Button */}
                   <button
                     onClick={() => onOpenAuth('signup')}
+                    aria-label="Continue with Google Authentication"
                     className="w-full py-2.5 px-4 rounded-xl border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white text-xs font-medium transition flex items-center justify-center space-x-2.5 shadow-sm cursor-pointer"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -541,6 +561,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <input
                         type="email"
                         readOnly
+                        aria-label="Work Email Address"
                         value="alice@thunder.ai"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-white/10 bg-black/40 text-xs font-mono text-zinc-200 outline-none"
                       />
@@ -548,6 +569,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                     <button
                       onClick={() => onOpenAuth('signup')}
+                      aria-label="Continue with email registration"
                       className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-bold transition shadow-[0_0_15px_rgba(255,255,255,0.2)] cursor-pointer"
                     >
                       Continue with Email
@@ -655,6 +677,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <img
                       src="/thumb-creation-spark.webp"
                       alt="Neural Creation Spark"
+                      width={400}
+                      height={128}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d14] via-transparent to-transparent" />
@@ -1078,6 +1104,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <img
                       src="/usecase-beauty.webp"
                       alt="Beauty & Aesthetics"
+                      width={176}
+                      height={144}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1109,6 +1137,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <img
                       src="/usecase-realestate.webp"
                       alt="Real estate"
+                      width={176}
+                      height={144}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1140,7 +1170,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-homeservices.webp"
-                      alt="Home services"
+                      alt="Home services customer triage"
+                      width={176}
+                      height={144}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1175,7 +1207,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-professional.webp"
-                      alt="Professional services"
+                      alt="Professional services intake"
+                      width={176}
+                      height={144}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1206,7 +1240,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-automotive.webp"
-                      alt="Automotive"
+                      alt="Automotive lead engagement"
+                      width={176}
+                      height={144}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1306,6 +1342,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <img
                       src={m.image}
                       alt={m.name}
+                      width={320}
+                      height={112}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
@@ -1378,6 +1416,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </LazyReveal>
         </div>
       </section>
+      </main>
 
       {/* -------------------- MINIMAL STATEMENT FOOTER ("THUNDER") -------------------- */}
       <footer className="bg-[#050608] text-zinc-500 pt-16 sm:pt-24 pb-12 px-6 sm:px-12 border-t border-white/10 relative overflow-hidden">
@@ -1404,7 +1443,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   THUNDER
                 </text>
               </svg>
-              <h1 className="sr-only">THUNDER</h1>
+              <span className="sr-only">THUNDER</span>
             </div>
           </LazyReveal>
 
@@ -1422,6 +1461,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <a href="#features" className="hover:text-white transition">Changelog</a>
                 <button
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  aria-label="Scroll back to top"
                   className="hover:text-white underline underline-offset-4 cursor-pointer"
                 >
                   Back to top ↑
