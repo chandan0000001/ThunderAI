@@ -138,6 +138,60 @@ export const getUserConfiguredProviders = async (userId) => {
   return results;
 };
 
+// Return candidate keys in current round-robin priority order for failover resilience
+export const getCandidateKeys = async (userId, provider) => {
+  // 1. User BYOK keys first
+  const userKeys = await getUserApiKeys(userId, provider, true);
+  if (userKeys.length > 0) {
+    const mapKey = `${userId}:${provider}`;
+    const currentIndex = userKeyIndices.get(mapKey) || 0;
+    const candidates = [];
+    for (let i = 0; i < userKeys.length; i++) {
+      candidates.push({
+        apiKey: userKeys[(currentIndex + i) % userKeys.length],
+        isUserKey: true,
+        provider,
+      });
+    }
+    userKeyIndices.set(mapKey, (currentIndex + 1) % userKeys.length);
+    return candidates;
+  }
+
+  // 2. System keys for target provider
+  const systemKeys = getSystemKeys(provider);
+  if (systemKeys.length > 0) {
+    const currentIndex = systemKeyIndices[provider] || 0;
+    const candidates = [];
+    for (let i = 0; i < systemKeys.length; i++) {
+      candidates.push({
+        apiKey: systemKeys[(currentIndex + i) % systemKeys.length],
+        isUserKey: false,
+        provider,
+      });
+    }
+    systemKeyIndices[provider] = (currentIndex + 1) % systemKeys.length;
+    return candidates;
+  }
+
+  // 3. Fallback to OpenRouter system keys
+  const fallbackKeys = getSystemKeys("openrouter");
+  if (fallbackKeys.length > 0) {
+    const currentIndex = systemKeyIndices.openrouter || 0;
+    const candidates = [];
+    for (let i = 0; i < fallbackKeys.length; i++) {
+      candidates.push({
+        apiKey: fallbackKeys[(currentIndex + i) % fallbackKeys.length],
+        isUserKey: false,
+        provider: "openrouter",
+      });
+    }
+    systemKeyIndices.openrouter = (currentIndex + 1) % fallbackKeys.length;
+    return candidates;
+  }
+
+  throw new Error(`No API key configured for ${provider.toUpperCase()}.`);
+};
+
 // Round-Robin Key Selector
 export const getActiveApiKey = async (userId, provider) => {
   // 1. Check if user provided their own key(s)

@@ -338,7 +338,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
       {/* Users Telemetry Table */}
       <div className="rounded-2xl border border-white/10 bg-black/50 overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
+          <table className="w-full min-w-[700px] text-left text-xs font-mono">
             <thead>
               <tr className="border-b border-white/10 bg-white/[0.02] text-zinc-400 uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-4">Operator</th>

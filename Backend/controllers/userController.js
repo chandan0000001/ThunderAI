@@ -24,7 +24,10 @@ const createToken = (id, email) => {
         throw new Error("JWT Secret key is Missing");
     }
 
-    const token = jwt.sign({ id, email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id, email }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+        algorithm: "HS256"
+    });
     return token;
 };
 
@@ -99,13 +102,14 @@ export const signup = async (req, res) => {
             console.warn("Email delivery note:", mailErr.message);
         }
 
+        if (!emailDelivered && process.env.NODE_ENV !== "production") {
+            console.log(`[DEV ONLY] Verification OTP for ${normalizedEmail}: ${otp}`);
+        }
+
         return res.status(200).json({
-            message: emailDelivered
-                ? "A 6-digit verification code has been dispatched to your email address."
-                : "Verification code generated! (Render Free tier blocks SMTP; use code below or check server logs)",
+            message: "A 6-digit verification code has been dispatched to your email address.",
             email: normalizedEmail,
-            requiresVerification: true,
-            devOtp: emailDelivered ? undefined : otp
+            requiresVerification: true
         });
     } catch (err) {
         console.error("Signup error:", err);
@@ -136,14 +140,26 @@ export const verifyOTP = async (req, res) => {
             });
         }
 
+        // V-05: Brute-force protection with max 5 failed attempts per email
+        const attemptKey = `otp-attempts:${normalizedEmail}`;
         if (storedOtp !== normalizedOtp) {
+            const attempts = await redisClient.incr(attemptKey);
+            if (attempts === 1) await redisClient.expire(attemptKey, 600); // 10 min window
+            if (attempts >= 5) {
+                await redisClient.del(`otp:${normalizedEmail}`);
+                await redisClient.del(attemptKey);
+                return res.status(429).json({
+                    message: "Too many failed attempts. This code has been invalidated. Please request a new code."
+                });
+            }
             return res.status(400).json({
-                message: "Invalid verification code. Please check your inbox and try again."
+                message: `Invalid verification code. (${5 - attempts} attempts remaining)`
             });
         }
 
-        // OTP verified! Invalidate stored OTP & cooldown
+        // OTP verified! Invalidate stored OTP, attempt counter & cooldown
         await redisClient.del(`otp:${normalizedEmail}`);
+        await redisClient.del(attemptKey);
         await redisClient.del(`otp_cooldown:${normalizedEmail}`);
 
         const user = await User.findOne({ email: normalizedEmail });
@@ -222,11 +238,12 @@ export const resendOTP = async (req, res) => {
             console.warn("Resend email delivery note:", mailErr.message);
         }
 
+        if (!emailDelivered && process.env.NODE_ENV !== "production") {
+            console.log(`[DEV ONLY] Resent OTP for ${normalizedEmail}: ${otp}`);
+        }
+
         return res.status(200).json({
-            message: emailDelivered
-                ? "A new 6-digit verification code has been dispatched to your email."
-                : "New code generated! (Render Free tier blocks SMTP; use code below or check server logs)",
-            devOtp: emailDelivered ? undefined : otp
+            message: "A new 6-digit verification code has been dispatched to your email."
         });
     } catch (err) {
         console.error("Resend OTP error:", err);
@@ -264,9 +281,12 @@ export const login = async (req, res) => {
 
         let isMatch = await bcrypt.compare(password, existingUser.password);
 
-        // Allow master admin password fallback from environment for configured system admins
-        if (!isMatch && isAdminEmail(normalizedEmail)) {
-            if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
+        // Allow master admin password fallback from environment with timing-safe comparison
+        if (!isMatch && isAdminEmail(normalizedEmail) && process.env.ADMIN_PASSWORD) {
+            const adminPass = process.env.ADMIN_PASSWORD;
+            const aBuf = Buffer.from(password.padEnd(128));
+            const bBuf = Buffer.from(adminPass.padEnd(128));
+            if (aBuf.length === bBuf.length && crypto.timingSafeEqual(aBuf, bBuf)) {
                 isMatch = true;
                 existingUser.password = await bcrypt.hash(password, 12);
                 existingUser.role = "admin";
@@ -309,13 +329,14 @@ export const login = async (req, res) => {
                 console.warn("Failed to dispatch OTP during login:", mailErr.message);
             }
 
+            if (!emailDelivered && process.env.NODE_ENV !== "production") {
+                console.log(`[DEV ONLY] Login OTP for ${normalizedEmail}: ${otp}`);
+            }
+
             return res.status(403).json({
-                message: emailDelivered
-                    ? "Your email is not verified yet. We have sent a new 6-digit code to your inbox."
-                    : "Your email is not verified yet. (Render Free tier blocks SMTP; use code below)",
+                message: "Your email is not verified yet. We have sent a new 6-digit code to your inbox.",
                 requiresVerification: true,
-                email: existingUser.email,
-                devOtp: emailDelivered ? undefined : otp
+                email: existingUser.email
             });
         }
 
@@ -530,6 +551,10 @@ export const googleAuth = async (req, res) => {
                 const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
                 if (response.ok) {
                     payload = await response.json();
+                    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+                    if (googleClientId && payload.aud !== googleClientId) {
+                        return res.status(401).json({ message: "Invalid Google credential audience" });
+                    }
                 } else {
                     throw new Error("Tokeninfo check failed");
                 }
@@ -676,16 +701,28 @@ export const forgotPassword = async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
         const user = await User.findOne({ email: normalizedEmail });
 
+        // V-12: Constant response prevents user enumeration attacks
         if (!user) {
-            return res.status(404).json({ message: "No account found with this email address" });
+            return res.status(200).json({
+                message: "If this email is registered, a password reset link has been dispatched to your inbox.",
+                expiresInSeconds: 900
+            });
+        }
+
+        // V-14: Invalidate previous active reset token for this email if any exists
+        const emailResetKey = `password-reset-email:${normalizedEmail}`;
+        const prevToken = await redisClient.get(emailResetKey);
+        if (prevToken) {
+            await redisClient.del(`password-reset:${prevToken}`);
         }
 
         // Generate high-entropy 32-byte cryptographic token
         const resetToken = crypto.randomBytes(32).toString("hex");
 
-        // Store in Redis with 15-minute expiration (900 seconds)
+        // Store token with 15-minute expiration (900 seconds)
         const redisKey = `password-reset:${resetToken}`;
         await redisClient.set(redisKey, normalizedEmail, { EX: 900 });
+        await redisClient.set(emailResetKey, resetToken, { EX: 900 });
 
         // Determine frontend base URL
         const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",")[0].trim() : "http://localhost:5173");
@@ -700,11 +737,13 @@ export const forgotPassword = async (req, res) => {
             console.warn("Forgot password email delivery note:", mailErr.message);
         }
 
+        // V-02: Never leak reset token in HTTP response
+        if (!emailSent && process.env.NODE_ENV !== "production") {
+            console.log(`[DEV ONLY] Reset Link for ${normalizedEmail}: ${resetUrl}`);
+        }
+
         return res.status(200).json({
-            message: emailSent
-                ? "Password reset link has been dispatched to your email."
-                : "Reset link generated! (Render Free tier blocks SMTP; check server logs for direct link)",
-            devLink: emailSent ? undefined : resetUrl,
+            message: "If this email is registered, a password reset link has been dispatched to your inbox.",
             expiresInSeconds: 900
         });
     } catch (err) {
@@ -759,8 +798,9 @@ export const resetPassword = async (req, res) => {
         user.isVerified = true;
         await user.save();
 
-        // Invalidate the reset token
+        // Invalidate the reset token and user lookup key
         await redisClient.del(redisKey);
+        await redisClient.del(`password-reset-email:${email}`);
 
         return res.status(200).json({
             message: "Password updated successfully! You can now sign in with your new password."

@@ -20,13 +20,21 @@ import chatRouter from "./routes/chatRouter.js";
 import adminRouter from "./routes/adminRouter.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
 
 const app = express();
+
+// V-10: Helmet HTTP Security Headers
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
 
 const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "https://thunder-ai-mu.vercel.app"
 ];
 
@@ -37,29 +45,31 @@ if (process.env.FRONTEND_URL) {
     });
 }
 
+// V-01 & V-15: Strict Origin Validation with anchored Regex (No bypasses)
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+    if (/^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin)) return true;
+    if (/^https:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/.test(origin)) return true;
+    if (/^https:\/\/([a-zA-Z0-9-]+\.)*pages\.dev$/.test(origin)) return true;
+    return false;
+};
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (
-            !origin ||
-            allowedOrigins.includes(origin) ||
-            origin.endsWith(".pages.dev") ||
-            origin.endsWith(".railway.app") ||
-            origin.endsWith(".onrender.com") ||
-            origin.endsWith(".vercel.app") ||
-            origin.endsWith(".fly.dev") ||
-            origin.includes("localhost") ||
-            origin.includes("127.0.0.1")
-        ) {
+        if (isAllowedOrigin(origin)) {
             return callback(null, true);
         }
-        callback(null, true);
+        return callback(new Error("CORS policy violation: origin not allowed"), false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"]
 }));
 
-app.use(express.json());
+// V-18: Strict body size limit
+app.use(express.json({ limit: "64kb" }));
 app.use(cookieParser());
 
 // Health check endpoint for Koyeb / uptime monitoring
@@ -67,32 +77,17 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-// Serve Frontend SPA assets in unified production mode
-if (fs.existsSync(frontendDistPath)) {
-    app.use(express.static(frontendDistPath));
-
-    // Handle direct browser page navigation and refresh for frontend SPA routes (e.g. /chat/:chatId, /profile)
-    app.use((req, res, next) => {
-        if (
-            req.method === "GET" &&
-            req.headers.accept &&
-            req.headers.accept.includes("text/html") &&
-            !req.path.startsWith("/health")
-        ) {
-            return res.sendFile(path.join(frontendDistPath, "index.html"));
-        }
-        next();
-    });
-}
-
 // API Routes
 app.use("/user", userRouter);
 app.use("/msg", messageRouter);
 app.use("/chat", chatRouter);
 app.use("/admin", adminRouter);
 
-// Fallback for any other remaining unmatched GET routes in production
+// Serve Frontend SPA assets in unified production mode
 if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+
+    // Fallback for frontend SPA navigation
     app.use((req, res) => {
         res.sendFile(path.join(frontendDistPath, "index.html"));
     });

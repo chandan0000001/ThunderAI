@@ -57,10 +57,16 @@ export const sendMessage = async (req, res) => {
     const { chatId } = req.params;
     const { content, model } = req.body;
 
-    // 1. Validate message content
+    // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
       return res.status(400).json({
         message: "Message content is required"
+      });
+    }
+
+    if (content.length > 32000) {
+      return res.status(400).json({
+        message: "Message exceeds maximum allowed length of 32,000 characters"
       });
     }
 
@@ -99,10 +105,11 @@ export const sendMessage = async (req, res) => {
         });
       }
 
+      const cleanTopic = content.trim().replace(/<[^>]*>?/gm, "").slice(0, 40) || "New Conversation";
       chat = await Chat.create({
         userId: req.user._id,
         model,
-        topic: content.trim().slice(0, 40),
+        topic: cleanTopic,
       });
     }
 
@@ -182,9 +189,9 @@ export const sendMessage = async (req, res) => {
       assistantMessage
     });
   } catch (err) {
-    console.log(err);
+    console.error("SendMessage error:", err);
     res.status(500).json({
-      message: "Internal server error"
+      message: err.message || "Failed to process message"
     });
   }
 };
@@ -194,10 +201,16 @@ export const sendMessageStream = async (req, res) => {
     const { chatId } = req.params;
     const { content, model } = req.body;
 
-    // 1. Validate message content
+    // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
       return res.status(400).json({
         message: "Message content is required",
+      });
+    }
+
+    if (content.length > 32000) {
+      return res.status(400).json({
+        message: "Message exceeds maximum allowed length of 32,000 characters",
       });
     }
 
@@ -229,10 +242,11 @@ export const sendMessageStream = async (req, res) => {
         });
       }
 
+      const cleanTopic = content.trim().replace(/<[^>]*>?/gm, "").slice(0, 40) || "New Conversation";
       chat = await Chat.create({
         userId: req.user._id,
         model,
-        topic: content.trim().slice(0, 40),
+        topic: cleanTopic,
       });
     }
 

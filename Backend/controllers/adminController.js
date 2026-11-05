@@ -13,10 +13,11 @@ export const getAllUsers = async (req, res) => {
         const { search, role, page = 1, limit = 50 } = req.query;
         const query = {};
 
-        if (search) {
+        if (search && typeof search === "string" && search.trim()) {
+            const safeSearch = search.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             query.$or = [
-                { name: { $regex: search, $options: "i" } },
-                { email: { $regex: search, $options: "i" } }
+                { name: { $regex: safeSearch, $options: "i" } },
+                { email: { $regex: safeSearch, $options: "i" } }
             ];
         }
 

@@ -117,13 +117,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
-      <div className={`relative w-full h-full sm:h-auto sm:max-h-[90vh] ${activeTab === 'admin' && isAdmin ? 'max-w-5xl' : 'max-w-xl'} rounded-none sm:rounded-3xl border-0 sm:border border-white/10 bg-[#0d0e14] text-white shadow-2xl flex flex-col overflow-hidden transition-all duration-200`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
+      <div className={`relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] ${activeTab === 'admin' && isAdmin ? 'max-w-5xl' : 'max-w-xl'} rounded-none sm:rounded-3xl border-0 sm:border border-white/10 bg-[#0d0e14] text-white shadow-2xl flex flex-col overflow-hidden transition-all duration-200`}>
         {/* Subtle Top White Hairline Highlight */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
         {/* Modal Header Bar */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-5 flex items-center justify-between border-b border-white/[0.08] shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-white/[0.08] shrink-0">
           <div className="flex items-center space-x-2.5">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white">
               <Zap className="w-3.5 h-3.5 fill-white" />
@@ -179,9 +179,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <AdminPanel currentUserId={currentUser?._id} onClose={onClose} />
           </div>
         ) : (
-        <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 flex-1 overflow-y-auto overscroll-contain">
+        <div className="p-3.5 sm:p-6 md:p-8 space-y-3.5 sm:space-y-5 flex-1 overflow-y-auto overscroll-contain">
           {/* 1. User Identity Header */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
             <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
               {/* Avatar with Referrer-Policy and Error Fallback */}
               <div className="relative shrink-0">
@@ -231,7 +231,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1.5">
-                  <span className="font-mono text-[11px] sm:text-xs text-zinc-400 truncate max-w-[200px] sm:max-w-none">
+                  <span className="font-mono text-[11px] sm:text-xs text-zinc-400 truncate max-w-[190px] sm:max-w-none">
                     {currentUser?.email || 'operator@thunder.ai'}
                   </span>
                   <button
@@ -253,7 +253,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <button
               onClick={handleLiveRefresh}
               disabled={refreshing}
-              className="self-start sm:self-auto px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white font-mono text-[11px] sm:text-xs flex items-center space-x-1.5 sm:space-x-2 transition cursor-pointer"
+              className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white font-mono text-[11px] sm:text-xs flex items-center space-x-1.5 sm:space-x-2 transition cursor-pointer shrink-0"
               title="Refresh live token consumption from Redis & MongoDB"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -279,7 +279,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
             {/* Metrics Display */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              <div className="p-3 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319]">
+              <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319]">
                 <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 block uppercase">
                   Tokens Consumed
                 </span>
@@ -288,7 +288,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </span>
               </div>
 
-              <div className="p-3 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319]">
+              <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319]">
                 <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 block uppercase">
                   Quota Window Limit
                 </span>
@@ -297,7 +297,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </span>
               </div>
 
-              <div className="p-3 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319] col-span-2 sm:col-span-1">
+              <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/5 bg-[#121319] col-span-2 sm:col-span-1">
                 <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 block uppercase">
                   Remaining Tokens
                 </span>
@@ -323,73 +323,73 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           {/* 3. TECHNICAL SPEC MATRIX */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {/* Operator Info */}
-            <div className="p-3 sm:p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Cpu className="w-4 h-4" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
+                <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="min-w-0">
-                <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase block">
-                  Operator Tier & Role
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
+                  Tier & Role
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-white truncate block">
-                  {isAdmin ? 'System Administrator // Root Access' : 'Standard // Enterprise Core'}
+                <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
+                  {isAdmin ? 'System Admin' : 'Standard Core'}
                 </span>
               </div>
             </div>
 
             {/* Engine Gateway */}
-            <div className="p-3 sm:p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Database className="w-4 h-4" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
+                <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="min-w-0">
-                <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase block">
-                  Active Neural Router
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
+                  Neural Router
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-white truncate block">
-                  OpenRouter Free Tier (Active)
+                <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
+                  OpenRouter Active
                 </span>
               </div>
             </div>
 
             {/* Security Protocol */}
-            <div className="p-3 sm:p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-emerald-400">
-                <Zap className="w-4 h-4" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-emerald-400">
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="min-w-0">
-                <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase block">
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
                   Security Protocol
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-white truncate block">
-                  Stateless JWT // Bcrypt-12
+                <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
+                  JWT // Bcrypt-12
                 </span>
               </div>
             </div>
 
             {/* Context Summarization */}
-            <div className="p-3 sm:p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Layers className="w-4 h-4" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
+                <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="min-w-0">
-                <span className="text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase block">
-                  Memory Condensation
+              <div className="min-w-0 flex-1">
+                <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
+                  Memory Cache
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-white truncate block">
-                  Adaptive Context Summarization
+                <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
+                  Adaptive Summary
                 </span>
               </div>
             </div>
           </div>
 
           {/* 4. FOOTER ACTIONS */}
-          <div className="pt-3 sm:pt-4 border-t border-white/[0.08] flex items-center justify-between shrink-0">
+          <div className="pt-3 sm:pt-4 border-t border-white/[0.08] flex items-center justify-between shrink-0 gap-2">
             <button
               onClick={onLogout}
-              className="px-3 sm:px-4 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white font-mono text-xs flex items-center space-x-2 transition cursor-pointer"
+              className="px-3 sm:px-4 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white font-mono text-xs flex items-center space-x-1.5 sm:space-x-2 transition cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>SIGN OUT</span>
@@ -398,15 +398,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {!isAdmin ? (
               <button
                 onClick={() => setDeleteModalOpen(true)}
-                className="px-3 sm:px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-mono text-xs flex items-center space-x-2 transition cursor-pointer"
+                className="px-3 sm:px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-mono text-xs flex items-center space-x-1.5 sm:space-x-2 transition cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>DELETE ACCOUNT</span>
               </button>
             ) : (
-              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[10px] sm:text-xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>PROTECTED ROOT ADMIN</span>
+              <div className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[9px] sm:text-xs">
+                <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">PROTECTED ROOT ADMIN</span>
               </div>
             )}
           </div>

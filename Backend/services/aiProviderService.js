@@ -1,4 +1,4 @@
-import { getProviderFromModel, getActiveApiKey } from "./keyManagerService.js";
+import { getProviderFromModel, getActiveApiKey, getCandidateKeys } from "./keyManagerService.js";
 
 // Normalize model ID for target provider
 const normalizeModelForProvider = (provider, model) => {
@@ -23,64 +23,84 @@ const normalizeModelForProvider = (provider, model) => {
   return model;
 };
 
-// Dispatch non-streaming AI response
+// Dispatch non-streaming AI response with multi-key failover
 export const generateAIResponse = async ({ model, messages, userId }) => {
   const provider = getProviderFromModel(model);
-  const { apiKey, isUserKey } = await getActiveApiKey(userId, provider);
-  const targetModel = normalizeModelForProvider(provider, model);
+  const candidates = await getCandidateKeys(userId, provider);
+  let lastError = null;
 
-  if (provider === "claude") {
-    return generateClaudeResponse({ apiKey, model: targetModel, messages, isUserKey });
+  for (let i = 0; i < candidates.length; i++) {
+    const { apiKey, isUserKey, provider: activeProvider } = candidates[i];
+    const targetModel = normalizeModelForProvider(activeProvider, model);
+
+    try {
+      if (activeProvider === "claude") {
+        return await generateClaudeResponse({ apiKey, model: targetModel, messages, isUserKey });
+      }
+
+      // OpenAI-compatible providers: OpenRouter, Groq, ChatGPT
+      let endpoint = "https://openrouter.ai/api/v1/chat/completions";
+      if (activeProvider === "groq") endpoint = "https://api.groq.com/openai/v1/chat/completions";
+      else if (activeProvider === "chatgpt") endpoint = "https://api.openai.com/v1/chat/completions";
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          ...(activeProvider === "openrouter"
+            ? {
+                "HTTP-Referer": "https://thunder-ai.app",
+                "X-Title": "Thunder AI Workspace",
+              }
+            : {}),
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const err = new Error(
+          `${activeProvider.toUpperCase()} API error (${response.status}): ${errorText}`
+        );
+
+        // Failover on auth failure (401), rate limit (429), or server outage (5xx)
+        if (response.status === 401 || response.status === 429 || response.status >= 500) {
+          console.warn(`[Key Failover] Candidate key ${i + 1}/${candidates.length} failed with HTTP ${response.status}. Retrying with next key...`);
+          lastError = err;
+          continue;
+        }
+        throw err;
+      }
+
+      const data = await response.json();
+      const aiReply = data.choices?.[0]?.message?.content;
+      if (!aiReply) throw new Error("AI response was empty");
+
+      const promptTokens = data.usage?.prompt_tokens || Math.ceil(JSON.stringify(messages).length / 4);
+      const completionTokens = data.usage?.completion_tokens || Math.ceil(aiReply.length / 4);
+
+      return {
+        aiReply,
+        usage: {
+          promptTokens,
+          completionTokens,
+          totalTokens: promptTokens + completionTokens,
+        },
+        provider: activeProvider,
+        isUserKey,
+      };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[AI Failover] Error with ${activeProvider} key ${i + 1}/${candidates.length}: ${err.message}`);
+    }
   }
 
-  // OpenAI-compatible providers: OpenRouter, Groq, ChatGPT
-  let endpoint = "https://openrouter.ai/api/v1/chat/completions";
-  if (provider === "groq") endpoint = "https://api.groq.com/openai/v1/chat/completions";
-  else if (provider === "chatgpt") endpoint = "https://api.openai.com/v1/chat/completions";
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...(provider === "openrouter"
-        ? {
-            "HTTP-Referer": "https://thunder-ai.app",
-            "X-Title": "Thunder AI Workspace",
-          }
-        : {}),
-    },
-    body: JSON.stringify({
-      model: targetModel,
-      messages,
-      temperature: 0.7,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `${provider.toUpperCase()} API error (${response.status}): ${errorText}`
-    );
-  }
-
-  const data = await response.json();
-  const aiReply = data.choices?.[0]?.message?.content;
-  if (!aiReply) throw new Error("AI response was empty");
-
-  const promptTokens = data.usage?.prompt_tokens || Math.ceil(JSON.stringify(messages).length / 4);
-  const completionTokens = data.usage?.completion_tokens || Math.ceil(aiReply.length / 4);
-
-  return {
-    aiReply,
-    usage: {
-      promptTokens,
-      completionTokens,
-      totalTokens: promptTokens + completionTokens,
-    },
-    provider,
-    isUserKey,
-  };
+  throw lastError || new Error(`All candidate API keys for ${provider} failed.`);
 };
 
 // Anthropic Claude native handler

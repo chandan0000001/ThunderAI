@@ -19,6 +19,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...(options.headers || {}),
     },
   };
@@ -193,6 +194,7 @@ export const api = {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/event-stream',
         },
         body: JSON.stringify(bodyPayload),
