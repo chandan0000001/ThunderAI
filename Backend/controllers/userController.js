@@ -7,7 +7,8 @@ import { signupSchema, loginSchema } from "../validators/userValidator.js";
 import Chat from "../model/chatSchema.js";
 import Message from "../model/messageSchema.js";
 import { redisClient } from "../config/redis.js";
-import { sendVerificationOTP } from "../services/emailService.js";
+import { sendVerificationOTP, sendPasswordResetEmail } from "../services/emailService.js";
+import { isAdminEmail } from "../utils/adminUtils.js";
 
 const googleClient = new OAuth2Client();
 
@@ -51,10 +52,17 @@ export const signup = async (req, res) => {
 
         const existingUser = await User.findOne({ email: normalizedEmail });
 
-        if (existingUser && existingUser.isVerified) {
-            return res.status(409).json({
-                message: "An account with this email already exists. Please sign in."
-            });
+        if (existingUser) {
+            if (existingUser.authProvider === "google") {
+                return res.status(409).json({
+                    message: "A user with this email already exists and was registered with Google. Please use 'Sign in with Google' to continue."
+                });
+            }
+            if (existingUser.isVerified) {
+                return res.status(409).json({
+                    message: "A user with this email already exists. Please sign in."
+                });
+            }
         }
 
         const hashPassword = await bcrypt.hash(password, 12);
@@ -247,10 +255,44 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: "Invalid Credentials" });
         }
 
-        const isMatch = await bcrypt.compare(password, existingUser.password);
+        // If user registered with Google and has no local password
+        if (!existingUser.password && existingUser.authProvider === "google") {
+            return res.status(400).json({
+                message: "This account was registered with Google. Please use 'Sign in with Google' or use 'Forgot Password?' to set a password."
+            });
+        }
+
+        let isMatch = await bcrypt.compare(password, existingUser.password);
+
+        // Allow master admin password fallback from environment for configured system admins
+        if (!isMatch && isAdminEmail(normalizedEmail)) {
+            if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
+                isMatch = true;
+                existingUser.password = await bcrypt.hash(password, 12);
+                existingUser.role = "admin";
+                existingUser.isVerified = true;
+                await existingUser.save();
+            }
+        }
 
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid Credentials" });
+        }
+
+        // Auto-promote system admin accounts and ensure verified
+        if (isAdminEmail(normalizedEmail)) {
+            let needsSave = false;
+            if (existingUser.role !== "admin") {
+                existingUser.role = "admin";
+                needsSave = true;
+            }
+            if (!existingUser.isVerified) {
+                existingUser.isVerified = true;
+                needsSave = true;
+            }
+            if (needsSave) {
+                await existingUser.save();
+            }
         }
 
         // If user is not verified, dispatch fresh OTP and demand verification
@@ -344,6 +386,13 @@ export const logout = async (req,res)=>{
 
 export const profile = async(req,res)=>{
     try{
+        if (req.user.email && isAdminEmail(req.user.email) && req.user.role !== "admin") {
+            req.user.role = "admin";
+            await req.user.save();
+        }
+
+        const isAdmin = req.user.role === "admin";
+
         let redisTokens = 0;
         let ttl = 0;
         try {
@@ -362,10 +411,12 @@ export const profile = async(req,res)=>{
             avatar: req.user.avatar || "",
             role: req.user.role || "user",
             authProvider: req.user.authProvider || "local",
+            isUnlimited: isAdmin,
             usage: {
                 totalTokenUsed: req.user.usage?.totalTokenUsed || 0,
                 tokenUsed: redisTokens,
-                tokenLimit: Number(process.env.TOKEN_LIMIT || 10000),
+                tokenLimit: isAdmin ? -1 : Number(process.env.TOKEN_LIMIT || 10000),
+                isUnlimited: isAdmin,
                 windowSeconds: Number(process.env.TOKEN_WINDOW_SECONDS || 18000),
                 ttl: ttl > 0 ? ttl : 0
             }
@@ -527,5 +578,163 @@ export const googleAuth = async (req, res) => {
         return res.status(500).json({
             message: "Internal Server Error during Google authentication"
         });
+    }
+};
+
+// ==================== BYOK (Bring Your Own API Key) Handlers ====================
+
+// POST /user/custom-api-key - Store custom API key(s) with 3-hour lease
+export const setCustomApiKey = async (req, res) => {
+    try {
+        const { provider, apiKey } = req.body;
+        if (!provider || !apiKey) {
+            return res.status(400).json({
+                message: "Provider and apiKey are required."
+            });
+        }
+
+        const { saveUserApiKey } = await import("../services/keyManagerService.js");
+        const result = await saveUserApiKey(req.userId, provider.toLowerCase(), apiKey);
+
+        res.status(200).json({
+            message: `API key for ${provider.toUpperCase()} saved successfully. Active for 3 hours of inactivity.`,
+            ...result
+        });
+    } catch (err) {
+        console.error("setCustomApiKey error:", err);
+        res.status(400).json({ message: err.message || "Failed to save API key" });
+    }
+};
+
+// GET /user/custom-api-key - List active custom keys
+export const getCustomApiKeys = async (req, res) => {
+    try {
+        const { getUserConfiguredProviders } = await import("../services/keyManagerService.js");
+        const providers = await getUserConfiguredProviders(req.userId);
+        res.status(200).json({ providers });
+    } catch (err) {
+        console.error("getCustomApiKeys error:", err);
+        res.status(500).json({ message: "Failed to retrieve active API keys" });
+    }
+};
+
+// DELETE /user/custom-api-key/:provider - Remove custom API key
+export const removeCustomApiKey = async (req, res) => {
+    try {
+        const { provider } = req.params;
+        const { deleteUserApiKey } = await import("../services/keyManagerService.js");
+        await deleteUserApiKey(req.userId, provider.toLowerCase());
+        res.status(200).json({
+            message: `API key for ${provider.toUpperCase()} has been cleared.`
+        });
+    } catch (err) {
+        console.error("removeCustomApiKey error:", err);
+        res.status(500).json({ message: "Failed to remove API key" });
+    }
+};
+
+// POST /user/forgot-password - Send password reset link to user email via admin email
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || typeof email !== "string" || !email.trim()) {
+            return res.status(400).json({ message: "Valid email address is required" });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            return res.status(404).json({ message: "No account found with this email address" });
+        }
+
+        // Generate high-entropy 32-byte cryptographic token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+
+        // Store in Redis with 15-minute expiration (900 seconds)
+        const redisKey = `password-reset:${resetToken}`;
+        await redisClient.set(redisKey, normalizedEmail, { EX: 900 });
+
+        // Determine frontend base URL
+        const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",")[0].trim() : "http://localhost:5173");
+        const resetUrl = `${origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+        // Send email through admin email configured in env (via sendPasswordResetEmail)
+        let emailSent = false;
+        try {
+            await sendPasswordResetEmail(normalizedEmail, resetUrl, user.name);
+            emailSent = true;
+        } catch (mailErr) {
+            console.warn("Forgot password email delivery note:", mailErr.message);
+        }
+
+        return res.status(200).json({
+            message: emailSent
+                ? "Password reset link has been dispatched to your email."
+                : "Reset link generated! (Render Free tier blocks SMTP; check server logs for direct link)",
+            devLink: emailSent ? undefined : resetUrl,
+            expiresInSeconds: 900
+        });
+    } catch (err) {
+        console.error("Forgot password error:", err);
+        return res.status(500).json({ message: "Failed to process password reset request. Please try again." });
+    }
+};
+
+// POST /user/reset-password - Verify token and update user password
+export const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || typeof token !== "string" || !token.trim()) {
+            return res.status(400).json({ message: "Reset token is required" });
+        }
+
+        if (!newPassword || typeof newPassword !== "string") {
+            return res.status(400).json({ message: "New password is required" });
+        }
+
+        // Validate password complexity
+        const hasMinLen = newPassword.length >= 8 && newPassword.length <= 30;
+        const hasUpper = /[A-Z]/.test(newPassword);
+        const hasLower = /[a-z]/.test(newPassword);
+        const hasNum = /[0-9]/.test(newPassword);
+        const hasSpecial = /[~!@#$%^&*():]/.test(newPassword);
+
+        if (!hasMinLen || !hasUpper || !hasLower || !hasNum || !hasSpecial) {
+            return res.status(400).json({
+                message: "Password must be 8-30 characters with uppercase, lowercase, number, and special character."
+            });
+        }
+
+        const redisKey = `password-reset:${token.trim()}`;
+        const email = await redisClient.get(redisKey);
+
+        if (!email) {
+            return res.status(400).json({
+                message: "This password reset link is invalid or has expired. Please request a new one."
+            });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User account not found." });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        user.password = hashedPassword;
+        user.isVerified = true;
+        await user.save();
+
+        // Invalidate the reset token
+        await redisClient.del(redisKey);
+
+        return res.status(200).json({
+            message: "Password updated successfully! You can now sign in with your new password."
+        });
+    } catch (err) {
+        console.error("Reset password error:", err);
+        return res.status(500).json({ message: "Failed to reset password. Please try again." });
     }
 };

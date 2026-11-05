@@ -292,3 +292,231 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
   console.log(`======================================================\n`);
   throw new Error('SMTP connection timed out or blocked on Render free tier. Use the OTP from server logs or configure RESEND_API_KEY.');
 };
+
+/**
+ * Generates an attractive Thunder AI HTML email with the password reset link.
+ */
+const getResetPasswordHtml = (resetUrl, name = 'Operator') => {
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@thunder.ai';
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Thunder AI Password</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #090a0f;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #e4e4e7;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #090a0f;
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+    .main {
+      background-color: #121318;
+      margin: 0 auto;
+      max-width: 520px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo-badge {
+      display: inline-block;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+    .logo-icon {
+      color: #eab308;
+      font-size: 24px;
+      margin-right: 6px;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #a1a1aa;
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .btn-container {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+      color: #000000 !important;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(234, 179, 8, 0.4);
+    }
+    .expiry {
+      font-size: 12px;
+      color: #71717a;
+      text-align: center;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 10px;
+    }
+    .fallback-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 12px;
+      word-break: break-all;
+      font-size: 11px;
+      color: #a1a1aa;
+      font-family: monospace;
+      margin-top: 20px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: #52525b;
+      margin-top: 28px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table class="main" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td>
+          <div class="logo-container">
+            <span class="logo-badge"><span class="logo-icon">&#9889;</span>THUNDER AI</span>
+          </div>
+
+          <h1 class="title">Reset Your Password</h1>
+          <p class="subtitle">
+            Hello <strong>${name}</strong>,<br>
+            A request was received to reset the password for your Thunder AI operator account. Click the button below to choose a new password.
+          </p>
+
+          <div class="btn-container">
+            <a href="${resetUrl}" class="btn" target="_blank">Reset Password</a>
+            <p class="expiry">&#9200; Valid for 15 minutes</p>
+          </div>
+
+          <div class="fallback-box">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${resetUrl}" style="color: #facc15; text-decoration: underline;">${resetUrl}</a>
+          </div>
+
+          <p style="font-size: 12px; color: #71717a; margin-top: 20px; text-align: center;">
+            If you did not initiate this request, you can safely disregard this email. Your password will remain unchanged.
+          </p>
+
+          <div class="footer">
+            &copy; ${new Date().getFullYear()} Thunder AI Intelligence Platform &bull; Security Administration (${adminEmail})
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Sends a password reset email from the admin email configured in environment.
+ *
+ * @param {string} email - Recipient email address
+ * @param {string} resetUrl - Complete password reset URL
+ * @param {string} name - User's name
+ * @returns {Promise<boolean>}
+ */
+export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator') => {
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@thunder.ai';
+
+  // Option 1: Resend HTTP REST API
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const apiKey = process.env.RESEND_API_KEY.trim();
+      const senderEmail = process.env.RESEND_FROM_EMAIL || adminEmail;
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `Thunder AI Security <${senderEmail}>`,
+          to: [email],
+          subject: '⚡ Reset Your Thunder AI Password',
+          html: getResetPasswordHtml(resetUrl, name),
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ [EmailService] Password reset link sent to ${email} via Resend`);
+        return true;
+      }
+    } catch (err) {
+      console.warn(`Resend failed for reset email:`, err.message);
+    }
+  }
+
+  // Option 2: Gmail SMTP (from admin email configured in env)
+  const transporter = getTransporter();
+  if (transporter) {
+    const mailOptions = {
+      from: `"Thunder AI Security" <${adminEmail}>`,
+      to: email,
+      subject: '⚡ Reset Your Thunder AI Password',
+      text: `Hello ${name},\n\nYou requested a password reset for your Thunder AI account.\nPlease use the link below to reset your password (valid for 15 minutes):\n\n${resetUrl}\n\nIf you did not request this, please ignore this email.`,
+      html: getResetPasswordHtml(resetUrl, name),
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✅ [EmailService] Password reset email sent to ${email} via Gmail SMTP (${info.messageId})`);
+      return true;
+    } catch (err) {
+      console.error(`❌ [EmailService] Gmail SMTP error sending to ${email}:`, err.message);
+      console.log(`\n======================================================`);
+      console.log(`⚡ [RENDER FREE TIER RESET LINK BACKUP]`);
+      console.log(`✉️  User: ${email}`);
+      console.log(`🔗  Link: ${resetUrl}`);
+      console.log(`======================================================\n`);
+      throw err;
+    }
+  }
+
+  console.log(`\n======================================================`);
+  console.log(`⚡ [RENDER FREE TIER RESET LINK BACKUP]`);
+  console.log(`✉️  User: ${email}`);
+  console.log(`🔗  Link: ${resetUrl}`);
+  console.log(`======================================================\n`);
+  throw new Error('SMTP connection timed out or blocked on Render free tier. Use link from server logs or configure RESEND_API_KEY.');
+};

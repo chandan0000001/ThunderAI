@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { LandingPage } from './components/landing/LandingPage';
 import { ThunderApp } from './components/thunder/ThunderApp';
 import { AuthModal } from './components/auth/AuthModal';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { api } from './services/api';
 import type { User } from './types';
 
@@ -203,6 +204,20 @@ export function App() {
               onDeleteAccount={handleDeleteAccount}
               onUpdateUser={handleUpdateUser}
               initialProfileOpen={true}
+            />
+          }
+        />
+
+        {/* Reset Password Route */}
+        <Route
+          path="/reset-password"
+          element={
+            <ResetPasswordPage
+              onPasswordResetSuccess={() => {
+                setAuthInitialMode('login');
+                setAuthModalOpen(true);
+                navigate('/');
+              }}
             />
           }
         />

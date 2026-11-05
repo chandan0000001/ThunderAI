@@ -1,7 +1,18 @@
 import { redisClient } from "../config/redis.js";
+import { isAdminEmail } from "../utils/adminUtils.js";
 
 const authenticatedRateLimiter = async (req, res, next) => {
     try {
+        const isAdmin =
+            req.user?.role === "admin" ||
+            isAdminEmail(req.user?.email) ||
+            isAdminEmail(req.tokenPayload?.email);
+
+        // Admin has UNLIMITED window requests
+        if (isAdmin) {
+            return next();
+        }
+
         const userId = req.userId;
 
         const key = `rate-limit:user:${userId}`;

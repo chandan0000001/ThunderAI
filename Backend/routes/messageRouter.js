@@ -7,21 +7,16 @@ import loadUserMiddleware from "../middleware/loadUserMiddleware.js";
 const messageRouter = express.Router();
 
 messageRouter.use(authUserMiddleware);
+messageRouter.use(loadUserMiddleware);
 messageRouter.use(authenticatedRateLimiter);
 
 // Streaming routes
-messageRouter.post("/stream", tokenUsageMiddleware, loadUserMiddleware, sendMessageStream);
-messageRouter.post("/:chatId/stream", tokenUsageMiddleware, loadUserMiddleware, sendMessageStream);
+messageRouter.post("/stream", tokenUsageMiddleware, sendMessageStream);
+messageRouter.post("/:chatId/stream", tokenUsageMiddleware, sendMessageStream);
 
 // Non-streaming fallback routes
-messageRouter.post("/", tokenUsageMiddleware, loadUserMiddleware, sendMessage);
-messageRouter.get("/:chatId", loadUserMiddleware, getMessage);
-messageRouter.post("/:chatId", tokenUsageMiddleware, loadUserMiddleware, sendMessage);
-
-
-
-
-
-
+messageRouter.post("/", tokenUsageMiddleware, sendMessage);
+messageRouter.get("/:chatId", getMessage);
+messageRouter.post("/:chatId", tokenUsageMiddleware, sendMessage);
 
 export default messageRouter;

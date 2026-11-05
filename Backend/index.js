@@ -17,6 +17,7 @@ import { verifyEmailConfiguration } from "./services/emailService.js";
 import userRouter from "./routes/userRouter.js";
 import messageRouter from "./routes/messageRouter.js";
 import chatRouter from "./routes/chatRouter.js";
+import adminRouter from "./routes/adminRouter.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -25,7 +26,8 @@ const app = express();
 const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://thunder-ai-mu.vercel.app"
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -87,6 +89,7 @@ if (fs.existsSync(frontendDistPath)) {
 app.use("/user", userRouter);
 app.use("/msg", messageRouter);
 app.use("/chat", chatRouter);
+app.use("/admin", adminRouter);
 
 // Fallback for any other remaining unmatched GET routes in production
 if (fs.existsSync(frontendDistPath)) {
@@ -101,8 +104,8 @@ const startServer = async () => {
         await connectRedis();
 
         const PORT = process.env.PORT || 3000;
-        app.listen(PORT, "0.0.0.0", () => {
-            console.log(`⚡ Thunder AI Server is running at http://0.0.0.0:${PORT}`);
+        app.listen(PORT, () => {
+            console.log(`Thunder AI Server is running on port ${PORT}`);
         });
 
         // Test email configuration asynchronously in background (never blocks port binding)
@@ -120,7 +123,7 @@ const startServer = async () => {
                     existing.password = hash;
                     existing.isVerified = true;
                     await existing.save();
-                    console.log(`⚡ Admin user ensured: ${adminEmail} (Role: admin)`);
+                    console.log(` Admin user ensured: ${adminEmail} (Role: admin)`);
                 } else {
                     await User.create({
                         name: "Thunder Admin",
@@ -130,7 +133,7 @@ const startServer = async () => {
                         isVerified: true,
                         authProvider: "local"
                     });
-                    console.log(`⚡ Admin user created: ${adminEmail} (Role: admin)`);
+                    console.log(` Admin user created: ${adminEmail} (Role: admin)`);
                 }
             }).catch(e => console.warn("Admin bootstrap note:", e.message));
         }

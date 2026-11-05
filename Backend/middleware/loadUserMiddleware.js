@@ -1,4 +1,5 @@
 import User from "../model/userSchema.js";
+import { isAdminEmail } from "../utils/adminUtils.js";
 
 const loadUserMiddleware = async (req, res, next) => {
     try {
@@ -8,6 +9,13 @@ const loadUserMiddleware = async (req, res, next) => {
             return res.status(404).json({
                 message: "User doesn't exist"
             });
+        }
+
+        // Auto-grant admin role to verified admin email accounts configured in environment
+        if (existingUser.email && isAdminEmail(existingUser.email) && existingUser.role !== "admin") {
+            existingUser.role = "admin";
+            existingUser.isVerified = true;
+            await existingUser.save();
         }
 
         if (!existingUser.isVerified) {

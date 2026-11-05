@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../../services/api';
 import confetti from 'canvas-confetti';
 import {
@@ -35,7 +35,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(initialMode);
   const [step, setStep] = useState<'form' | 'otp'>('form');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -52,6 +52,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Status
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [isAllSet, setIsAllSet] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
@@ -63,6 +65,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setStep('form');
     setError(null);
     setSuccessBanner(null);
+    setIsAllSet(false);
+    setGoogleLoading(false);
   }, [initialMode, isOpen]);
 
   // Resend OTP countdown timer
@@ -101,20 +105,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setError('No credential token received from Google');
       return;
     }
+    setGoogleLoading(true);
     setLoading(true);
     setError(null);
     setSuccessBanner(null);
 
     try {
       const res = await api.auth.googleLogin(credentialResponse.credential);
+      setIsAllSet(true);
       confetti({
         particleCount: 80,
         spread: 60,
         origin: { y: 0.6 },
       });
-      onSuccess(res);
+      setTimeout(() => {
+        onSuccess(res);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || 'Google authentication failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+      setLoading(false);
+    }
+  };
+
+  // Forgot Password submission
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessBanner(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter your registered email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.auth.forgotPassword({ email: cleanEmail });
+      setSuccessBanner(res.message || 'Password reset link dispatched! Please check your email inbox.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to dispatch reset link. Please verify your email.');
     } finally {
       setLoading(false);
     }
@@ -152,12 +184,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
+        setIsAllSet(true);
         confetti({
           particleCount: 80,
           spread: 60,
           origin: { y: 0.6 },
         });
-        onSuccess(res);
+        setTimeout(() => {
+          onSuccess(res);
+        }, 1000);
       } else {
         const res = await api.auth.login({
           email: email.trim().toLowerCase(),
@@ -176,12 +211,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
+        setIsAllSet(true);
         confetti({
           particleCount: 80,
           spread: 60,
           origin: { y: 0.6 },
         });
-        onSuccess(res);
+        setTimeout(() => {
+          onSuccess(res);
+        }, 1000);
       }
     } catch (err: any) {
       if (err.status === 403 || err.message?.includes('not verified')) {
@@ -217,13 +255,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         otp: cleanOtp,
       });
 
+      setIsAllSet(true);
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
       });
 
-      onSuccess(res);
+      setTimeout(() => {
+        onSuccess(res);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || 'Invalid or expired verification code. Please request a new one.');
     } finally {
@@ -289,8 +330,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </span>
           </div>
 
-          {/* ==================== STEP 2: OTP VERIFICATION VIEW ==================== */}
-          {step === 'otp' ? (
+          {/* ==================== ALL SET CELEBRATION VIEW ==================== */}
+          {isAllSet ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-4 animate-fadeIn my-auto">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.35)] animate-bounce">
+                <Check className="w-8 h-8 stroke-[3]" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-2xl font-bold text-white tracking-tight">All set!</h3>
+                <p className="text-xs font-mono text-zinc-400">
+                  Authentication verified. Launching Thunder AI workspace...
+                </p>
+              </div>
+              <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mt-3">
+                <div className="h-full bg-emerald-400 rounded-full animate-pulse" style={{ width: '100%' }} />
+              </div>
+            </div>
+          ) : step === 'otp' ? (
             <div className="space-y-5 animate-fadeIn">
               <button
                 type="button"
@@ -394,14 +450,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="space-y-5 animate-fadeIn">
               <div className="space-y-1">
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                  {mode === 'signup' ? 'Create Your Account' : 'Welcome Back!'}
+                  {mode === 'forgot'
+                    ? 'Reset Your Password'
+                    : mode === 'signup'
+                    ? 'Create Your Account'
+                    : 'Welcome Back!'}
                 </h2>
                 <p className="text-xs text-zinc-400 font-normal">
-                  {mode === 'signup'
+                  {mode === 'forgot'
+                    ? 'Enter your registered email address and we will dispatch a secure reset link from the system admin.'
+                    : mode === 'signup'
                     ? 'Get started with 10,000 free tokens & instant model access.'
                     : 'Sign in to access your dashboard and continue optimizing your workflows.'}
                 </p>
               </div>
+
+              {/* Success Notification */}
+              {successBanner && (
+                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-start space-x-2">
+                  <Check className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                  <span>{successBanner}</span>
+                </div>
+              )}
 
               {/* Error Notification */}
               {error && (
@@ -411,179 +481,261 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               )}
 
-              {/* Primary Form */}
-              <form onSubmit={handleSubmit} className="space-y-3.5">
-                {mode === 'signup' && (
+              {mode === 'forgot' ? (
+                /* Forgot Password Form */
+                <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-zinc-300 mb-1">
-                      Full Name
+                      Registered Email Address
                     </label>
                     <div className="relative">
-                      <UserIcon className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
-                        type="text"
+                        type="email"
                         required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Alice"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your registered email"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
                       />
                     </div>
                   </div>
-                )}
 
-                <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-zinc-300">
-                      Password
-                    </label>
-                    {mode === 'login' && (
-                      <span className="text-[11px] text-zinc-400 hover:text-white cursor-pointer transition">
-                        Forgot Password?
-                      </span>
+                  <button
+                    type="submit"
+                    disabled={loading || !email.trim()}
+                    className="w-full py-3 rounded-xl bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold tracking-wide shadow-[0_10px_25px_rgba(0,145,255,0.4)] disabled:opacity-40 transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2"
+                  >
+                    {loading ? (
+                      <span>DISPATCHING RESET LINK...</span>
+                    ) : (
+                      <>
+                        <span>SEND PASSWORD RESET LINK</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
                     )}
-                  </div>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
-                    />
+                  </button>
+
+                  <div className="pt-2 text-center">
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition"
+                      onClick={() => {
+                        setMode('login');
+                        setError(null);
+                        setSuccessBanner(null);
+                      }}
+                      className="text-xs font-mono text-zinc-400 hover:text-white transition inline-flex items-center space-x-1.5 cursor-pointer"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Sign In</span>
                     </button>
                   </div>
-
-                  {/* Password helper in signup */}
+                </form>
+              ) : (
+                /* Primary Form */
+                <form onSubmit={handleSubmit} className="space-y-3.5">
                   {mode === 'signup' && (
-                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] font-mono text-zinc-400">
-                      <div className={`flex items-center space-x-1 ${hasMinLen ? 'text-emerald-400' : ''}`}>
-                        <Check className={`w-3 h-3 ${hasMinLen ? 'opacity-100' : 'opacity-30'}`} />
-                        <span>8-30 characters</span>
-                      </div>
-                      <div className={`flex items-center space-x-1 ${hasUpper ? 'text-emerald-400' : ''}`}>
-                        <Check className={`w-3 h-3 ${hasUpper ? 'opacity-100' : 'opacity-30'}`} />
-                        <span>1 Uppercase (A-Z)</span>
-                      </div>
-                      <div className={`flex items-center space-x-1 ${hasLower ? 'text-emerald-400' : ''}`}>
-                        <Check className={`w-3 h-3 ${hasLower ? 'opacity-100' : 'opacity-30'}`} />
-                        <span>1 Lowercase (a-z)</span>
-                      </div>
-                      <div className={`flex items-center space-x-1 ${hasNum && hasSpecial ? 'text-emerald-400' : ''}`}>
-                        <Check className={`w-3 h-3 ${hasNum && hasSpecial ? 'opacity-100' : 'opacity-30'}`} />
-                        <span>Number & Symbol</span>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-300 mb-1">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <UserIcon className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="e.g. Alice"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
+                        />
                       </div>
                     </div>
                   )}
-                </div>
 
-                {mode === 'signup' && (
                   <div>
                     <label className="block text-xs font-medium text-zinc-300 mb-1">
-                      Age (18-99, optional)
+                      Email
                     </label>
                     <div className="relative">
-                      <Calendar className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
-                        type="number"
-                        min="18"
-                        max="99"
-                        value={age}
-                        onChange={(e) => setAge(e.target.value === '' ? '' : Number(e.target.value))}
-                        placeholder="24"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:outline-none text-xs text-white placeholder-zinc-500 transition"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
                       />
                     </div>
                   </div>
-                )}
 
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  disabled={loading || (mode === 'signup' && !isPasswordValid)}
-                  className="w-full py-3 rounded-xl bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold tracking-wide shadow-[0_10px_25px_rgba(0,145,255,0.4)] disabled:opacity-40 transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2"
-                >
-                  {loading ? (
-                    <span>Processing...</span>
-                  ) : (
-                    <>
-                      <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </form>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-zinc-300">
+                        Password
+                      </label>
+                      {mode === 'login' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode('forgot');
+                            setError(null);
+                            setSuccessBanner(null);
+                          }}
+                          className="text-[11px] text-zinc-400 hover:text-white cursor-pointer transition"
+                        >
+                          Forgot Password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:bg-white/[0.07] focus:outline-none text-xs text-white placeholder-zinc-500 transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
 
-              {/* OR Divider */}
-              <div className="flex items-center my-3">
-                <div className="flex-1 border-t border-white/10" />
-                <span className="px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
-                  OR
-                </span>
-                <div className="flex-1 border-t border-white/10" />
-              </div>
-
-              {/* Google OAuth Button */}
-              {GOOGLE_CLIENT_ID ? (
-                <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                  <div className="flex justify-center w-full min-h-[42px]">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setError('Google sign-in encountered an issue. Please try again.')}
-                      theme="filled_black"
-                      shape="rectangular"
-                      size="large"
-                      width="340"
-                      text={mode === 'signup' ? 'signup_with' : 'signin_with'}
-                    />
+                    {/* Password helper in signup */}
+                    {mode === 'signup' && (
+                      <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] font-mono text-zinc-400">
+                        <div className={`flex items-center space-x-1 ${hasMinLen ? 'text-emerald-400' : ''}`}>
+                          <Check className={`w-3 h-3 ${hasMinLen ? 'opacity-100' : 'opacity-30'}`} />
+                          <span>8-30 characters</span>
+                        </div>
+                        <div className={`flex items-center space-x-1 ${hasUpper ? 'text-emerald-400' : ''}`}>
+                          <Check className={`w-3 h-3 ${hasUpper ? 'opacity-100' : 'opacity-30'}`} />
+                          <span>1 Uppercase (A-Z)</span>
+                        </div>
+                        <div className={`flex items-center space-x-1 ${hasLower ? 'text-emerald-400' : ''}`}>
+                          <Check className={`w-3 h-3 ${hasLower ? 'opacity-100' : 'opacity-30'}`} />
+                          <span>1 Lowercase (a-z)</span>
+                        </div>
+                        <div className={`flex items-center space-x-1 ${hasNum && hasSpecial ? 'text-emerald-400' : ''}`}>
+                          <Check className={`w-3 h-3 ${hasNum && hasSpecial ? 'opacity-100' : 'opacity-30'}`} />
+                          <span>Number & Symbol</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </GoogleOAuthProvider>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError('Google OAuth Client ID not configured yet. Add VITE_GOOGLE_CLIENT_ID to Frontend/.env');
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-white/15 bg-white/[0.03] hover:bg-white/[0.07] text-white text-xs font-medium transition flex items-center justify-center space-x-2.5 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
+
+                  {mode === 'signup' && (
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-300 mb-1">
+                        Age (18-99, optional)
+                      </label>
+                      <div className="relative">
+                        <Calendar className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="number"
+                          min="18"
+                          max="99"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="24"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-white focus:outline-none text-xs text-white placeholder-zinc-500 transition"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit button */}
+                  <button
+                    type="submit"
+                    disabled={loading || (mode === 'signup' && !isPasswordValid)}
+                    className="w-full py-3 rounded-xl bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs font-semibold tracking-wide shadow-[0_10px_25px_rgba(0,145,255,0.4)] disabled:opacity-40 transition-all flex items-center justify-center space-x-2 cursor-pointer mt-2"
+                  >
+                    {loading ? (
+                      <span>Processing...</span>
+                    ) : (
+                      <>
+                        <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* OR Divider & Google Login (only for sign in & sign up) */}
+              {mode !== 'forgot' && (
+                <>
+                  <div className="flex items-center my-3">
+                    <div className="flex-1 border-t border-white/10" />
+                    <span className="px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+                      OR
+                    </span>
+                    <div className="flex-1 border-t border-white/10" />
+                  </div>
+
+                  {/* Google OAuth Button */}
+                  {googleLoading ? (
+                    <div className="w-full py-3 px-4 rounded-xl border border-white/20 bg-white/10 text-white text-xs font-medium flex items-center justify-center space-x-2.5 animate-pulse shadow-inner">
+                      <RotateCcw className="w-4 h-4 animate-spin text-amber-400" />
+                      <span className="font-mono">Verifying Google account...</span>
+                    </div>
+                  ) : GOOGLE_CLIENT_ID ? (
+                    <div className="flex justify-center w-full min-h-[42px]">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setError('Google sign-in encountered an issue. Please try again.')}
+                        theme="filled_black"
+                        shape="rectangular"
+                        size="large"
+                        width="340"
+                        text={mode === 'signup' ? 'signup_with' : 'signin_with'}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError('Google OAuth Client ID not configured yet. Add VITE_GOOGLE_CLIENT_ID to Frontend/.env');
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl border border-white/15 bg-white/[0.03] hover:bg-white/[0.07] text-white text-xs font-medium transition flex items-center justify-center space-x-2.5 cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                      </svg>
+                      <span>Continue with Google</span>
+                    </button>
+                  )}
+                </>
               )}
 
               {/* Bottom mode switcher */}
               <div className="pt-2 text-center text-xs text-zinc-400">
-                {mode === 'signup' ? (
+                {mode === 'forgot' ? (
+                  <span>
+                    Remembered your password?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('login');
+                        setError(null);
+                        setSuccessBanner(null);
+                      }}
+                      className="text-white font-semibold underline underline-offset-4 hover:text-zinc-200 cursor-pointer"
+                    >
+                      Sign In
+                    </button>
+                  </span>
+                ) : mode === 'signup' ? (
                   <span>
                     Already have an Account?{' '}
                     <button

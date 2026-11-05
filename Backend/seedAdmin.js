@@ -18,8 +18,11 @@ async function seedAdmin() {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB successfully");
 
-    const email = "kumardalaichandan803@gmail.com";
-    const plainPassword = "admin#chnadan@Thunder120";
+    const email = (process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS?.split(',')[0] || '').trim().toLowerCase();
+    const plainPassword = process.env.ADMIN_PASSWORD || '';
+    if (!email || !plainPassword) {
+      throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be configured in environment (.env)");
+    }
     const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
     let user = await User.findOne({ email });

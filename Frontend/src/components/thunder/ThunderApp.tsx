@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import type { User, Chat, Message, AvailableModel } from '../../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ProfileModal } from '../profile/ProfileModal';
+import { ApiKeyModal } from '../byok/ApiKeyModal';
 import {
   Menu,
   Plus,
@@ -31,6 +32,7 @@ import {
   Layers,
   Home,
   Sparkles,
+  Key,
 } from 'lucide-react';
 
 interface ThunderAppProps {
@@ -54,40 +56,40 @@ const AVAILABLE_MODELS: AvailableModel[] = [
     enabled: true,
   },
   {
-    id: 'google/gemini-2.0-flash-exp:free',
-    name: 'Gemini 2.0 Flash',
-    provider: 'Google DeepMind',
-    description: 'High-throughput multimodal intelligence engine.',
-    tag: 'COMING SOON',
-    badge: 'Coming Soon',
-    enabled: false,
+    id: 'groq/llama-3.3-70b-versatile',
+    name: 'Groq Llama 3.3 70B',
+    provider: 'Groq LPU',
+    description: 'Ultra-fast 70B parameter open-weights model on Groq hardware.',
+    tag: 'FAST',
+    badge: 'Operational',
+    enabled: true,
+  },
+  {
+    id: 'groq/deepseek-r1-distill-llama-70b',
+    name: 'DeepSeek R1 (Groq)',
+    provider: 'Groq / DeepSeek',
+    description: 'Recursive chain-of-thought mathematical reasoning Titan.',
+    tag: 'REASONING',
+    badge: 'Operational',
+    enabled: true,
   },
   {
     id: 'anthropic/claude-3.5-sonnet',
     name: 'Claude 3.5 Sonnet',
-    provider: 'Anthropic',
+    provider: 'Anthropic BYOK',
     description: 'Industry benchmark for code architecture and problem solving.',
-    tag: 'COMING SOON',
-    badge: 'Coming Soon',
-    enabled: false,
+    tag: 'BYOK',
+    badge: 'Supported',
+    enabled: true,
   },
   {
-    id: 'deepseek/deepseek-r1',
-    name: 'DeepSeek R1',
-    provider: 'DeepSeek AI',
-    description: 'Recursive chain-of-thought mathematical reasoning Titan.',
-    tag: 'COMING SOON',
-    badge: 'Coming Soon',
-    enabled: false,
-  },
-  {
-    id: 'meta-llama/llama-3.3-70b-instruct',
-    name: 'Llama 3.3 70B',
-    provider: 'Meta',
-    description: 'Open-weights 70B parameter powerhouse.',
-    tag: 'COMING SOON',
-    badge: 'Coming Soon',
-    enabled: false,
+    id: 'openai/gpt-4o',
+    name: 'ChatGPT GPT-4o',
+    provider: 'OpenAI BYOK',
+    description: 'OpenAI flagship multimodal reasoning model.',
+    tag: 'BYOK',
+    badge: 'Supported',
+    enabled: true,
   },
 ];
 
@@ -130,9 +132,23 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const navigate = useNavigate();
   const { chatId: urlChatId } = useParams<{ chatId?: string }>();
 
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Responsive mobile check & sidebar state
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : false
+  );
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Chats & messages
   const [chats, setChats] = useState<Chat[]>([]);
@@ -154,13 +170,16 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   // Live Token Tracking State
   const [tokenStats, setTokenStats] = useState({
     used: currentUser?.usage?.tokenUsed ?? currentUser?.usage?.totalTokenUsed ?? 0,
-    limit: currentUser?.usage?.tokenLimit || 10000,
+    limit: currentUser?.role === 'admin' ? -1 : (currentUser?.usage?.tokenLimit || 10000),
   });
   const [syncingTokens, setSyncingTokens] = useState(false);
   const [lastTokenDelta, setLastTokenDelta] = useState<number | null>(null);
 
+  const isAdminUser = currentUser?.role === 'admin' || tokenStats.limit === -1;
+
   // Settings / Profile Modal
   const [profileModalOpen, setProfileModalOpen] = useState(initialProfileOpen);
+  const [byokModalOpen, setByokModalOpen] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -296,6 +315,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
   // Start new chat (navigates to /chat)
   const handleNewChat = () => {
+    if (isMobile) setSidebarOpen(false);
     setCurrentChatId(null);
     setMessages([]);
     setInputPrompt('');
@@ -577,11 +597,21 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         isDarkMode ? 'bg-[#131314] text-[#e3e3e3]' : 'bg-[#f8f9fa] text-[#1f1f1f]'
       }`}
     >
+      {/* Mobile Backdrop Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-fadeIn"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* -------------------- THUNDER SIDEBAR -------------------- */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-72' : 'w-16'
-        } transition-all duration-300 flex flex-col justify-between shrink-0 z-20 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 shadow-2xl flex flex-col justify-between transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        } ${
+          sidebarOpen ? 'md:w-72' : 'md:w-16'
+        } ${
           isDarkMode
             ? 'bg-[#1e1f20] border-r border-[#2d2e30]'
             : 'bg-[#f0f4f9] border-r border-[#e1e3e1]'
@@ -597,14 +627,16 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                   ? 'hover:bg-[#2d2e30] text-[#c4c7c5] hover:text-white'
                   : 'hover:bg-[#e4ebf5] text-[#444746] hover:text-black'
               }`}
-              title={sidebarOpen ? 'Collapse menu' : 'Expand menu'}
+              title={sidebarOpen ? 'Collapse / close menu' : 'Expand menu'}
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5 hidden md:block" />
+              <X className="w-5 h-5 md:hidden" />
             </button>
 
             {sidebarOpen && (
               <button
                 onClick={() => {
+                  setSidebarOpen(false);
                   onBackToLanding();
                   navigate('/');
                 }}
@@ -734,6 +766,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                   key={chat._id}
                   onClick={() => {
                     if (sending) return;
+                    if (isMobile) setSidebarOpen(false);
                     setCurrentChatId(chat._id);
                     navigate(`/chat/${chat._id}`);
                   }}
@@ -781,7 +814,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center space-x-1.5 text-zinc-400">
                   <Zap className="w-3.5 h-3.5 text-white" />
-                  <span className="font-bold tracking-wider text-zinc-300">TOKEN QUOTA</span>
+                  <span className="font-bold tracking-wider text-zinc-300">
+                    {isAdminUser ? 'ADMIN QUOTA' : 'TOKEN QUOTA'}
+                  </span>
                   <button
                     onClick={refreshLiveTokens}
                     disabled={syncingTokens}
@@ -807,23 +842,46 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               {/* Live Progress Bar */}
               <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full bg-white rounded-full transition-all duration-300"
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    isAdminUser
+                      ? 'bg-gradient-to-r from-emerald-400 via-amber-400 to-yellow-300'
+                      : 'bg-white'
+                  }`}
                   style={{
-                    width: `${Math.min(100, (tokenStats.used / (tokenStats.limit || 10000)) * 100)}%`,
+                    width: isAdminUser ? '100%' : `${Math.min(100, (tokenStats.used / (tokenStats.limit || 10000)) * 100)}%`,
                   }}
                 />
               </div>
 
               <div className="flex justify-between items-center text-[9px] text-zinc-500">
-                <span>LIMIT: {(tokenStats.limit || 10000).toLocaleString()}</span>
-                <span className="text-emerald-400 font-semibold">● ACTIVE</span>
+                <span>LIMIT: {isAdminUser ? '∞ UNLIMITED' : (tokenStats.limit || 10000).toLocaleString()}</span>
+                <span className="text-emerald-400 font-semibold">{isAdminUser ? '● UNRESTRICTED' : '● ACTIVE'}</span>
               </div>
             </div>
+          )}
+
+          {/* BYOK Custom Keys in Sidebar */}
+          {sidebarOpen && (
+            <button
+              onClick={() => {
+                if (isMobile) setSidebarOpen(false);
+                setByokModalOpen(true);
+              }}
+              className="w-full px-3 py-2 rounded-xl border border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-mono text-xs flex items-center justify-between transition cursor-pointer"
+              title="Add custom API keys for Claude, Groq, OpenRouter, ChatGPT"
+            >
+              <div className="flex items-center space-x-2">
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-semibold text-[11px]">API KEYS (BYOK)</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold">ROUND-ROBIN</span>
+            </button>
           )}
 
           {/* Profile Button in Sidebar (Navigates to /profile) */}
           <div
             onClick={() => {
+              if (isMobile) setSidebarOpen(false);
               setProfileModalOpen(true);
               navigate('/profile');
             }}
@@ -857,8 +915,8 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 <div className="overflow-hidden">
                   <div className="text-xs font-medium truncate text-white flex items-center space-x-1">
                     <span>{currentUser?.name || 'Operator'}</span>
-                    {currentUser?.role === 'admin' && (
-                      <span className="px-1.5 py-0.2 rounded bg-white text-black text-[8px] font-bold">
+                    {isAdminUser && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-400 text-black text-[8px] font-bold">
                         ADMIN
                       </span>
                     )}
@@ -898,44 +956,53 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         />
 
         {/* Top Header Bar */}
-        <header className={`h-14 px-6 flex items-center justify-between border-b backdrop-blur-md z-10 ${
+        <header className={`h-14 px-3 sm:px-6 flex items-center justify-between border-b backdrop-blur-md z-10 ${
           isDarkMode
             ? 'border-[#2d2e30]/60 bg-[#0e0f14]/80'
             : 'border-[#e1e3e1] bg-[#ffffff]/80'
         }`}>
           {/* Thunder Title & Model Selector Dropdown */}
-          <div className="flex items-center space-x-3 relative">
+          <div className="flex items-center space-x-2 sm:space-x-3 relative min-w-0">
+            {/* Mobile Hamburger Drawer Button */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-1.5 -ml-1 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer shrink-0"
+              title="Open conversations"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div
               onClick={() => {
                 onBackToLanding();
                 navigate('/');
               }}
-              className="flex items-center space-x-2 cursor-pointer group select-none"
+              className="flex items-center space-x-1.5 sm:space-x-2 cursor-pointer group select-none shrink-0"
               title="Return to Home"
             >
-              <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 flex items-center justify-center shadow-md group-hover:scale-105 transition">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 flex items-center justify-center shadow-md group-hover:scale-105 transition shrink-0">
                 <Zap className="w-3.5 h-3.5 text-black" />
               </div>
-              <span className={`font-semibold text-base tracking-tight font-mono uppercase group-hover:text-amber-400 transition ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+              <span className={`font-semibold text-sm sm:text-base tracking-tight font-mono uppercase group-hover:text-amber-400 transition ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
                 Thunder
               </span>
             </div>
 
             {/* Model Selector Pill */}
-            <div className="relative">
+            <div className="relative min-w-0">
               <button
                 onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium transition ${
+                className={`flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs font-medium transition cursor-pointer max-w-[145px] sm:max-w-none ${
                   isDarkMode
                     ? 'bg-[#1e1f20] hover:bg-[#28292a] border-[#2d2e30] text-[#c4c7c5] hover:text-white'
                     : 'bg-[#f0f4f9] hover:bg-[#e4ebf5] border-[#d3dbdf] text-[#444746] hover:text-black'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="font-medium truncate text-[11px] sm:text-xs">
                   {AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || 'OpenRouter Free Tier'}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               </button>
 
               {/* Model Dropdown Menu */}
@@ -1005,13 +1072,36 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                       </button>
                     );
                   })}
+
+                  <div className="pt-2 border-t border-white/10 px-1">
+                    <button
+                      onClick={() => {
+                        setModelDropdownOpen(false);
+                        setByokModalOpen(true);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-300 font-mono text-[11px] font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
+                    >
+                      <Key className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ADD YOUR OWN API KEYS (BYOK)</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* BYOK Custom Keys Button */}
+            <button
+              onClick={() => setByokModalOpen(true)}
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition cursor-pointer shadow-sm"
+              title="Add your own API key (Claude, Groq, OpenRouter, ChatGPT) with round-robin support"
+            >
+              <Key className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline font-mono text-[11px] font-bold">API KEYS</span>
+            </button>
+
             <button
               onClick={() => {
                 onBackToLanding();
@@ -1071,21 +1161,21 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         )}
 
         {/* -------------------- CHAT CONTENT (Messages or Empty Thunder State) -------------------- */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {!currentChatId && messages.length === 0 ? (
             /* Thunder Empty State Greeting */
-            <div className="max-w-3xl mx-auto h-full flex flex-col justify-center py-12 space-y-10">
-              <div className="space-y-3">
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white font-inter">
+            <div className="max-w-3xl mx-auto h-full flex flex-col justify-center py-6 sm:py-12 space-y-6 sm:space-y-10">
+              <div className="space-y-2 sm:space-y-3">
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white font-inter">
                   Hello, {currentUser?.name?.split(' ')[0] || 'Operator'}
                 </h1>
-                <p className="text-xl sm:text-3xl font-light text-zinc-400 font-inter">
+                <p className="text-base sm:text-2xl md:text-3xl font-light text-zinc-400 font-inter">
                   How can Thunder assist your workflow today?
                 </p>
               </div>
 
               {/* Suggestion prompt cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 pt-2 sm:pt-4">
                 {SUGGESTIONS.map((s, idx) => {
                   const Icon = s.icon;
                   return (
@@ -1095,7 +1185,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                         setInputPrompt(s.prompt);
                         handleSendMessage(s.prompt);
                       }}
-                      className="p-4.5 rounded-2xl border border-white/10 bg-[#121319]/80 backdrop-blur-md hover:bg-[#181922]/95 hover:border-white/25 text-left transition-all duration-200 flex flex-col justify-between h-36 group cursor-pointer shadow-lg"
+                      className="p-3 sm:p-4 rounded-2xl border border-white/10 bg-[#121319]/80 backdrop-blur-md hover:bg-[#181922]/95 hover:border-white/25 text-left transition-all duration-200 flex flex-col justify-between min-h-[90px] sm:h-36 group cursor-pointer shadow-lg gap-2"
                     >
                       <div className="space-y-1">
                         <span className="text-xs font-semibold text-white leading-snug block">
@@ -1105,7 +1195,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                           {s.desc}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-white/5">
                         <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-zinc-300 group-hover:text-white transition">
                           <Icon className="w-3.5 h-3.5" />
                         </div>
@@ -1240,8 +1330,8 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         </div>
 
         {/* -------------------- FLOATING THUNDER BOTTOM PROMPT BAR -------------------- */}
-        <div className="p-4 md:pb-6 max-w-3xl w-full mx-auto relative z-20">
-          <div className={`rounded-3xl border shadow-2xl backdrop-blur-xl transition-all p-3 space-y-2 ${
+        <div className="p-2 sm:p-4 md:pb-6 max-w-3xl w-full mx-auto relative z-20">
+          <div className={`rounded-3xl border shadow-2xl backdrop-blur-xl transition-all p-2.5 sm:p-3 space-y-2 ${
             isDarkMode
               ? 'bg-[#1e1f20]/85 border-white/10 focus-within:border-yellow-500/50 focus-within:bg-[#28292a]/95'
               : 'bg-[#f0f4f9]/85 border-[#d3dbdf] focus-within:border-yellow-500 focus-within:bg-white/95'
@@ -1272,12 +1362,12 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               isDarkMode ? 'border-white/[0.04]' : 'border-black/[0.04]'
             }`}>
               {/* Left action accessories */}
-              <div className="flex items-center space-x-1.5 text-zinc-400">
+              <div className="flex items-center space-x-1 sm:space-x-1.5 text-zinc-400">
                 <button
                   type="button"
                   title="Upload attachment"
                   disabled={sending}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition ${
                     sending ? 'opacity-40 cursor-not-allowed' : ''
                   } ${
                     isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
@@ -1289,7 +1379,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                   type="button"
                   title="Web Search"
                   disabled={sending}
-                  className={`p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition ${
                     sending ? 'opacity-40 cursor-not-allowed' : ''
                   } ${
                     isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
@@ -1297,7 +1387,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 >
                   <Globe className="w-4 h-4" />
                 </button>
-                <span className="text-[10px] font-mono text-zinc-500 pl-1">
+                <span className="text-[10px] font-mono text-zinc-500 pl-1 truncate max-w-[90px] sm:max-w-none">
                   Model: {selectedModel.split('/')[1] || selectedModel}
                 </span>
               </div>
@@ -1343,6 +1433,12 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         onDeleteAccount={onDeleteAccount}
         isDarkMode={isDarkMode}
         onUserUpdated={onUpdateUser}
+      />
+
+      {/* -------------------- BYOK CUSTOM API KEYS MODAL -------------------- */}
+      <ApiKeyModal
+        isOpen={byokModalOpen}
+        onClose={() => setByokModalOpen(false)}
       />
     </div>
   );

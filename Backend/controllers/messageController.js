@@ -1,7 +1,7 @@
 import Chat from "../model/chatSchema.js";
 import Message from "../model/messageSchema.js";
 import mongoose from "mongoose";
-import { generateAIResponse, generateAIStreamResponse } from "../services/openRouterService.js";
+import { generateAIResponse, generateAIStreamResponse } from "../services/aiProviderService.js";
 import {buildMessagesForAI} from "../utils/chatContext.js"
 import {
   addUserTokenUsage,
@@ -122,9 +122,10 @@ export const sendMessage = async (req, res) => {
       currentMessage: content.trim(),
     });
 
-    const { aiReply, usage } = await generateAIResponse({
+    const { aiReply, usage, provider, isUserKey } = await generateAIResponse({
       model: chat.model,
       messages: messagesForAI,
+      userId: req.user._id,
     });
 
     const userMessage = await Message.create({
@@ -151,31 +152,32 @@ export const sendMessage = async (req, res) => {
     await addChatTokenUsage(chat, usage);
     await addUserTokenUsage(req.user, usage.totalTokens);
 
-    // redis ke andar information ko daalna padega
-
-    const tokenUsed = await redisClient.incrBy(
-        req.tokenUsageKey,
-        usage.totalTokens
-    );
-
+    // Redis token usage update (only for system key usage; BYOK is rate-limited by provider)
+    let tokenUsed = 0;
+    if (!isUserKey && req.tokenUsageKey) {
+      tokenUsed = await redisClient.incrBy(req.tokenUsageKey, usage.totalTokens);
       if (tokenUsed === usage.totalTokens) {
-           await redisClient.expire(
-           req.tokenUsageKey,
-          Number(process.env.TOKEN_WINDOW_SECONDS)
+        await redisClient.expire(
+          req.tokenUsageKey,
+          Number(process.env.TOKEN_WINDOW_SECONDS || 18000)
         );
       }
-
-
+    }
 
     updateSummaryIfNeeded(chat._id);
+
+    const isAdmin = req.user?.role === "admin";
 
     return res.status(201).json({
       message: "Message sent successfully",
       chatId: chat._id,
       reply: aiReply,
       usage,
+      provider,
+      isUserKey,
       tokenUsed,
-      tokenLimit: Number(process.env.TOKEN_LIMIT),
+      tokenLimit: (isAdmin || isUserKey) ? -1 : Number(process.env.TOKEN_LIMIT || 10000),
+      isUnlimited: isAdmin || isUserKey,
       userMessage,
       assistantMessage
     });
@@ -273,10 +275,11 @@ export const sendMessageStream = async (req, res) => {
       })}\n\n`
     );
 
-    // Stream generation from OpenRouter (native or fallback)
-    const { aiReply, usage } = await generateAIStreamResponse({
+    // Stream generation from AI provider (OpenRouter, Groq, Claude, ChatGPT)
+    const { aiReply, usage, provider, isUserKey } = await generateAIStreamResponse({
       model: chat.model,
       messages: messagesForAI,
+      userId: req.user._id,
       onChunk: async (delta) => {
         res.write(
           `data: ${JSON.stringify({
@@ -305,9 +308,9 @@ export const sendMessageStream = async (req, res) => {
     await addChatTokenUsage(chat, usage);
     await addUserTokenUsage(req.user, usage.totalTokens);
 
-    // Redis token usage update
+    // Redis token usage update (only for system key usage; BYOK is rate-limited by provider)
     let tokenUsed = 0;
-    if (req.tokenUsageKey) {
+    if (!isUserKey && req.tokenUsageKey) {
       tokenUsed = await redisClient.incrBy(req.tokenUsageKey, usage.totalTokens);
       if (tokenUsed === usage.totalTokens) {
         await redisClient.expire(
@@ -317,6 +320,8 @@ export const sendMessageStream = async (req, res) => {
       }
     }
 
+    const isAdmin = req.user?.role === "admin";
+
     // Emit done event with complete metadata
     res.write(
       `data: ${JSON.stringify({
@@ -324,8 +329,11 @@ export const sendMessageStream = async (req, res) => {
         chatId: chat._id,
         reply: aiReply,
         usage,
+        provider,
+        isUserKey,
         tokenUsed,
-        tokenLimit: Number(process.env.TOKEN_LIMIT || 10000),
+        tokenLimit: (isAdmin || isUserKey) ? -1 : Number(process.env.TOKEN_LIMIT || 10000),
+        isUnlimited: isAdmin || isUserKey,
         userMessage,
         assistantMessage,
       })}\n\n`

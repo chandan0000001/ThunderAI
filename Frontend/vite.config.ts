@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/user': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -25,7 +25,7 @@ export default defineConfig({
         },
       },
       '/chat': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -35,7 +35,17 @@ export default defineConfig({
         },
       },
       '/msg': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes('text/html')) {
+            return '/index.html';
+          }
+        },
+      },
+      '/admin': {
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
         bypass: (req) => {

@@ -1,4 +1,4 @@
-import type { User, Chat, Message, SendMessageResponse, AuthResponse, VerifyOtpResponse } from '../types';
+import type { User, Chat, Message, SendMessageResponse, AuthResponse, VerifyOtpResponse, AdminUser, AdminStats, ByokProviderStatus } from '../types';
 
 // In production with decoupled deployment (Cloudflare Pages + Koyeb), set VITE_API_BASE_URL in Cloudflare Pages dashboard
 // (e.g. VITE_API_BASE_URL=https://your-backend.koyeb.app). In local dev or unified mode, defaults to empty string.
@@ -78,6 +78,20 @@ export const api = {
 
     login: async (data: { email: string; password: string }): Promise<AuthResponse> => {
       return request<AuthResponse>('/user/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    forgotPassword: async (data: { email: string }): Promise<{ message: string; devLink?: string }> => {
+      return request<{ message: string; devLink?: string }>('/user/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    resetPassword: async (data: { token: string; newPassword: string }): Promise<{ message: string }> => {
+      return request<{ message: string }>('/user/reset-password', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -246,6 +260,80 @@ export const api = {
       }
 
       return donePayload;
+    },
+  },
+
+  admin: {
+    getUsers: async (params?: { search?: string; role?: string; page?: number }): Promise<{ users: AdminUser[]; total: number; page: number; pages: number }> => {
+      const query = new URLSearchParams();
+      if (params?.search) query.append('search', params.search);
+      if (params?.role) query.append('role', params.role);
+      if (params?.page) query.append('page', params.page.toString());
+      const qs = query.toString();
+      return request(`/admin/users${qs ? `?${qs}` : ''}`, { method: 'GET' });
+    },
+
+    createUser: async (data: { name: string; email: string; password: string; role?: string; age?: number }): Promise<{ message: string; user: AdminUser }> => {
+      return request('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    inviteUser: async (data: { name?: string; email: string; role?: string }): Promise<{ message: string; tempPassword?: string; emailSent?: boolean; user: AdminUser }> => {
+      return request('/admin/users/invite', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    deleteUser: async (userId: string): Promise<{ message: string }> => {
+      return request(`/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+    },
+
+    updateRole: async (userId: string, role: 'user' | 'admin'): Promise<{ message: string; user: { _id: string; email: string; role: string } }> => {
+      return request(`/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      });
+    },
+
+    resetQuota: async (userId: string): Promise<{ message: string }> => {
+      return request(`/admin/users/${userId}/reset-quota`, {
+        method: 'PATCH',
+      });
+    },
+
+    getStats: async (): Promise<AdminStats> => {
+      return request<AdminStats>('/admin/stats', {
+        method: 'GET',
+      });
+    },
+  },
+
+  byok: {
+    getStatus: async (): Promise<{ providers: ByokProviderStatus[] }> => {
+      return request<{ providers: ByokProviderStatus[] }>('/user/custom-api-key', {
+        method: 'GET',
+      });
+    },
+
+    saveKey: async (
+      provider: string,
+      apiKey: string
+    ): Promise<{ message: string; provider: string; keyCount: number; ttl: number; masked?: string }> => {
+      return request('/user/custom-api-key', {
+        method: 'POST',
+        body: JSON.stringify({ provider, apiKey }),
+      });
+    },
+
+    deleteKey: async (provider: string): Promise<{ message: string }> => {
+      return request(`/user/custom-api-key/${provider}`, {
+        method: 'DELETE',
+      });
     },
   },
 };

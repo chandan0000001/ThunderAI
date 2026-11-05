@@ -14,6 +14,7 @@ export interface UserUsage {
   totalTokens?: number;
   windowSeconds?: number;
   ttl?: number;
+  isUnlimited?: boolean;
 }
 
 export interface User {
@@ -25,6 +26,41 @@ export interface User {
   role?: string;
   usage?: UserUsage;
   isVerified?: boolean;
+  isUnlimited?: boolean;
+}
+
+export interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin' | string;
+  age?: number;
+  avatar?: string;
+  isVerified?: boolean;
+  authProvider?: string;
+  usage?: UserUsage;
+  liveTokens?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  adminCount: number;
+  totalChats: number;
+  totalMessages: number;
+  totalTokensUsed: number;
+  governanceStatus: string;
+  slidingWindowSeconds: number;
+  tokenLimit: number;
+}
+
+export interface ByokProviderStatus {
+  provider: 'openrouter' | 'groq' | 'claude' | 'chatgpt';
+  active: boolean;
+  keyCount: number;
+  maskedKey?: string;
+  ttlRemainingSeconds?: number;
 }
 
 export interface Chat {
