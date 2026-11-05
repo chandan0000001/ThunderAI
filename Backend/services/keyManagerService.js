@@ -139,10 +139,14 @@ export const getUserConfiguredProviders = async (userId) => {
 };
 
 // Return candidate keys in current round-robin priority order for failover resilience
-export const getCandidateKeys = async (userId, provider) => {
-  // 1. User BYOK keys first
-  const userKeys = await getUserApiKeys(userId, provider, true);
-  if (userKeys.length > 0) {
+export const getCandidateKeys = async (userId, provider, { useThunderEngine = true } = {}) => {
+  // 1. If User Custom Key (BYOK) mode is selected (useThunderEngine === false)
+  if (!useThunderEngine) {
+    const userKeys = await getUserApiKeys(userId, provider, true);
+    if (!userKeys || userKeys.length === 0) {
+      throw new Error(`No API key configured for ${provider.toUpperCase()}. Please configure your key in Settings or switch ON Thunder Internal Engine.`);
+    }
+
     const mapKey = `${userId}:${provider}`;
     const currentIndex = userKeyIndices.get(mapKey) || 0;
     const candidates = [];
@@ -157,95 +161,55 @@ export const getCandidateKeys = async (userId, provider) => {
     return candidates;
   }
 
-  // 2. System keys for target provider
-  const systemKeys = getSystemKeys(provider);
-  if (systemKeys.length > 0) {
+  // 2. Thunder Internal Engine mode (useThunderEngine === true)
+  // Candidate pool with primary provider keys first
+  const candidates = [];
+  const primaryKeys = getSystemKeys(provider);
+  if (primaryKeys.length > 0) {
     const currentIndex = systemKeyIndices[provider] || 0;
-    const candidates = [];
-    for (let i = 0; i < systemKeys.length; i++) {
+    for (let i = 0; i < primaryKeys.length; i++) {
       candidates.push({
-        apiKey: systemKeys[(currentIndex + i) % systemKeys.length],
+        apiKey: primaryKeys[(currentIndex + i) % primaryKeys.length],
         isUserKey: false,
         provider,
       });
     }
-    systemKeyIndices[provider] = (currentIndex + 1) % systemKeys.length;
-    return candidates;
+    systemKeyIndices[provider] = (currentIndex + 1) % primaryKeys.length;
   }
 
-  // 3. Fallback to OpenRouter system keys
-  const fallbackKeys = getSystemKeys("openrouter");
-  if (fallbackKeys.length > 0) {
-    const currentIndex = systemKeyIndices.openrouter || 0;
-    const candidates = [];
-    for (let i = 0; i < fallbackKeys.length; i++) {
-      candidates.push({
-        apiKey: fallbackKeys[(currentIndex + i) % fallbackKeys.length],
-        isUserKey: false,
-        provider: "openrouter",
-      });
+  // 3. Fallback across all other active providers in environment
+  const fallbackOrder = ["groq", "openrouter", "claude", "chatgpt"];
+  for (const altProvider of fallbackOrder) {
+    if (altProvider === provider) continue;
+    const altKeys = getSystemKeys(altProvider);
+    if (altKeys.length > 0) {
+      const altIndex = systemKeyIndices[altProvider] || 0;
+      for (let i = 0; i < altKeys.length; i++) {
+        candidates.push({
+          apiKey: altKeys[(altIndex + i) % altKeys.length],
+          isUserKey: false,
+          provider: altProvider,
+        });
+      }
+      systemKeyIndices[altProvider] = (altIndex + 1) % altKeys.length;
     }
-    systemKeyIndices.openrouter = (currentIndex + 1) % fallbackKeys.length;
-    return candidates;
   }
 
-  throw new Error(`No API key configured for ${provider.toUpperCase()}.`);
+  if (candidates.length === 0) {
+    throw new Error(`No API keys configured in environment for ${provider.toUpperCase()}.`);
+  }
+
+  return candidates;
 };
 
 // Round-Robin Key Selector
-export const getActiveApiKey = async (userId, provider) => {
-  // 1. Check if user provided their own key(s)
-  const userKeys = await getUserApiKeys(userId, provider, true);
-  if (userKeys.length > 0) {
-    const mapKey = `${userId}:${provider}`;
-    const currentIndex = userKeyIndices.get(mapKey) || 0;
-    const selectedKey = userKeys[currentIndex % userKeys.length];
-    userKeyIndices.set(mapKey, (currentIndex + 1) % userKeys.length);
-
-    return {
-      apiKey: selectedKey,
-      isUserKey: true,
-      provider,
-      totalKeysInPool: userKeys.length,
-      rotationIndex: currentIndex % userKeys.length,
-    };
-  }
-
-  // 2. Fall back to Thunder system keys from environment
-  const systemKeys = getSystemKeys(provider);
-  if (systemKeys.length > 0) {
-    const currentIndex = systemKeyIndices[provider] || 0;
-    const selectedKey = systemKeys[currentIndex % systemKeys.length];
-    systemKeyIndices[provider] = (currentIndex + 1) % systemKeys.length;
-
-    return {
-      apiKey: selectedKey,
-      isUserKey: false,
-      provider,
-      totalKeysInPool: systemKeys.length,
-      rotationIndex: currentIndex % systemKeys.length,
-    };
-  }
-
-  // 3. Fallback to OpenRouter key if specific provider key is absent
-  const fallbackKeys = getSystemKeys("openrouter");
-  if (fallbackKeys.length > 0) {
-    const currentIndex = systemKeyIndices.openrouter || 0;
-    const selectedKey = fallbackKeys[currentIndex % fallbackKeys.length];
-    systemKeyIndices.openrouter = (currentIndex + 1) % fallbackKeys.length;
-
-    return {
-      apiKey: selectedKey,
-      isUserKey: false,
-      provider: "openrouter",
-      totalKeysInPool: fallbackKeys.length,
-      rotationIndex: currentIndex % fallbackKeys.length,
-    };
-  }
-
-  throw new Error(
-    `No API key configured for ${provider.toUpperCase()}. Please configure ${provider.toUpperCase()}_API_KEY in Backend/.env or provide your own key in settings.`
-  );
+export const getActiveApiKey = async (userId, provider, { useThunderEngine = true } = {}) => {
+  const candidates = await getCandidateKeys(userId, provider, { useThunderEngine });
+  return {
+    ...candidates[0],
+    totalKeysInPool: candidates.length,
+    rotationIndex: 0,
+  };
 };
 
 // Mask key for secure display

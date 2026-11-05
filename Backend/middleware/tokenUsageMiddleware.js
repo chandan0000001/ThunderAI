@@ -17,7 +17,12 @@ const tokenUsageMiddleware = async (req, res, next) => {
             return next();
         }
 
-        // BYOK: If user configured their own API key, rate limits are managed by provider
+        // BYOK: If user toggled Custom Key mode or configured their own key, rate limits are managed by provider
+        const useThunderEngine = req.body?.useThunderEngine ?? true;
+        if (!useThunderEngine) {
+            return next();
+        }
+
         const model = req.body?.model;
         if (model) {
             const provider = getProviderFromModel(model);

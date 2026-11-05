@@ -18,6 +18,8 @@ interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onKeysUpdated?: () => void;
+  useThunderEngine?: boolean;
+  onToggleEngine?: (useEngine: boolean) => void;
 }
 
 const PROVIDERS = [
@@ -51,7 +53,13 @@ const PROVIDERS = [
   },
 ] as const;
 
-export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKeysUpdated }) => {
+export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
+  isOpen,
+  onClose,
+  onKeysUpdated,
+  useThunderEngine = true,
+  onToggleEngine,
+}) => {
   const [statuses, setStatuses] = useState<Record<string, ByokProviderStatus>>({});
   const [selectedProvider, setSelectedProvider] = useState<string>('openrouter');
   const [keyInput, setKeyInput] = useState<string>('');
@@ -164,6 +172,51 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
 
         {/* Scrollable Body */}
         <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 font-mono text-xs">
+          {/* Engine Mode Toggle Selector */}
+          <div className="p-3.5 rounded-2xl border border-white/10 bg-black/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div>
+              <div className="font-bold text-white flex items-center space-x-2">
+                <span>ACTIVE ENGINE MODE:</span>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                  useThunderEngine ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                }`}>
+                  {useThunderEngine ? 'THUNDER INTERNAL API (ON)' : 'USER CUSTOM API KEY (OFF)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {useThunderEngine
+                  ? "Thunder handles models and failovers using internal environment keys."
+                  : "Uses your own provided API keys directly. Rate limits are handled by your provider."}
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-1 p-1 rounded-xl bg-white/5 border border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => onToggleEngine && onToggleEngine(true)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer ${
+                  useThunderEngine
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Zap className="w-3 h-3 fill-current" />
+                <span>Thunder Internal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleEngine && onToggleEngine(false)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer ${
+                  !useThunderEngine
+                    ? 'bg-amber-400 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Key className="w-3 h-3" />
+                <span>User Provided</span>
+              </button>
+            </div>
+          </div>
           {/* Notification */}
           {notice && (
             <div

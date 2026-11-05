@@ -24,6 +24,7 @@ export interface User {
   age?: number;
   avatar?: string;
   role?: string;
+  isAdmin?: boolean;
   usage?: UserUsage;
   isVerified?: boolean;
   isUnlimited?: boolean;
@@ -125,4 +126,5 @@ export interface AvailableModel {
   tag: string;
   badge?: string;
   enabled?: boolean;
+  isEnvActive?: boolean;
 }

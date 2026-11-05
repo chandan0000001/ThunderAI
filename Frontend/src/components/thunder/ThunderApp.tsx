@@ -24,7 +24,6 @@ import {
   ThumbsDown,
   X,
   AlertTriangle,
-  Clock,
   RefreshCw,
   Code2,
   Terminal,
@@ -49,47 +48,42 @@ const AVAILABLE_MODELS: AvailableModel[] = [
   {
     id: 'openrouter/free',
     name: 'OpenRouter Free Tier',
-    provider: 'Backend Default',
-    description: 'Active zero-cost routing engine connected to open weights.',
-    tag: 'ACTIVE',
+    provider: 'OpenRouter (.env)',
+    description: 'Active environment engine connected to NVIDIA Nemotron 3.5 & open weights.',
+    tag: 'ACTIVE IN ENV',
     badge: 'Operational',
     enabled: true,
+    isEnvActive: true,
   },
   {
-    id: 'groq/llama-3.3-70b-versatile',
-    name: 'Groq Llama 3.3 70B',
-    provider: 'Groq LPU',
-    description: 'Ultra-fast 70B parameter open-weights model on Groq hardware.',
-    tag: 'FAST',
+    id: 'groq/openai/gpt-oss-120b',
+    name: 'Groq LPU Engine',
+    provider: 'Groq LPU (.env)',
+    description: 'Active ultra-fast inference engine powered by Groq LPU hardware.',
+    tag: 'ACTIVE IN ENV',
     badge: 'Operational',
     enabled: true,
-  },
-  {
-    id: 'groq/deepseek-r1-distill-llama-70b',
-    name: 'DeepSeek R1 (Groq)',
-    provider: 'Groq / DeepSeek',
-    description: 'Recursive chain-of-thought mathematical reasoning Titan.',
-    tag: 'REASONING',
-    badge: 'Operational',
-    enabled: true,
+    isEnvActive: true,
   },
   {
     id: 'anthropic/claude-3.5-sonnet',
     name: 'Claude 3.5 Sonnet',
-    provider: 'Anthropic BYOK',
-    description: 'Industry benchmark for code architecture and problem solving.',
-    tag: 'BYOK',
-    badge: 'Supported',
+    provider: 'Anthropic (BYOK)',
+    description: 'Industry benchmark for code architecture. Requires custom Anthropic API key.',
+    tag: 'BYOK KEY REQUIRED',
+    badge: 'BYOK',
     enabled: true,
+    isEnvActive: false,
   },
   {
     id: 'openai/gpt-4o',
     name: 'ChatGPT GPT-4o',
-    provider: 'OpenAI BYOK',
-    description: 'OpenAI flagship multimodal reasoning model.',
-    tag: 'BYOK',
-    badge: 'Supported',
+    provider: 'OpenAI (BYOK)',
+    description: 'OpenAI flagship reasoning model. Requires custom OpenAI API key.',
+    tag: 'BYOK KEY REQUIRED',
+    badge: 'BYOK',
     enabled: true,
+    isEnvActive: false,
   },
 ];
 
@@ -162,6 +156,20 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const [sending, setSending] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('openrouter/free');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+
+  // Engine Source Mode: Thunder Internal API (true) vs User Custom Key (false)
+  const [useThunderEngine, setUseThunderEngine] = useState<boolean>(() => {
+    const saved = localStorage.getItem('thunder_use_internal_engine');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleToggleEngine = (engineMode: boolean) => {
+    setUseThunderEngine(engineMode);
+    localStorage.setItem('thunder_use_internal_engine', String(engineMode));
+    if (!engineMode) {
+      setByokModalOpen(true);
+    }
+  };
 
   // Status & notifications
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -386,6 +394,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
           chatId: currentChatId || undefined,
           content: text,
           model: selectedModel,
+          useThunderEngine,
         },
         {
           onStart: (startData) => {
@@ -489,6 +498,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             chatId: currentChatId || undefined,
             content: text,
             model: selectedModel,
+            useThunderEngine,
           });
 
           if (!currentChatId && fallbackRes.chatId) {
@@ -983,7 +993,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-200 flex items-center justify-center shadow-md group-hover:scale-105 transition shrink-0">
                 <Zap className="w-3.5 h-3.5 text-black" />
               </div>
-              <span className={`font-semibold text-sm sm:text-base tracking-tight font-mono uppercase group-hover:text-amber-400 transition ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+              <span className={`hidden sm:inline font-semibold text-sm sm:text-base tracking-tight font-mono uppercase group-hover:text-amber-400 transition ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
                 Thunder
               </span>
             </div>
@@ -992,76 +1002,73 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             <div className="relative min-w-0">
               <button
                 onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
-                className={`flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs font-medium transition cursor-pointer max-w-[145px] sm:max-w-none ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs font-medium transition cursor-pointer max-w-[110px] sm:max-w-none ${
                   isDarkMode
                     ? 'bg-[#1e1f20] hover:bg-[#28292a] border-[#2d2e30] text-[#c4c7c5] hover:text-white'
                     : 'bg-[#f0f4f9] hover:bg-[#e4ebf5] border-[#d3dbdf] text-[#444746] hover:text-black'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${
+                  AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.isEnvActive
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-amber-400'
+                }`} />
                 <span className="font-medium truncate text-[11px] sm:text-xs">
                   {AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || 'OpenRouter Free Tier'}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-500 shrink-0" />
               </button>
 
               {/* Model Dropdown Menu */}
               {modelDropdownOpen && (
                 <div
-                  className={`absolute top-full left-0 mt-2 w-80 rounded-2xl border shadow-2xl p-2 z-50 space-y-1.5 ${
+                  className={`absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl border shadow-2xl p-2 z-50 space-y-1.5 ${
                     isDarkMode
                       ? 'bg-[#1e1f20] border-[#2d2e30]'
                       : 'bg-[#ffffff] border-[#d3dbdf]'
                   }`}
                 >
-                  <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex justify-between items-center">
+                  <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex justify-between items-center border-b border-white/5 pb-2">
                     <span>Neural Router Model</span>
-                    <span className="text-emerald-400 font-bold">1 Active</span>
+                    <span className="text-emerald-400 font-bold">2 Active in Env (OpenRouter & Groq)</span>
                   </div>
                   {AVAILABLE_MODELS.map((model) => {
                     const isSelected = selectedModel === model.id;
-                    const isAvailable = model.enabled !== false;
+                    const isEnv = model.isEnvActive;
                     return (
                       <button
                         key={model.id}
                         onClick={() => {
-                          if (!isAvailable) {
+                          if (!isEnv && useThunderEngine) {
                             setErrorMessage(
-                              `${model.name} is coming soon. OpenRouter Free Tier is currently the only active engine.`
+                              `${model.name} requires a custom API key. Switch Engine to User Key mode or open API Keys.`
                             );
-                            setModelDropdownOpen(false);
-                            return;
                           }
                           setSelectedModel(model.id);
                           setModelDropdownOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-start justify-between ${
-                          isAvailable
-                            ? isSelected
-                              ? isDarkMode
-                                ? 'bg-[#004a77]/40 text-[#c2e7ff] border border-blue-500/30'
-                                : 'bg-[#e8f0fe] text-[#1967d2] border border-blue-200'
-                              : isDarkMode
-                              ? 'hover:bg-[#28292a] text-[#c4c7c5]'
-                              : 'hover:bg-[#f0f4f9] text-[#1f1f1f]'
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-start justify-between cursor-pointer ${
+                          isSelected
+                            ? isDarkMode
+                              ? 'bg-[#004a77]/40 text-[#c2e7ff] border border-blue-500/30'
+                              : 'bg-[#e8f0fe] text-[#1967d2] border border-blue-200'
                             : isDarkMode
-                            ? 'opacity-40 cursor-not-allowed hover:bg-transparent text-zinc-500'
-                            : 'opacity-40 cursor-not-allowed hover:bg-transparent text-zinc-400'
+                            ? 'hover:bg-[#28292a] text-[#c4c7c5]'
+                            : 'hover:bg-[#f0f4f9] text-[#1f1f1f]'
                         }`}
                       >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center space-x-2">
+                        <div className="space-y-0.5 min-w-0 pr-2">
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                             <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
                               {model.name}
                             </span>
-                            {isAvailable ? (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-mono font-bold">
-                                ACTIVE
+                            {isEnv ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[8px] font-mono font-bold shrink-0">
+                                ACTIVE IN ENV
                               </span>
                             ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[9px] font-mono flex items-center space-x-1">
-                                <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                                <span>COMING SOON</span>
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 text-[8px] font-mono font-bold shrink-0">
+                                USER KEY REQUIRED
                               </span>
                             )}
                           </div>
@@ -1082,7 +1089,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                       className="w-full py-2 px-3 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-300 font-mono text-[11px] font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
                     >
                       <Key className="w-3.5 h-3.5 text-amber-400" />
-                      <span>ADD YOUR OWN API KEYS (BYOK)</span>
+                      <span>MANAGE / ADD API KEYS (BYOK)</span>
                     </button>
                   </div>
                 </div>
@@ -1091,14 +1098,44 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+            {/* Engine Toggle Switch (Thunder Internal API vs User Custom Key) */}
+            <div className="flex items-center p-0.5 rounded-full border border-white/10 bg-black/40 text-[9px] sm:text-[10px] font-mono shadow-sm">
+              <button
+                onClick={() => handleToggleEngine(true)}
+                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-bold flex items-center space-x-1 transition cursor-pointer ${
+                  useThunderEngine
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Thunder Internal Engine (ON) — automatic failover across environment models (OpenRouter & Groq)"
+              >
+                <Zap className="w-2.5 h-2.5 fill-current" />
+                <span className="hidden sm:inline">Thunder API</span>
+                <span className="sm:hidden text-[9px]">Thunder</span>
+              </button>
+              <button
+                onClick={() => handleToggleEngine(false)}
+                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-bold flex items-center space-x-1 transition cursor-pointer ${
+                  !useThunderEngine
+                    ? 'bg-amber-400 text-black shadow font-extrabold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="User Custom Key (OFF) — strictly uses your provided API key with round-robin"
+              >
+                <Key className="w-2.5 h-2.5" />
+                <span className="hidden sm:inline">User Key</span>
+                <span className="sm:hidden text-[9px]">Custom</span>
+              </button>
+            </div>
+
             {/* BYOK Custom Keys Button */}
             <button
               onClick={() => setByokModalOpen(true)}
-              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition cursor-pointer shadow-sm"
+              className="flex items-center space-x-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition cursor-pointer shadow-sm"
               title="Add your own API key (Claude, Groq, OpenRouter, ChatGPT) with round-robin support"
             >
-              <Key className="w-3.5 h-3.5 text-amber-400" />
+              <Key className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
               <span className="hidden sm:inline font-mono text-[11px] font-bold">API KEYS</span>
             </button>
 
@@ -1107,7 +1144,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 onBackToLanding();
                 navigate('/');
               }}
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 hover:text-white text-xs font-medium transition cursor-pointer group shadow-sm"
+              className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 hover:text-white text-xs font-medium transition cursor-pointer group shadow-sm"
               aria-label="Return to Home"
             >
               <Home className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition" />
@@ -1120,7 +1157,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 setProfileModalOpen(true);
                 navigate('/profile');
               }}
-              className="w-8 h-8 rounded-full border border-white/20 hover:border-white/40 bg-white/10 p-[1.5px] overflow-hidden transition cursor-pointer hover:scale-105 active:scale-95"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/20 hover:border-white/40 bg-white/10 p-[1px] sm:p-[1.5px] overflow-hidden transition cursor-pointer hover:scale-105 active:scale-95 shrink-0"
               aria-label="Profile and Settings"
             >
               <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold overflow-hidden bg-[#131314] text-white">
@@ -1324,6 +1361,32 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 );
               })}
 
+              {/* If last message is from user without assistant response, allow 1-click generation */}
+              {messages.length > 0 && messages[messages.length - 1].role === 'user' && !sending && (
+                <div className="flex items-center space-x-2 pt-2 animate-fadeIn">
+                  <button
+                    onClick={() => handleSendMessage(messages[messages.length - 1].content)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-mono text-xs font-semibold flex items-center space-x-1.5 shadow-lg transition cursor-pointer"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-white" />
+                    <span>⚡ GENERATE AI RESPONSE</span>
+                  </button>
+                  <span className="text-[11px] font-mono text-zinc-500">Click to resume generation for this prompt</span>
+                </div>
+              )}
+
+              {currentChatId && messages.length === 0 && (
+                <div className="py-20 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-zinc-400">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-mono font-bold text-white">Empty Conversation</h3>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                    No messages in this chat yet. Type your question below to begin.
+                  </p>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -1439,6 +1502,8 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
       <ApiKeyModal
         isOpen={byokModalOpen}
         onClose={() => setByokModalOpen(false)}
+        useThunderEngine={useThunderEngine}
+        onToggleEngine={handleToggleEngine}
       />
     </div>
   );

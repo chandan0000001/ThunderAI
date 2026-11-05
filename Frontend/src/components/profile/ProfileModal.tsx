@@ -100,6 +100,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const isAdmin =
     currentUser?.role === 'admin' ||
+    currentUser?.role === 'system_admin' ||
+    Boolean(currentUser?.isAdmin) ||
+    Boolean(currentUser?.email && currentUser.email.toLowerCase() === 'kumardalaichandan803@gmail.com') ||
     localUsage.isUnlimited ||
     localUsage.tokenLimit === -1;
 

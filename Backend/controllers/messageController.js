@@ -55,7 +55,7 @@ export const getMessage = async(req,res)=>{
 export const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { content, model } = req.body;
+    const { content, model, useThunderEngine = true } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -133,6 +133,7 @@ export const sendMessage = async (req, res) => {
       model: chat.model,
       messages: messagesForAI,
       userId: req.user._id,
+      useThunderEngine,
     });
 
     const userMessage = await Message.create({
@@ -197,9 +198,10 @@ export const sendMessage = async (req, res) => {
 };
 
 export const sendMessageStream = async (req, res) => {
+  let chat = null;
   try {
     const { chatId } = req.params;
-    const { content, model } = req.body;
+    const { content, model, useThunderEngine = true } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -213,8 +215,6 @@ export const sendMessageStream = async (req, res) => {
         message: "Message exceeds maximum allowed length of 32,000 characters",
       });
     }
-
-    let chat;
 
     // 2. Existing chat case
     if (chatId) {
@@ -289,11 +289,12 @@ export const sendMessageStream = async (req, res) => {
       })}\n\n`
     );
 
-    // Stream generation from AI provider (OpenRouter, Groq, Claude, ChatGPT)
+    // Stream generation from AI provider (with multi-key and provider failover)
     const { aiReply, usage, provider, isUserKey } = await generateAIStreamResponse({
       model: chat.model,
       messages: messagesForAI,
       userId: req.user._id,
+      useThunderEngine,
       onChunk: async (delta) => {
         res.write(
           `data: ${JSON.stringify({
@@ -360,9 +361,23 @@ export const sendMessageStream = async (req, res) => {
     console.error("Stream error in sendMessageStream:", err);
     if (!res.headersSent) {
       return res.status(500).json({
-        message: "Internal server error",
+        message: err.message || "Failed to generate AI response",
       });
     } else {
+      // Save error notice in database so conversation isn't left hanging without assistant answer
+      if (chat && chat._id) {
+        try {
+          await Message.create({
+            chatId: chat._id,
+            role: "assistant",
+            content: `⚠️ **Generation Stopped**: ${err.message || 'The AI provider encountered an error'}. Please try again or switch model provider.`,
+            userId: req.user?._id,
+          });
+        } catch (dbErr) {
+          console.warn("Could not save assistant error message:", dbErr.message);
+        }
+      }
+
       res.write(
         `data: ${JSON.stringify({
           type: "error",

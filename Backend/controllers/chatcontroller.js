@@ -6,26 +6,35 @@ import Message from "../model/messageSchema.js";
 
 // req.user = user ki information hogi// last 20 chats muje fetch karni hai
 
-export const getRecentChat = async(req,res)=>{
-    
-    try{
-        
-       const chats =  await Chat.find({userId:req.user._id}).select("topic updatedAt").sort({ updatedAt: -1 })
-      .limit(20);
+export const getRecentChat = async (req, res) => {
+    try {
+        const chats = await Chat.find({ userId: req.user._id })
+            .select("topic updatedAt model messageCount")
+            .sort({ updatedAt: -1 })
+            .limit(30);
 
-      res.status(200).json({
-        message: "Your all recent chats",
-        chats
-      })
+        // Filter out abandoned chats with 0 messages
+        const validChats = [];
+        for (const c of chats) {
+            const count = await Message.countDocuments({ chatId: c._id });
+            if (count > 0) {
+                validChats.push(c);
+            } else {
+                Chat.deleteOne({ _id: c._id }).catch(() => {});
+            }
+        }
 
-    }
-    catch(err){
-        console.log(err);
+        res.status(200).json({
+            message: "Your all recent chats",
+            chats: validChats
+        });
+    } catch (err) {
+        console.error("getRecentChat error:", err);
         res.status(500).json({
-            message: "Interna server error"
-        })
+            message: "Internal server error"
+        });
     }
-}
+};
 
 export const getSingleChat = async(req,res)=>{
     try{

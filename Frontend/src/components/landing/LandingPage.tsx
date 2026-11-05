@@ -701,12 +701,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="flex space-x-2 pt-1">
                     <button
                       onClick={onLaunchApp}
+                      aria-label="Authorize Agent for API compute"
                       className="flex-1 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-zinc-200 transition cursor-pointer"
                     >
                       Authorize Agent
                     </button>
                     <button
                       onClick={() => handleCopyPrompt('sk-thunder-agent-v2-live-token')}
+                      aria-label="Copy agent token to clipboard"
                       className="px-3.5 py-2 rounded-xl border border-white/10 text-xs text-zinc-300 hover:bg-white/10 transition cursor-pointer"
                     >
                       Copy Token
@@ -1398,6 +1400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
                   <button
                     onClick={onLaunchApp}
+                    aria-label="Enter Thunder Workspace"
                     className="px-8 py-3.5 rounded-full bg-white text-black font-mono text-xs font-bold hover:bg-zinc-200 transition shadow-[0_0_25px_rgba(255,255,255,0.4)] cursor-pointer hover:scale-105 active:scale-95"
                   >
                     ENTER THUNDER WORKSPACE
@@ -1405,6 +1408,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   {!isLoggedIn && (
                     <button
                       onClick={() => onOpenAuth('signup')}
+                      aria-label="Create a new Thunder AI account"
                       className="px-7 py-3.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 text-white font-mono text-xs hover:border-white/40 transition cursor-pointer"
                     >
                       CREATE ACCOUNT
@@ -1419,7 +1423,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* -------------------- MINIMAL STATEMENT FOOTER ("THUNDER") -------------------- */}
-      <footer className="bg-[#050608] text-zinc-500 pt-16 sm:pt-24 pb-12 px-6 sm:px-12 border-t border-white/10 relative overflow-hidden">
+      <footer className="bg-[#050608] text-zinc-400 pt-16 sm:pt-24 pb-12 px-6 sm:px-12 border-t border-white/10 relative overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-12">
           {/* MASSIVE STATEMENT LOGO: ONLY "THUNDER" (Zero Clipping, 100% Edge-to-Edge Responsive) */}
           <LazyReveal>
@@ -1448,7 +1452,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </LazyReveal>
 
           <LazyReveal delay={100}>
-            <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-zinc-500 text-center sm:text-left">
+            <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-zinc-400 text-center sm:text-left">
               <div>
                 <span>© 2026 Thunder AI. All rights reserved.</span>
               </div>

@@ -72,6 +72,15 @@ app.use(cors({
 app.use(express.json({ limit: "64kb" }));
 app.use(cookieParser());
 
+// Disable ETags and enforce no-cache for real-time dynamic API routes (avoids stale 304s on chats/messages)
+app.set("etag", false);
+app.use("/(user|msg|chat|admin)", (req, res, next) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    next();
+});
+
 // Health check endpoint for Koyeb / uptime monitoring
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
