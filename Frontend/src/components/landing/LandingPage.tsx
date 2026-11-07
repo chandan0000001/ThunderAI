@@ -14,10 +14,13 @@ import {
   Building2,
   Bot,
   Laptop,
+  Smartphone,
+  Tablet,
   Menu,
   X,
 } from 'lucide-react';
 import { usePageSEO } from '../../utils/seo';
+import { detectClientDevice, fetchClientIP, type ClientTelemetry } from '../../utils/clientInfo';
 
 /* -------------------- REUSABLE ELEMENT LAZY-REVEAL COMPONENT -------------------- */
 /* Ultra-smooth reveal: Initial viewport elements are visible immediately (zero reload flicker), off-screen elements gently fade in */
@@ -117,6 +120,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Live sparkline simulation for Modal observability card
   const [sparkPoints, setSparkPoints] = useState<number[]>([32, 45, 58, 48, 62, 75, 68, 85, 78, 92, 88, 96]);
+
+  // Real-time Visitor Device & IP Telemetry (Identifies browser, OS, and public IP address)
+  const [clientTelemetry, setClientTelemetry] = useState<ClientTelemetry>(() => {
+    const initial = detectClientDevice();
+    return {
+      ...initial,
+      ip: 'Detecting network...',
+      loading: true,
+    };
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadTelemetry = async () => {
+      const detectedIp = await fetchClientIP();
+      if (!isMounted) return;
+      setClientTelemetry((prev) => ({
+        ...prev,
+        ip: detectedIp,
+        loading: false,
+      }));
+
+      // Inject real client handshake into the live telemetry log stream
+      const timeStr = new Date().toTimeString().split(' ')[0];
+      setTelemetryLogs((prev) => [
+        `[SESSION] ${timeStr} · Handshake verified: ${clientTelemetry.browser} (${detectedIp})`,
+        ...prev.slice(0, 3),
+      ]);
+    };
+
+    loadTelemetry();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Real-time telemetry generator
   useEffect(() => {
@@ -1023,15 +1061,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   />
                   <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center">
-                        <Laptop className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0">
+                        {clientTelemetry.deviceType === 'mobile' ? (
+                          <Smartphone className="w-4 h-4 text-sky-400" />
+                        ) : clientTelemetry.deviceType === 'tablet' ? (
+                          <Tablet className="w-4 h-4 text-sky-400" />
+                        ) : (
+                          <Laptop className="w-4 h-4 text-sky-400" />
+                        )}
                       </div>
                       <div>
-                        <h5 className="font-bold text-white">Linux Workstation · Current Session</h5>
-                        <p className="text-[10px] text-zinc-400">Chrome Browser · 192.168.1.6</p>
+                        <h5 className="font-bold text-white">
+                          {clientTelemetry.os} · Current Session
+                        </h5>
+                        <p className="text-[10px] text-zinc-400 flex items-center space-x-1.5">
+                          <span>{clientTelemetry.browser}</span>
+                          <span>·</span>
+                          <span
+                            className={
+                              clientTelemetry.loading
+                                ? 'animate-pulse text-zinc-500 font-mono'
+                                : 'text-zinc-300 font-mono font-medium'
+                            }
+                          >
+                            {clientTelemetry.ip}
+                          </span>
+                        </p>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-400 text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-400 text-[10px] font-bold shrink-0">
                       ACTIVE
                     </span>
                   </div>

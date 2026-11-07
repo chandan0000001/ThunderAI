@@ -24,6 +24,9 @@ import helmet from "helmet";
 
 const app = express();
 
+// Trust proxy for accurate client IP identification on Render / Vercel / Cloudflare
+app.set("trust proxy", true);
+
 // V-10: Helmet HTTP Security Headers
 app.use(helmet({
     contentSecurityPolicy: false,

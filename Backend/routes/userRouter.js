@@ -12,7 +12,8 @@ import {
     getCustomApiKeys,
     removeCustomApiKey,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    getClientInfo
 } from "../controllers/userController.js";
 import authUserMiddleware from '../middleware/authUserMiddleware.js';
 import unauthenticatedRateLimiter from '../middleware/unauthenticatedRateLimiter.js';
@@ -29,6 +30,7 @@ userRouter.post("/verify-otp", unauthenticatedRateLimiter, verifyOTP);
 userRouter.post("/resend-otp", unauthenticatedRateLimiter, resendOTP);
 userRouter.post("/forgot-password", unauthenticatedRateLimiter, forgotPassword);
 userRouter.post("/reset-password", unauthenticatedRateLimiter, resetPassword);
+userRouter.get("/client-info", getClientInfo);
 userRouter.get("/profile", authUserMiddleware, authenticatedRateLimiter, loadUserMiddleware, profile);
 userRouter.delete("/delete", authUserMiddleware, loadUserMiddleware, deleteAccount);
 

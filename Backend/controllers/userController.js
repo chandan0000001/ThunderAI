@@ -810,3 +810,22 @@ export const resetPassword = async (req, res) => {
         return res.status(500).json({ message: "Failed to reset password. Please try again." });
     }
 };
+
+/**
+ * Returns the client's detected IP address and user-agent string for device governance telemetry.
+ */
+export const getClientInfo = async (req, res) => {
+    try {
+        const forwarded = req.headers["x-forwarded-for"];
+        const rawIp = forwarded
+            ? forwarded.split(",")[0].trim()
+            : (req.socket?.remoteAddress || req.ip || "127.0.0.1");
+        const clientIp = rawIp.replace(/^::ffff:/, "");
+        return res.status(200).json({
+            ip: clientIp,
+            userAgent: req.headers["user-agent"] || "",
+        });
+    } catch {
+        return res.status(200).json({ ip: "127.0.0.1" });
+    }
+};
