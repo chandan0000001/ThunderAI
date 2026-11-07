@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { LandingPage } from './components/landing/LandingPage';
 import { RouteLoadingScreen } from './components/common/RouteLoadingScreen';
 import { NotFoundPage } from './components/common/NotFoundPage';
@@ -294,6 +295,7 @@ export function App() {
 
       {/* Privacy-Preserving Web Analytics */}
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
