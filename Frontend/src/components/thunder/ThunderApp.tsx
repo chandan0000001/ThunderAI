@@ -33,6 +33,7 @@ import {
   Sparkles,
   Key,
 } from 'lucide-react';
+import { usePageSEO } from '../../utils/seo';
 
 interface ThunderAppProps {
   currentUser: User | null;
@@ -156,6 +157,19 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const [sending, setSending] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('openrouter/free');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+
+  // Dynamic Page SEO Synchronization
+  const currentChat = chats.find((c) => c._id === currentChatId);
+  usePageSEO({
+    title: initialProfileOpen
+      ? 'Account Telemetry & Settings // Thunder AI'
+      : currentChat?.topic
+      ? `${currentChat.topic} // Thunder Chat`
+      : 'Chat Workspace // Thunder AI',
+    description:
+      'Interactive conversational AI workspace with multi-model routing, sliding-window rate limiting, and real-time streaming inference.',
+    canonical: initialProfileOpen ? '/profile' : '/chat',
+  });
 
   // Engine Source Mode: Thunder Internal API (true) vs User Custom Key (false)
   const [useThunderEngine, setUseThunderEngine] = useState<boolean>(() => {
@@ -725,7 +739,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                   <div className="relative w-full h-24 rounded-xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group">
                     <img
                       src="/thumb-creation-spark.webp"
-                      alt="Thunder AI Assistant"
+                      alt="Thunder AI Assistant workspace spark"
                       className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0e0f14] via-transparent to-transparent" />
@@ -905,7 +919,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 {currentUser?.avatar ? (
                   <img
                     src={currentUser.avatar}
-                    alt={currentUser.name}
+                    alt={currentUser?.name || 'User profile avatar'}
                     referrerPolicy="no-referrer"
                     crossOrigin="anonymous"
                     onError={(e) => {
@@ -1164,7 +1178,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 {currentUser?.avatar ? (
                   <img
                     src={currentUser.avatar}
-                    alt={currentUser.name}
+                    alt={currentUser?.name || 'User profile avatar'}
                     referrerPolicy="no-referrer"
                     crossOrigin="anonymous"
                     onError={(e) => {

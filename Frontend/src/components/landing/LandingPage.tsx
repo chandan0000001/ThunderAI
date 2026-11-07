@@ -17,6 +17,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { usePageSEO } from '../../utils/seo';
 
 /* -------------------- REUSABLE ELEMENT LAZY-REVEAL COMPONENT -------------------- */
 /* Ultra-smooth reveal: Initial viewport elements are visible immediately (zero reload flicker), off-screen elements gently fade in */
@@ -89,6 +90,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   isLoggedIn,
   userName,
 }) => {
+  usePageSEO({
+    title: 'Thunder AI // Conversational Intelligence & Compute Platform',
+    description:
+      'Next-generation conversational AI platform powered by OpenRouter multi-model synthesis, Redis sliding-window token governance, and Google Gemini chat architecture.',
+    canonical: '/',
+  });
+
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [featuresDropdownOpen, setFeaturesDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -401,8 +409,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           )}
         </div>
 
-        {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION (Vertically Centered in 100vh) -------------------- */}
-        <div className="relative z-10 my-auto py-8 sm:py-12 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-4 sm:space-y-6">
+        {/* -------------------- HERO TYPOGRAPHY & CALL TO ACTION (Optimized Above The Fold) -------------------- */}
+        <div className="relative z-10 my-auto py-4 sm:py-8 md:py-12 px-4 sm:px-8 max-w-5xl mx-auto text-center space-y-3.5 sm:space-y-6">
           {/* Main 2-Line Headline Matching Reference Layout */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.12] drop-shadow-[0_4px_25px_rgba(0,0,0,0.65)]">
             Conversational AI, auth, <br className="hidden sm:inline" />
@@ -414,16 +422,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Stateless JWT sessions, Redis sliding-window quotas, and multi-model AI routing designed for modern web apps.
           </p>
 
-          {/* Primary CTA Button & Micro-Guarantee Chip */}
-          <div className="pt-2 flex flex-col items-center space-y-3">
-            <button
-              onClick={onLaunchApp}
-              aria-label="Try free with Thunder AI"
-              className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2.5 shadow-[0_10px_35px_rgba(0,145,255,0.45)] hover:shadow-[0_14px_45px_rgba(0,145,255,0.65)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-white text-white" />
-              <span>Try free with Thunder</span>
-            </button>
+          {/* Primary CTA Buttons & Micro-Guarantee Chip - Guaranteed Above The Fold */}
+          <div className="pt-1.5 sm:pt-2 flex flex-col items-center space-y-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+              <button
+                onClick={onLaunchApp}
+                aria-label="Try free with Thunder AI"
+                className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-full bg-[#0091ff] hover:bg-[#007ee5] text-white text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2.5 shadow-[0_10px_35px_rgba(0,145,255,0.45)] hover:shadow-[0_14px_45px_rgba(0,145,255,0.65)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                <Zap className="w-4 h-4 fill-white text-white" />
+                <span>Try free with Thunder</span>
+              </button>
+
+              <a
+                href="#features"
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3.5 rounded-full border border-white/20 bg-black/40 hover:bg-white/10 text-zinc-200 text-xs sm:text-sm font-medium flex items-center justify-center space-x-2 backdrop-blur-md transition-all cursor-pointer"
+              >
+                <span>Explore Features</span>
+                <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+              </a>
+            </div>
+
             <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] sm:text-xs text-white/80 font-medium drop-shadow-md">
               <span>🎁 Includes 10,000 free tokens</span>
               <span className="hidden sm:inline text-white/40">·</span>
@@ -676,7 +695,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-white/10 bg-black/60 group">
                     <img
                       src="/thumb-creation-spark.webp"
-                      alt="Neural Creation Spark"
+                      alt="Thunder AI neural protocol creation spark visualization"
                       width={400}
                       height={128}
                       loading="lazy"
@@ -1105,7 +1124,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-beauty.webp"
-                      alt="Beauty & Aesthetics"
+                      alt="Beauty and aesthetics - automated conversational appointment scheduling"
                       width={176}
                       height={144}
                       loading="lazy"
@@ -1138,7 +1157,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-realestate.webp"
-                      alt="Real estate"
+                      alt="Real estate - automated conversational tour booking and buyer triage"
                       width={176}
                       height={144}
                       loading="lazy"
@@ -1172,7 +1191,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-homeservices.webp"
-                      alt="Home services customer triage"
+                      alt="Home services - emergency dispatch and estimate triage"
                       width={176}
                       height={144}
                       loading="lazy"
@@ -1209,7 +1228,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-professional.webp"
-                      alt="Professional services intake"
+                      alt="Professional services - client intake and urgency routing"
                       width={176}
                       height={144}
                       loading="lazy"
@@ -1242,7 +1261,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden shrink-0 relative bg-black/60 border border-white/10">
                     <img
                       src="/usecase-automotive.webp"
-                      alt="Automotive lead engagement"
+                      alt="Automotive - instant lead engagement and test drive qualification"
                       width={176}
                       height={144}
                       loading="lazy"
@@ -1343,7 +1362,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="w-full h-28 rounded-2xl overflow-hidden mb-4 relative bg-black/60 border border-white/10 shrink-0">
                     <img
                       src={m.image}
-                      alt={m.name}
+                      alt={`${m.name} LLM neural engine model card`}
                       width={320}
                       height={112}
                       loading="lazy"
@@ -1461,6 +1480,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <a href="#features" className="hover:text-white transition">Features</a>
                 <a href="#compute" className="hover:text-white transition">Compute Grid</a>
                 <a href="#architecture" className="hover:text-white transition">Architecture</a>
+                <a href="/privacy" className="hover:text-white transition">Privacy Policy</a>
+                <a href="/sitemap.xml" className="hover:text-white transition">Sitemap</a>
                 <a href="#testimonials" className="hover:text-white transition">Feedback</a>
                 <a href="#features" className="hover:text-white transition">Changelog</a>
                 <button

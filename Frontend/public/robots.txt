@@ -1,4 +1,27 @@
+# Thunder AI Robots Exclusion Protocol
+# https://thunder-ai-mu.vercel.app
+
 User-agent: *
 Allow: /
+Disallow: /api/
 
+# Specialized Search Crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Agentic Browsing & AI Research Bots
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Sitemap Index
 Sitemap: https://thunder-ai-mu.vercel.app/sitemap.xml
+Host: https://thunder-ai-mu.vercel.app

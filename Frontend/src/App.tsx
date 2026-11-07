@@ -1,6 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { LandingPage } from './components/landing/LandingPage';
+import { RouteLoadingScreen } from './components/common/RouteLoadingScreen';
+import { NotFoundPage } from './components/common/NotFoundPage';
 import { api } from './services/api';
 import type { User } from './types';
 
@@ -12,6 +15,9 @@ const AuthModal = lazy(() =>
 );
 const ResetPasswordPage = lazy(() =>
   import('./components/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
+);
+const PrivacyPolicyPage = lazy(() =>
+  import('./components/legal/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
 );
 
 interface ProtectedChatViewProps {
@@ -35,9 +41,10 @@ const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
 }) => {
   if (sessionChecking) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
-        VERIFYING SESSION TELEMETRY...
-      </div>
+      <RouteLoadingScreen
+        message="VERIFYING SESSION TELEMETRY..."
+        subtext="AUTHENTICATING CRYPTOGRAPHIC JWT TOKENS"
+      />
     );
   }
 
@@ -48,9 +55,10 @@ const ProtectedChatView: React.FC<ProtectedChatViewProps> = ({
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
-          INITIALIZING WORKSPACE...
-        </div>
+        <RouteLoadingScreen
+          message="INITIALIZING WORKSPACE..."
+          subtext="SYNCHRONIZING MODEL MESH & CHAT SESSIONS"
+        />
       }
     >
       <ThunderApp
@@ -169,14 +177,10 @@ export function App() {
       console.warn('Blocked: Administrator accounts are protected and cannot be deleted.');
       return;
     }
-    try {
-      await api.auth.deleteAccount();
-      setCurrentUser(null);
-      localStorage.removeItem('thunder_cached_user');
-      navigate('/');
-    } catch (err: any) {
-      throw err;
-    }
+    await api.auth.deleteAccount();
+    setCurrentUser(null);
+    localStorage.removeItem('thunder_cached_user');
+    navigate('/');
   };
 
   const handleUpdateUser = (updatedUser: User) => {
@@ -238,9 +242,10 @@ export function App() {
           element={
             <Suspense
               fallback={
-                <div className="flex h-screen w-screen items-center justify-center font-mono text-xs text-white bg-[#090a0f]">
-                  LOADING SECURITY CONSOLE...
-                </div>
+                <RouteLoadingScreen
+                  message="LOADING SECURITY CONSOLE..."
+                  subtext="VERIFYING RECOVERY TOKEN PROTOCOL"
+                />
               }
             >
               <ResetPasswordPage
@@ -254,8 +259,25 @@ export function App() {
           }
         />
 
-        {/* Fallback to Home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Privacy Policy Route */}
+        <Route
+          path="/privacy"
+          element={
+            <Suspense
+              fallback={
+                <RouteLoadingScreen
+                  message="LOADING PRIVACY POLICY..."
+                  subtext="FETCHING DATA PROTECTION PROTOCOLS"
+                />
+              }
+            >
+              <PrivacyPolicyPage />
+            </Suspense>
+          }
+        />
+
+        {/* Custom 404 Route for Unmatched Paths */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {/* Auth Modal for Sign in / Sign up - lazy loaded on demand */}
@@ -269,6 +291,9 @@ export function App() {
           />
         </Suspense>
       )}
+
+      {/* Privacy-Preserving Web Analytics */}
+      <Analytics />
     </div>
   );
 }

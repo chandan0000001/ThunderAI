@@ -192,7 +192,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   {currentUser?.avatar ? (
                     <img
                       src={currentUser.avatar}
-                      alt={currentUser.name}
+                      alt={currentUser?.name || 'User profile avatar'}
                       referrerPolicy="no-referrer"
                       crossOrigin="anonymous"
                       onError={(e) => {

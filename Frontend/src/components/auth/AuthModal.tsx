@@ -799,7 +799,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-400 to-sky-400 p-0.5 shadow-md">
                 <img
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&fm=webp&q=80"
-                  alt="Michael Carter"
+                  alt="Michael Carter - Staff AI Engineer at DevCore testimonial"
                   className="w-full h-full object-cover rounded-full"
                 />
               </div>

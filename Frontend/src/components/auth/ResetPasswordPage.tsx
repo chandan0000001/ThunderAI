@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   KeyRound,
 } from 'lucide-react';
+import { usePageSEO } from '../../utils/seo';
 
 interface ResetPasswordPageProps {
   onPasswordResetSuccess?: () => void;
@@ -21,6 +22,12 @@ interface ResetPasswordPageProps {
 export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
   onPasswordResetSuccess,
 }) => {
+  usePageSEO({
+    title: 'Reset Password // Security Console',
+    description: 'Cryptographically authenticate and securely reset your Thunder AI user password.',
+    canonical: '/reset-password',
+  });
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
