@@ -2,7 +2,7 @@
 
 A high-performance React 19 + TypeScript frontend crafted for multi-model AI routing, Redis token governance, and real-time streaming intelligence.
 
-## 🚀 Key Experiences
+## Key Experiences
 
 ### 1. Landing Page & Telemetry Matrix
 - **Panoramic Alpine Hero**: Cinematic full-screen twilight mountain backdrop, floating capsule navigation, and above-the-fold CTA layout.
@@ -19,14 +19,14 @@ A high-performance React 19 + TypeScript frontend crafted for multi-model AI rou
 - **Token Quota HUD**: Real-time sliding-window token usage meter hooked to Redis in-memory sorted sets.
 - **Settings & Profile Drawer**: User details display, live quota telemetry, Bring-Your-Own-Key management, and danger-zone account deletion.
 
-## 🛠️ Tech Stack
+## Tech Stack
 - **Framework**: React 19 + TypeScript (Strict mode, Vite v8)
 - **Styling**: Tailwind CSS v4 + Lucide Icons
 - **Observability**: `@vercel/analytics` + `@vercel/speed-insights`
 - **Animation & Effects**: Canvas Confetti, custom CSS keyframes
 - **Routing & SEO**: React Router v7 + Dynamic Page SEO Synchronizer
 
-## ⚡ Running the Frontend
+## Running the Frontend
 
 ```bash
 # In the Frontend directory

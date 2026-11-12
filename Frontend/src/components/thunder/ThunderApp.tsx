@@ -759,22 +759,25 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
                   <div className="space-y-1.5 pt-1">
                     {[
-                      { icon: '⚡', label: 'Write a Python script', prompt: 'Write a Python script that scrapes and cleans API JSON data.' },
-                      { icon: '🧠', label: 'Explain Redis rate limits', prompt: 'Explain the Redis sliding-window log rate limiting algorithm with code examples.' },
-                      { icon: '✨', label: 'Design a Three.js shader', prompt: 'Write a GLSL vertex and fragment shader with morphing sphere animations.' },
-                    ].map((item, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setInputPrompt(item.prompt);
-                          textareaRef.current?.focus();
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/15 transition flex items-center space-x-2 text-[11px] text-zinc-300 hover:text-white cursor-pointer group"
-                      >
-                        <span className="text-xs">{item.icon}</span>
-                        <span className="truncate group-hover:text-white transition">{item.label}</span>
-                      </button>
-                    ))}
+                      { icon: Code2, label: 'Write a Python script', prompt: 'Write a Python script that scrapes and cleans API JSON data.' },
+                      { icon: Cpu, label: 'Explain Redis rate limits', prompt: 'Explain the Redis sliding-window log rate limiting algorithm with code examples.' },
+                      { icon: Sparkles, label: 'Design a Three.js shader', prompt: 'Write a GLSL vertex and fragment shader with morphing sphere animations.' },
+                    ].map((item, i) => {
+                      const IconComponent = item.icon;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setInputPrompt(item.prompt);
+                            textareaRef.current?.focus();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/15 transition flex items-center space-x-2 text-[11px] text-zinc-300 hover:text-white cursor-pointer group"
+                        >
+                          <IconComponent className="w-3.5 h-3.5 text-zinc-400 group-hover:text-yellow-400 transition" />
+                          <span className="truncate group-hover:text-white transition">{item.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -1350,7 +1353,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                     className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-mono text-xs font-semibold flex items-center space-x-1.5 shadow-lg transition cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5 fill-white" />
-                    <span>⚡ GENERATE AI RESPONSE</span>
+                    <span>GENERATE AI RESPONSE</span>
                   </button>
                   <span className="text-[11px] font-mono text-zinc-500">Click to resume generation for this prompt</span>
                 </div>

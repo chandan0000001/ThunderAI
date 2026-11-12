@@ -1,12 +1,12 @@
-# 🚀 Cloud Deployment Guide: Cloudflare Pages + Backend
+# Cloud Deployment Guide: Cloudflare Pages + Backend
 
 This guide walks you through deploying **Thunder AI** using a decoupled cloud architecture:
-* 🌐 **Frontend**: **Cloudflare Pages / Workers** (100% Free, 0ms Cold Start, Global Edge CDN for Three.js 3D assets).
-* ⚡ **Backend**: **Railway** or **Render (Lightweight Backend-Only)** (Runs your production [`Dockerfile`](./Dockerfile) with fast builds and native SSE streaming).
+* **Frontend**: **Cloudflare Pages / Workers** (100% Free, 0ms Cold Start, Global Edge CDN for Three.js 3D assets).
+* **Backend**: **Railway** or **Render (Lightweight Backend-Only)** (Runs your production [`Dockerfile`](./Dockerfile) with fast builds and native SSE streaming).
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```mermaid
 flowchart LR
@@ -35,7 +35,7 @@ flowchart LR
 
 ---
 
-## 🌐 Step 1: Deploy Frontend to Cloudflare Pages
+## Step 1: Deploy Frontend to Cloudflare Pages
 
 ### In your Cloudflare Dashboard:
 1. Log in to **[dash.cloudflare.com](https://dash.cloudflare.com/)**.
@@ -60,7 +60,7 @@ flowchart LR
 
 ---
 
-## ⚡ Step 2: Deploy Backend (Choose Option A or Option B)
+## Step 2: Deploy Backend (Choose Option A or Option B)
 
 ### Option A: [Railway](https://railway.com) (Recommended — Free Trial, Fast Docker)
 1. Go to **[railway.com](https://railway.com)** and log in with **GitHub**.
@@ -110,7 +110,7 @@ Render only felt slow before because it was trying to compile the entire 3D Reac
 
 ---
 
-## 🔄 Step 3: Connect Frontend and Backend
+## Step 3: Connect Frontend and Backend
 
 1. In your **Backend** environment variables (on Railway or Render), set:
    ```env

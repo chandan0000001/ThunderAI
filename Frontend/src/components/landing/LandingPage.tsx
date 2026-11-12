@@ -576,9 +576,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] sm:text-xs text-white/80 font-medium drop-shadow-md">
-              <span>🎁 Includes 10,000 free tokens</span>
+              <span>Includes 10,000 free tokens</span>
               <span className="hidden sm:inline text-white/40">·</span>
-              <span>💳 No card required</span>
+              <span>No card required</span>
             </div>
           </div>
         </div>
@@ -742,7 +742,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] hover:border-white/20 transition flex items-center justify-between text-xs group cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500/20 to-indigo-500/30 border border-sky-500/30 text-sky-400 flex items-center justify-center font-bold font-mono">
-                          ⚡
+                          <Zap className="w-4 h-4 text-sky-400" />
                         </div>
                         <div>
                           <span className="font-semibold text-white block group-hover:text-sky-300 transition">

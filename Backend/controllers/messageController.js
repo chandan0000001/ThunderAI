@@ -370,7 +370,7 @@ export const sendMessageStream = async (req, res) => {
           await Message.create({
             chatId: chat._id,
             role: "assistant",
-            content: `⚠️ **Generation Stopped**: ${err.message || 'The AI provider encountered an error'}. Please try again or switch model provider.`,
+            content: `**Generation Stopped**: ${err.message || 'The AI provider encountered an error'}. Please try again or switch model provider.`,
             userId: req.user?._id,
           });
         } catch (dbErr) {

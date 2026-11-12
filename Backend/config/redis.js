@@ -3,7 +3,7 @@ import { createClient } from "redis";
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI || "redis://localhost:6379";
 
 if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL && !process.env.REDIS_URI) {
-  console.warn("⚠️ [SECURITY WARNING] REDIS_URL is not set in production. Falling back to local Redis instance.");
+  console.warn("[SECURITY WARNING] REDIS_URL is not set in production. Falling back to local Redis instance.");
 }
 
 const redisClient = createClient({

@@ -53,7 +53,7 @@ const sendViaResend = async (email, otp, name = 'User') => {
     body: JSON.stringify({
       from: `${senderName} <${senderEmail}>`,
       to: [email],
-      subject: `⚡ Your Thunder AI Verification Code is ${otp}`,
+      subject: `Your Thunder AI Verification Code is ${otp}`,
       html: getEmailHtml(otp, name),
     }),
   });
@@ -64,7 +64,7 @@ const sendViaResend = async (email, otp, name = 'User') => {
     throw new Error(data.message || `Resend API error status ${response.status}`);
   }
 
-  console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} via Resend API (ID: ${data.id})`);
+  console.log(`[EmailService] Verification OTP successfully sent to ${email} via Resend API (ID: ${data.id})`);
   return true;
 };
 
@@ -73,27 +73,27 @@ const sendViaResend = async (email, otp, name = 'User') => {
  */
 export const verifyEmailConfiguration = async () => {
   if (process.env.RESEND_API_KEY) {
-    console.log('✅ [EmailService] Resend API configured (HTTPS Port 443 - Fully supported on Render Free Tier)');
+    console.log('[EmailService] Resend API configured (HTTPS Port 443 - Fully supported on Render Free Tier)');
     return true;
   }
 
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.warn('\n⚠️  [EmailService] Neither RESEND_API_KEY nor Gmail credentials configured in Environment.');
-    console.warn('👉 On Render Free tier, outbound SMTP (465/587) is blocked by firewall.');
-    console.warn('👉 Add RESEND_API_KEY in Render Environment for 100% free delivery over HTTPS (port 443).\n');
+    console.warn('\n[EmailService] WARNING: Neither RESEND_API_KEY nor Gmail credentials configured in Environment.');
+    console.warn('- On Render Free tier, outbound SMTP (465/587) is blocked by firewall.');
+    console.warn('- Add RESEND_API_KEY in Render Environment for 100% free delivery over HTTPS (port 443).\n');
     return false;
   }
 
   try {
     await transporter.verify();
-    console.log(`✅ [EmailService] Gmail SMTP successfully connected as: ${process.env.EMAIL_USER}`);
+    console.log(`[EmailService] Gmail SMTP successfully connected as: ${process.env.EMAIL_USER}`);
     return true;
   } catch (err) {
-    console.warn(`\n⚠️  [EmailService] Gmail SMTP connection failed:`, err.message);
-    console.warn(`💡 Reason: Render Free Tier firewall blocks outbound SMTP ports (25, 465, 587).`);
-    console.warn(`👉 Solution: Set RESEND_API_KEY in Render Environment. Resend sends via HTTPS (port 443) which is never blocked.\n`);
+    console.warn(`\n[EmailService] WARNING: Gmail SMTP connection failed:`, err.message);
+    console.warn(`Reason: Render Free Tier firewall blocks outbound SMTP ports (25, 465, 587).`);
+    console.warn(`- Solution: Set RESEND_API_KEY in Render Environment. Resend sends via HTTPS (port 443) which is never blocked.\n`);
     return false;
   }
 };
@@ -257,7 +257,7 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
     try {
       return await sendViaResend(email, otp, name);
     } catch (err) {
-      console.error(`❌ [EmailService] Resend API failed:`, err.message);
+      console.error(`[EmailService] ERROR: Resend API failed:`, err.message);
       // Fall through to try Gmail SMTP if configured
     }
   }
@@ -269,23 +269,23 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
     const mailOptions = {
       from: `"Thunder AI" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: `⚡ Your Thunder AI Verification Code is ${otp}`,
+      subject: `Your Thunder AI Verification Code is ${otp}`,
       text: `Hello ${name},\n\nYour Thunder AI verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this, please ignore this message.`,
       html: getEmailHtml(otp, name),
     };
 
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} (Message ID: ${info.messageId})`);
+      console.log(`[EmailService] Verification OTP successfully sent to ${email} (Message ID: ${info.messageId})`);
       return true;
     } catch (error) {
-      console.error(`❌ [EmailService] SMTP delivery failed to send to ${email}:`, error.message);
+      console.error(`[EmailService] ERROR: SMTP delivery failed to send to ${email}:`, error.message);
       // VULN-09: Never leak OTP in console or logs in production environments
       if (process.env.NODE_ENV !== 'production') {
         console.log(`\n======================================================`);
-        console.log(`⚡ [DEV ONLY OTP LOG BACKUP]`);
-        console.log(`✉️  User: ${email}`);
-        console.log(`🔑  OTP Code: ${otp}`);
+        console.log(`[DEV ONLY OTP LOG BACKUP]`);
+        console.log(`User: ${email}`);
+        console.log(`OTP Code: ${otp}`);
         console.log(`======================================================\n`);
       }
       throw error;
@@ -295,9 +295,9 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
   // If neither service is active
   if (process.env.NODE_ENV !== 'production') {
     console.log(`\n======================================================`);
-    console.log(`⚡ [DEV ONLY OTP LOG BACKUP]`);
-    console.log(`✉️  User: ${email}`);
-    console.log(`🔑  OTP Code: ${otp}`);
+    console.log(`[DEV ONLY OTP LOG BACKUP]`);
+    console.log(`User: ${email}`);
+    console.log(`OTP Code: ${otp}`);
     console.log(`======================================================\n`);
   }
   throw new Error('Email service unavailable. Please configure RESEND_API_KEY or valid SMTP credentials.');
@@ -483,13 +483,13 @@ export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator')
         body: JSON.stringify({
           from: `Thunder AI Security <${senderEmail}>`,
           to: [email],
-          subject: '⚡ Reset Your Thunder AI Password',
+          subject: 'Reset Your Thunder AI Password',
           html: getResetPasswordHtml(resetUrl, name),
         }),
       });
 
       if (response.ok) {
-        console.log(`✅ [EmailService] Password reset link sent to ${email} via Resend`);
+        console.log(`[EmailService] Password reset link sent to ${email} via Resend`);
         return true;
       }
     } catch (err) {
@@ -503,23 +503,23 @@ export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator')
     const mailOptions = {
       from: `"Thunder AI Security" <${adminEmail}>`,
       to: email,
-      subject: '⚡ Reset Your Thunder AI Password',
+      subject: 'Reset Your Thunder AI Password',
       text: `Hello ${name},\n\nYou requested a password reset for your Thunder AI account.\nPlease use the link below to reset your password (valid for 15 minutes):\n\n${resetUrl}\n\nIf you did not request this, please ignore this email.`,
       html: getResetPasswordHtml(resetUrl, name),
     };
 
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.log(`✅ [EmailService] Password reset email sent to ${email} via SMTP (${info.messageId})`);
+      console.log(`[EmailService] Password reset email sent to ${email} via SMTP (${info.messageId})`);
       return true;
     } catch (err) {
-      console.error(`❌ [EmailService] SMTP error sending password reset to ${email}:`, err.message);
+      console.error(`[EmailService] ERROR: SMTP error sending password reset to ${email}:`, err.message);
       // VULN-09: Never leak password reset link in production logs
       if (process.env.NODE_ENV !== 'production') {
         console.log(`\n======================================================`);
-        console.log(`⚡ [DEV ONLY RESET LINK BACKUP]`);
-        console.log(`✉️  User: ${email}`);
-        console.log(`🔗  Link: ${resetUrl}`);
+        console.log(`[DEV ONLY RESET LINK BACKUP]`);
+        console.log(`User: ${email}`);
+        console.log(`Link: ${resetUrl}`);
         console.log(`======================================================\n`);
       }
       throw err;
@@ -528,9 +528,9 @@ export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator')
 
   if (process.env.NODE_ENV !== 'production') {
     console.log(`\n======================================================`);
-    console.log(`⚡ [DEV ONLY RESET LINK BACKUP]`);
-    console.log(`✉️  User: ${email}`);
-    console.log(`🔗  Link: ${resetUrl}`);
+    console.log(`[DEV ONLY RESET LINK BACKUP]`);
+    console.log(`User: ${email}`);
+    console.log(`Link: ${resetUrl}`);
     console.log(`======================================================\n`);
   }
   throw new Error('Email service unavailable. Please configure RESEND_API_KEY or valid SMTP credentials.');
@@ -553,7 +553,7 @@ export const sendAdminInviteEmail = async (email, tempPassword, name = 'Operator
 </head>
 <body style="margin:0;padding:0;background-color:#090a0f;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#e4e4e7;">
   <div style="max-width:600px;margin:40px auto;background:#10141f;border:1px solid #1e293b;border-radius:16px;padding:36px;">
-    <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:18px;">⚡ THUNDER AI // INVITATION</div>
+    <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:18px;">THUNDER AI // INVITATION</div>
     <p style="font-size:15px;color:#cbd5e1;line-height:1.6;">Hello ${name},</p>
     <p style="font-size:15px;color:#cbd5e1;line-height:1.6;">An administrator has provisioned an account for you on the Thunder AI Intelligence Platform.</p>
     <div style="background:#090a0f;border:1px solid #334155;border-radius:12px;padding:20px;margin:24px 0;">
@@ -561,7 +561,7 @@ export const sendAdminInviteEmail = async (email, tempPassword, name = 'Operator
       <div style="font-size:14px;color:#cbd5e1;margin-bottom:6px;"><strong>Email:</strong> ${email}</div>
       <div style="font-size:14px;color:#38bdf8;font-family:monospace;letter-spacing:1px;"><strong>Temporary Password:</strong> ${tempPassword}</div>
     </div>
-    <p style="font-size:13px;color:#f59e0b;margin-bottom:24px;">⚠️ For security, you are required to change your password immediately upon your first login.</p>
+    <p style="font-size:13px;color:#f59e0b;margin-bottom:24px;">For security, you are required to change your password immediately upon your first login.</p>
     <a href="${loginUrl}" style="display:inline-block;padding:12px 28px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Sign In to Thunder AI</a>
   </div>
 </body>
@@ -582,13 +582,13 @@ export const sendAdminInviteEmail = async (email, tempPassword, name = 'Operator
         body: JSON.stringify({
           from: `Thunder AI Administration <${senderEmail}>`,
           to: [email],
-          subject: '⚡ Your Thunder AI Invitation & Temporary Access Credentials',
+          subject: 'Your Thunder AI Invitation & Temporary Access Credentials',
           html: htmlContent,
         }),
       });
 
       if (response.ok) {
-        console.log(`✅ [EmailService] Admin invite email sent to ${email} via Resend`);
+        console.log(`[EmailService] Admin invite email sent to ${email} via Resend`);
         return true;
       }
     } catch (err) {
@@ -602,13 +602,13 @@ export const sendAdminInviteEmail = async (email, tempPassword, name = 'Operator
     const mailOptions = {
       from: `"Thunder AI Administration" <${adminEmail}>`,
       to: email,
-      subject: '⚡ Your Thunder AI Invitation & Temporary Access Credentials',
+      subject: 'Your Thunder AI Invitation & Temporary Access Credentials',
       text: `Hello ${name},\n\nYou have been invited to Thunder AI.\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nPlease sign in at ${loginUrl} and change your password immediately.`,
       html: htmlContent,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ [EmailService] Admin invite sent to ${email} via SMTP (${info.messageId})`);
+    console.log(`[EmailService] Admin invite sent to ${email} via SMTP (${info.messageId})`);
     return true;
   }
 
