@@ -35,50 +35,10 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Build strict explicit CORS allowlist from environment configuration
-const allowedOriginsSet = new Set();
+import { isAllowedOrigin } from "./utils/originUtils.js";
+import csrfProtection from "./middleware/csrfProtection.js";
 
-// 1. Explicit CORS allowlist from environment
-if (process.env.CORS_ALLOWED_ORIGINS) {
-    process.env.CORS_ALLOWED_ORIGINS.split(",").forEach(url => {
-        const trimmed = url.trim().replace(/\/$/, "");
-        if (trimmed) allowedOriginsSet.add(trimmed);
-    });
-}
-
-// 2. Production Frontend URL
-if (process.env.FRONTEND_URL) {
-    process.env.FRONTEND_URL.split(",").forEach(url => {
-        const trimmed = url.trim().replace(/\/$/, "");
-        if (trimmed) allowedOriginsSet.add(trimmed);
-    });
-}
-
-// 3. Known production deployment endpoints (exact matches only - NO wildcards)
-allowedOriginsSet.add("https://thunder-ai-mu.vercel.app");
-allowedOriginsSet.add("https://thunder-ai.pages.dev");
-
-// 4. Development origins (always permitted in dev, or when explicitly allowed)
-const devOrigins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-];
-if (process.env.NODE_ENV !== "production") {
-    devOrigins.forEach(origin => allowedOriginsSet.add(origin));
-}
-
-// VULN-01 Remediation: Strict Origin Validation with exact allowlist matching (No wildcards)
-export const isAllowedOrigin = (origin) => {
-    if (!origin) return true; // Allow non-browser requests (mobile apps, server-to-server, healthchecks)
-    const normalized = origin.trim().replace(/\/$/, "");
-    if (allowedOriginsSet.has(normalized)) return true;
-    if (process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalized)) {
-        return true;
-    }
-    return false;
-};
+export { isAllowedOrigin };
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -89,12 +49,15 @@ app.use(cors({
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With", "X-CSRF-Token"]
 }));
 
 // V-18: Strict body size limit
 app.use(express.json({ limit: "64kb" }));
 app.use(cookieParser());
+
+// F-06 Remediation: Enforce CSRF protection on state-changing requests
+app.use(csrfProtection);
 
 // Disable ETags and enforce no-cache for real-time dynamic API routes (avoids stale 304s on chats/messages)
 app.set("etag", false);
@@ -135,8 +98,20 @@ if (fs.existsSync(frontendDistPath)) {
 
 const startServer = async () => {
     try {
+        // Critical secret verification at application bootstrap
+        if (!process.env.JWT_SECRET) {
+            throw new Error("Critical startup failure: JWT_SECRET is not configured.");
+        }
+        if (!process.env.MONGO_URI) {
+            throw new Error("Critical startup failure: MONGO_URI is not configured.");
+        }
+
         await connectionDB();
         await connectRedis();
+
+        // Validate BYOK encryption key configuration
+        const { validateKeyManagerConfig } = await import("./services/keyManagerService.js");
+        validateKeyManagerConfig();
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, () => {
@@ -147,20 +122,29 @@ const startServer = async () => {
         verifyEmailConfiguration().catch(() => {});
 
         // Auto-bootstrap Admin account from environment variables if provided
+        // F-04 Remediation: Never overwrite an existing administrator's password during ordinary startup.
         if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
             import("./model/userSchema.js").then(async ({ default: User }) => {
-                const bcrypt = (await import("bcrypt")).default;
                 const adminEmail = process.env.ADMIN_EMAIL.trim().toLowerCase();
                 const existing = await User.findOne({ email: adminEmail });
-                const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
-                const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
                 if (existing) {
-                    existing.role = "admin";
-                    existing.password = hash;
-                    existing.isVerified = true;
-                    await existing.save();
-                    console.log(` Admin user ensured: ${adminEmail} (Role: admin)`);
+                    let needsSave = false;
+                    if (existing.role !== "admin") {
+                        existing.role = "admin";
+                        needsSave = true;
+                    }
+                    if (!existing.isVerified) {
+                        existing.isVerified = true;
+                        needsSave = true;
+                    }
+                    if (needsSave) {
+                        await existing.save();
+                    }
+                    console.log(` Admin user verified: ${adminEmail} (Role: admin)`);
                 } else {
+                    const bcrypt = (await import("bcrypt")).default;
+                    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
+                    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
                     await User.create({
                         name: "Thunder Admin",
                         email: adminEmail,

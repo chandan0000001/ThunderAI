@@ -1,7 +1,9 @@
 import { redisClient } from "../config/redis.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
+import { fallbackLimiter } from "../utils/fallbackRateLimiter.js";
 
 const authenticatedRateLimiter = async (req, res, next) => {
+    const maxAllowed = req.method === "GET" ? 100 : 40;
     try {
         const isAdmin =
             req.user?.role === "admin" ||
@@ -23,8 +25,6 @@ const authenticatedRateLimiter = async (req, res, next) => {
             await redisClient.expire(key, 60);
         }
 
-        const maxAllowed = req.method === "GET" ? 100 : 40;
-
         if (requestCount > maxAllowed) {
             const remainingTime = await redisClient.ttl(key);
 
@@ -35,7 +35,14 @@ const authenticatedRateLimiter = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.log("Authenticated rate limiter error:", error);
+        // F-05 Remediation: Enforce local in-memory fallback rate limiting during Redis outages
+        console.warn(`[RateLimiter] Redis unavailable; applying in-memory fallback rate limit for user: ${req.userId}`);
+        const fallback = fallbackLimiter.checkLimit(`user:${req.userId}`, maxAllowed, 60);
+        if (!fallback.allowed) {
+            return res.status(429).json({
+                message: `Too many requests. Try again after ${fallback.remainingTime} seconds.`
+            });
+        }
         next();
     }
 };

@@ -9,18 +9,18 @@ import Message from "../model/messageSchema.js";
 import { redisClient } from "../config/redis.js";
 import { sendVerificationOTP, sendPasswordResetEmail } from "../services/emailService.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
-import { isAllowedOrigin } from "../index.js";
+import { isAllowedOrigin } from "../utils/originUtils.js";
 
 const googleClient = new OAuth2Client();
 
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
 
-const createToken = (id, email) => {
+const createToken = (id, email, tokenVersion = 0) => {
     if (!process.env.JWT_SECRET) {
         throw new Error("JWT Secret key is Missing");
     }
 
-    const token = jwt.sign({ id, email }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id, email, tokenVersion }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN || "7d",
         algorithm: process.env.JWT_ALGORITHM || "HS256"
     });
@@ -169,7 +169,7 @@ export const verifyOTP = async (req, res) => {
         user.isVerified = true;
         await user.save();
 
-        const token = createToken(user._id, user.email);
+        const token = createToken(user._id, user.email, user.tokenVersion || 0);
         res.cookie("token", token, cookiesOption);
 
         return res.status(200).json({
@@ -343,7 +343,7 @@ export const login = async (req, res) => {
         }
         const isAdmin = existingUser.role === "admin";
 
-        const token = createToken(existingUser._id, existingUser.email);
+        const token = createToken(existingUser._id, existingUser.email, existingUser.tokenVersion || 0);
         res.cookie("token", token, cookiesOption);
 
         res.status(200).json({
@@ -622,7 +622,7 @@ export const googleAuth = async (req, res) => {
         }
         const isAdmin = user.role === "admin";
 
-        const token = createToken(user._id, user.email);
+        const token = createToken(user._id, user.email, user.tokenVersion || 0);
         res.cookie("token", token, cookiesOption);
 
         return res.status(200).json({
@@ -795,7 +795,17 @@ export const resetPassword = async (req, res) => {
         }
 
         const redisKey = `password-reset:${token.trim()}`;
-        const email = await redisClient.get(redisKey);
+
+        // F-07 Remediation: Atomic token consumption prevents concurrent reuse race condition
+        let email = null;
+        if (typeof redisClient.getDel === "function") {
+            email = await redisClient.getDel(redisKey);
+        } else {
+            email = await redisClient.get(redisKey);
+            if (email) {
+                await redisClient.del(redisKey);
+            }
+        }
 
         if (!email) {
             return res.status(400).json({
@@ -812,10 +822,15 @@ export const resetPassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
         user.password = hashedPassword;
         user.isVerified = true;
+
+        // F-07 Remediation: Increment tokenVersion to immediately revoke all existing active sessions
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
 
-        // Invalidate the reset token and user lookup key
-        await redisClient.del(redisKey);
+        // Update active session cache in Redis to instantly reject existing JWTs across all devices
+        await redisClient.set(`user:tokenVersion:${user._id.toString()}`, user.tokenVersion.toString(), { EX: 604800 });
+
+        // Invalidate lookup key
         await redisClient.del(`password-reset-email:${email}`);
 
         return res.status(200).json({

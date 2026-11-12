@@ -53,6 +53,12 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
+  // F-07: Token/Session versioning for immediate cross-device revocation on password reset
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+
 
 
   usage: {

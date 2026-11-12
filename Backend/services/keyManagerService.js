@@ -5,22 +5,45 @@ import { redisClient } from "../config/redis.js";
 const inMemoryCounters = new Map();
 
 /**
- * Derives a 32-byte AES-256 key from BYOK_ENCRYPTION_KEY or JWT_SECRET
+ * Resolves a dedicated 32-byte AES-256 key strictly from BYOK_ENCRYPTION_KEY.
+ * F-01 & F-02 Remediation: Completely eliminates predictable fallback string and
+ * eliminates derivation from JWT_SECRET to preserve strict cryptographic key separation.
  */
-const getEncryptionKey = () => {
-  if (process.env.BYOK_ENCRYPTION_KEY) {
-    const raw = process.env.BYOK_ENCRYPTION_KEY.trim();
-    if (raw.length === 64) {
-      return Buffer.from(raw, "hex");
-    }
-    return crypto.createHash("sha256").update(raw).digest();
+export const getEncryptionKey = () => {
+  const raw = process.env.BYOK_ENCRYPTION_KEY?.trim();
+  if (!raw || raw.includes("your_64_character")) {
+    throw new Error("BYOK_ENCRYPTION_KEY is required and missing from environment configuration");
   }
-  const secret = process.env.JWT_SECRET || "thunder-byok-storage-key-salt";
-  return crypto.createHash("sha256").update(secret).digest();
+
+  if (raw.length === 64 && /^[0-9a-fA-F]+$/.test(raw)) {
+    return Buffer.from(raw, "hex");
+  }
+
+  // Derive fixed 32-byte key from high-entropy passphrase if not hex-encoded
+  return crypto.createHash("sha256").update(raw).digest();
 };
 
 /**
- * VULN-10 Remediation: AES-256-GCM authenticated encryption for Redis BYOK storage
+ * Validates key manager cryptographic configuration at startup.
+ */
+export const validateKeyManagerConfig = () => {
+  try {
+    const key = getEncryptionKey();
+    if (!key || key.length !== 32) {
+      throw new Error("BYOK encryption key length is not 32 bytes");
+    }
+    return true;
+  } catch (err) {
+    if (process.env.NODE_ENV === "production") {
+      throw err;
+    }
+    console.warn(`[KeyManager] WARNING: ${err.message}. Set BYOK_ENCRYPTION_KEY in .env.`);
+    return false;
+  }
+};
+
+/**
+ * AES-256-GCM authenticated encryption for Redis BYOK storage.
  */
 const encryptAES = (text) => {
   const key = getEncryptionKey();
@@ -28,32 +51,42 @@ const encryptAES = (text) => {
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   let enc = cipher.update(text, "utf8", "base64");
   enc += cipher.final("base64");
-  const authTag = cipher.getAuthTag().toString("base64");
-  return `${iv.toString("base64")}:${authTag}:${enc}`;
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString("base64")}:${authTag.toString("base64")}:${enc}`;
 };
 
 /**
- * AES-256-GCM decryption with backward-compatible legacy plaintext fallback
+ * F-03 Remediation: Strict AES-256-GCM authenticated decryption.
+ * Fails closed on authentication-tag mismatch or malformed inputs.
+ * Never treats ciphertext or corrupted records as valid credential material.
  */
 const decryptAES = (payload) => {
-  if (!payload) return "";
+  if (!payload || typeof payload !== "string") {
+    return "";
+  }
+
   const parts = payload.split(":");
   if (parts.length !== 3) {
-    // Legacy plaintext support for existing keys in Redis
-    return payload;
+    throw new Error("Invalid BYOK ciphertext format: expected 3 base64 segments");
   }
+
+  const [ivB64, tagB64, encB64] = parts;
+  const iv = Buffer.from(ivB64, "base64");
+  const authTag = Buffer.from(tagB64, "base64");
+
+  if (iv.length !== 12 || authTag.length !== 16) {
+    throw new Error("Invalid BYOK ciphertext dimensions: IV must be 12 bytes and authTag 16 bytes");
+  }
+
   try {
-    const [ivB64, tagB64, encB64] = parts;
     const key = getEncryptionKey();
-    const iv = Buffer.from(ivB64, "base64");
-    const authTag = Buffer.from(tagB64, "base64");
     const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(authTag);
     let dec = decipher.update(encB64, "base64", "utf8");
     dec += decipher.final("utf8");
     return dec;
-  } catch {
-    return payload;
+  } catch (err) {
+    throw new Error(`BYOK decryption failed: ${err.message}`);
   }
 };
 

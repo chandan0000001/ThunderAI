@@ -1,4 +1,5 @@
 import { redisClient } from "../config/redis.js";
+import { fallbackLimiter } from "../utils/fallbackRateLimiter.js";
 
 const unauthenticatedRateLimiter = async (req, res, next) => {
     try {
@@ -20,9 +21,14 @@ const unauthenticatedRateLimiter = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.log("Unauthenticated rate limiter error:", error);
-
-        // If Redis fails, don't stop the entire application.
+        // F-05 Remediation: Fail gracefully to bounded in-memory rate limiter instead of failing open
+        console.warn(`[RateLimiter] Redis unavailable; applying in-memory fallback rate limit for IP: ${req.ip}`);
+        const fallback = fallbackLimiter.checkLimit(`ip:${req.ip}`, 10, 60);
+        if (!fallback.allowed) {
+            return res.status(429).json({
+                message: `Too many requests. Try again after ${fallback.remainingTime} seconds.`
+            });
+        }
         next();
     }
 };
