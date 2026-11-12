@@ -77,6 +77,8 @@ flowchart LR
    REDIS_URL=your_redis_connection_url
    TOKEN_LIMIT=10000
    TOKEN_WINDOW_SECONDS=18000
+   ADMIN_EMAIL=admin@thunderai.com
+   ADMIN_PASSWORD="your_admin_password_in_quotes" # Keep quoted if containing symbols like #
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_email_app_password
    FRONTEND_URL=https://thunder-ai.pages.dev

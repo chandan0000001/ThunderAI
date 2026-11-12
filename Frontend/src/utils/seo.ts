@@ -18,11 +18,15 @@ export function updatePageSEO({
   canonical,
   ogType = 'website',
 }: SEOProps) {
-  // Update Title
-  const formattedTitle = title.includes('Thunder AI') ? title : `${title} // Thunder AI`;
-  document.title = formattedTitle;
+  if (typeof document === 'undefined') return;
 
-  // Update or create Meta Tags helper
+  // Update Title only if changed
+  const formattedTitle = title.includes('Thunder AI') ? title : `${title} // Thunder AI`;
+  if (document.title !== formattedTitle) {
+    document.title = formattedTitle;
+  }
+
+  // Update or create Meta Tags helper only if content differs
   const setMeta = (attrName: string, attrVal: string, contentVal: string) => {
     let el = document.querySelector(`meta[${attrName}="${attrVal}"]`);
     if (!el) {
@@ -30,7 +34,9 @@ export function updatePageSEO({
       el.setAttribute(attrName, attrVal);
       document.head.appendChild(el);
     }
-    el.setAttribute('content', contentVal);
+    if (el.getAttribute('content') !== contentVal) {
+      el.setAttribute('content', contentVal);
+    }
   };
 
   setMeta('name', 'description', description);
@@ -40,7 +46,7 @@ export function updatePageSEO({
   setMeta('name', 'twitter:title', formattedTitle);
   setMeta('name', 'twitter:description', description);
 
-  // Update Canonical
+  // Update Canonical only if changed
   const fullCanonical = canonical
     ? (canonical.startsWith('http') ? canonical : `${BASE_URL}${canonical}`)
     : window.location.origin + window.location.pathname;
@@ -51,7 +57,9 @@ export function updatePageSEO({
     linkCanonical.setAttribute('rel', 'canonical');
     document.head.appendChild(linkCanonical);
   }
-  linkCanonical.setAttribute('href', fullCanonical);
+  if (linkCanonical.getAttribute('href') !== fullCanonical) {
+    linkCanonical.setAttribute('href', fullCanonical);
+  }
 }
 
 export function usePageSEO({ title, description, canonical, ogType }: SEOProps) {

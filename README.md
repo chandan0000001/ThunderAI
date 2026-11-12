@@ -27,12 +27,14 @@ The report covers:
 
 ## ✨ Features
 
-- **🌐 Interactive 3D Landing Page**: Three.js iridescent procedural energy orb with dynamic day/night light mode toggle, orbit camera controls, and smooth responsive layout.
+- **🌐 Interactive Landing Page & Alpine Backdrop**: Cinematic panoramic hero, floating capsule navigation, and responsive above-the-fold layout with micro-guarantees.
+- **📱 Real-Time Device Governance & Telemetry**: Dynamic client browser, operating system form-factor (Laptop, Smartphone, Tablet), and live public IP address detection.
 - **⚡ Real-Time Streaming Output**: High-throughput Server-Sent Events (SSE) token streaming with animated electric pulse cursor and markdown rendering.
-- **🧠 Multi-Model AI Routing**: Powered by OpenRouter free and low-latency open weights models (with graceful fallback handling).
+- **🧠 Multi-Model AI Routing & BYOK**: OpenRouter free tier, Groq LPU, DeepSeek R1, and Claude 3.5 Sonnet with client-side Bring-Your-Own-Key encryption and round-robin fallback.
 - **🛡️ Live Redis Token Metering**: Sliding-window rate governance, lifetime usage telemetry, and live consumption indicators.
-- **🧭 Dynamic Routing & History**: Full URL routing (`/`, `/chat`, `/chat/:chatId`, `/profile`), automatic session persistence, and instant conversation switching.
-- **💎 High-Voltage Profile & Account Control**: Live telemetry gauge, Redis TTL sliding-window tracker, and secure danger-confirmation account purge modal.
+- **🧭 Dynamic Routing & History**: Full URL routing (`/`, `/chat`, `/chat/:chatId`, `/profile`, `/privacy`), custom 404 terminal page, automatic session persistence, and instant conversation switching.
+- **📜 Comprehensive Privacy Policy**: 10-clause governance specification covering zero persistent model training, ephemeral 61-second Redis sliding-window TTLs, and GDPR Article 17 hard erasure.
+- **📊 Observability & Web Vitals**: Built-in Vercel Web Analytics and Vercel Speed Insights with zero render-blocking penalties.
 
 ---
 
@@ -73,12 +75,16 @@ PORT=3000
 MONGO_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_secret_key
 OPENROUTER_API_KEY=your_openrouter_api_key
+GROQ_API_KEY=your_groq_api_key
 DEFAULT_AI_MODEL=openrouter/free
 REDIS_URL=your_redis_connection_url
 TOKEN_LIMIT=10000
 TOKEN_WINDOW_SECONDS=18000
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_16_character_app_password
+# Admin Bootstrap (wrap password in quotes if it contains '#' or special characters)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD="your_strong_admin_password"
 ```
 
 Start the backend:

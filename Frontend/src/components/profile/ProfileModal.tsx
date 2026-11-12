@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { AdminPanel } from '../admin/AdminPanel';
+import { UserAvatar } from '../common/UserAvatar';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -39,55 +40,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'admin'>('profile');
-  const [localUsage, setLocalUsage] = useState({
-    tokenUsed: currentUser?.usage?.tokenUsed || currentUser?.usage?.totalTokenUsed || 0,
-    totalTokenUsed: currentUser?.usage?.totalTokenUsed || 0,
-    tokenLimit: currentUser?.usage?.tokenLimit || 10000,
-    windowSeconds: currentUser?.usage?.windowSeconds || 18000,
-    ttl: currentUser?.usage?.ttl || 0,
-    isUnlimited: currentUser?.usage?.isUnlimited || false,
-  });
-
-  // Sync when currentUser changes
-  useEffect(() => {
-    if (currentUser?.usage) {
-      setLocalUsage({
-        tokenUsed: currentUser.usage.tokenUsed ?? currentUser.usage.totalTokenUsed ?? 0,
-        totalTokenUsed: currentUser.usage.totalTokenUsed ?? 0,
-        tokenLimit: currentUser.usage.tokenLimit ?? 10000,
-        windowSeconds: currentUser.usage.windowSeconds ?? 18000,
-        ttl: currentUser.usage.ttl ?? 0,
-        isUnlimited: currentUser.usage.isUnlimited ?? (currentUser.role === 'admin'),
-      });
-    }
-  }, [currentUser]);
-
-  // Fetch fresh telemetry immediately when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      handleLiveRefresh();
-    }
-  }, [isOpen]);
 
   // Live Refresh Token Quota from Backend
   const handleLiveRefresh = async () => {
     try {
       setRefreshing(true);
       const freshUser = await api.auth.getProfile();
-      if (freshUser && freshUser.email) {
-        if (freshUser.usage) {
-          setLocalUsage({
-            tokenUsed: freshUser.usage.tokenUsed ?? freshUser.usage.totalTokenUsed ?? 0,
-            totalTokenUsed: freshUser.usage.totalTokenUsed ?? 0,
-            tokenLimit: freshUser.usage.tokenLimit ?? 10000,
-            windowSeconds: freshUser.usage.windowSeconds ?? 18000,
-            ttl: freshUser.usage.ttl ?? 0,
-            isUnlimited: freshUser.usage.isUnlimited ?? (freshUser.role === 'admin'),
-          });
-        }
-        if (onUserUpdated) {
-          onUserUpdated(freshUser);
-        }
+      if (freshUser && freshUser.email && onUserUpdated) {
+        onUserUpdated(freshUser);
       }
     } catch (err: any) {
       console.warn('Could not refresh live tokens:', err.message);
@@ -96,20 +56,36 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
+  // Fetch fresh telemetry immediately when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      handleLiveRefresh();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const effectiveUsage = currentUser?.usage || {
+    tokenUsed: 0,
+    totalTokenUsed: 0,
+    tokenLimit: 10000,
+    windowSeconds: 18000,
+    ttl: 0,
+    isUnlimited: false,
+  };
 
   const isAdmin =
     currentUser?.role === 'admin' ||
     currentUser?.role === 'system_admin' ||
     Boolean(currentUser?.isAdmin) ||
     Boolean(currentUser?.email && currentUser.email.toLowerCase() === 'kumardalaichandan803@gmail.com') ||
-    localUsage.isUnlimited ||
-    localUsage.tokenLimit === -1;
+    effectiveUsage.isUnlimited ||
+    effectiveUsage.tokenLimit === -1;
 
-  const used = localUsage.tokenUsed;
-  const limit = isAdmin ? -1 : localUsage.tokenLimit || 10000;
-  const percent = isAdmin ? 100 : Math.min(100, Math.round((used / (localUsage.tokenLimit || 10000)) * 100));
-  const remaining = isAdmin ? -1 : Math.max(0, (localUsage.tokenLimit || 10000) - used);
+  const used = effectiveUsage.tokenUsed ?? effectiveUsage.totalTokenUsed ?? 0;
+  const limit = isAdmin ? -1 : effectiveUsage.tokenLimit || 10000;
+  const percent = isAdmin ? 100 : Math.min(100, Math.round((used / (effectiveUsage.tokenLimit || 10000)) * 100));
+  const remaining = isAdmin ? -1 : Math.max(0, (effectiveUsage.tokenLimit || 10000) - used);
 
   const copyEmail = () => {
     if (currentUser?.email) {
@@ -189,28 +165,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* Avatar with Referrer-Policy and Error Fallback */}
               <div className="relative shrink-0">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl border border-white/20 bg-white/5 p-[1.5px] shadow-lg overflow-hidden flex items-center justify-center">
-                  {currentUser?.avatar ? (
-                    <img
-                      src={currentUser.avatar}
-                      alt={currentUser?.name || 'User profile avatar'}
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        if (e.currentTarget.nextElementSibling) {
-                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                        }
-                      }}
-                      className="w-full h-full object-cover rounded-2xl"
-                    />
-                  ) : null}
-                  <span
-                    className={`${
-                      currentUser?.avatar ? 'hidden' : 'flex'
-                    } w-full h-full items-center justify-center font-bold text-xl sm:text-2xl font-mono text-white`}
-                  >
-                    {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                  </span>
+                  <UserAvatar
+                    avatar={currentUser?.avatar}
+                    name={currentUser?.name}
+                    className="w-full h-full object-cover rounded-2xl"
+                    textClassName="font-bold text-xl sm:text-2xl font-mono text-white"
+                  />
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-400 border-2 border-black animate-pulse" />
               </div>

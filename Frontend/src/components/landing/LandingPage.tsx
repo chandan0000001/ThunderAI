@@ -23,43 +23,39 @@ import { usePageSEO } from '../../utils/seo';
 import { detectClientDevice, fetchClientIP, type ClientTelemetry } from '../../utils/clientInfo';
 
 /* -------------------- REUSABLE ELEMENT LAZY-REVEAL COMPONENT -------------------- */
-/* Ultra-smooth reveal: Initial viewport elements are visible immediately (zero reload flicker), off-screen elements gently fade in */
+/* Ultra-smooth reveal: Initial viewport elements are visible immediately without cascading render-flips */
 const LazyReveal: React.FC<{
   children: React.ReactNode;
   className?: string;
   delay?: number;
-}> = ({ children, className = '', delay = 0 }) => {
-  const [isVisible, setIsVisible] = useState(true);
+}> = React.memo(({ children, className = '', delay = 0 }) => {
+  const [isVisible, setIsVisible] = useState(false);
   const domRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!domRef.current) return;
+    const el = domRef.current;
+    if (!el) return;
 
-    const rect = domRef.current.getBoundingClientRect();
-    // If element is already in or near viewport, keep visible immediately without layout shift
-    if (rect.top <= window.innerHeight + 250 && rect.bottom >= -150) {
+    // Check if element is already in viewport on mount
+    const rect = el.getBoundingClientRect();
+    if (rect.top <= window.innerHeight + 150 && rect.bottom >= -100) {
       setIsVisible(true);
       return;
     }
-
-    // Only hide elements that are further down the scroll stream
-    setIsVisible(false);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (domRef.current) observer.unobserve(domRef.current);
+          observer.unobserve(el);
         }
       },
-      { rootMargin: '350px 0px 150px 0px', threshold: 0.01 }
+      { rootMargin: '250px 0px 100px 0px', threshold: 0.01 }
     );
 
-    const el = domRef.current;
     observer.observe(el);
-
     return () => {
-      if (el) observer.unobserve(el);
+      observer.disconnect();
     };
   }, []);
 
@@ -69,16 +65,148 @@ const LazyReveal: React.FC<{
       style={{
         transitionDelay: `${Math.min(delay, 40)}ms`,
       }}
-      className={`transition-opacity duration-400 ease-out ${
-        isVisible
-          ? 'opacity-100'
-          : 'opacity-0 pointer-events-none'
+      className={`transition-opacity duration-300 ease-out ${
+        isVisible ? 'opacity-100' : 'opacity-0'
       } ${className}`}
     >
       {children}
     </div>
   );
-};
+});
+
+/* -------------------- ISOLATED TELEMETRY CARDS (PREVENTS ROOT RE-RENDERS) -------------------- */
+const SecurityStreamCard: React.FC<{
+  clientBrowser?: string;
+  clientIp?: string;
+  onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+}> = React.memo(({ clientBrowser, clientIp, onMouseMove }) => {
+  const [telemetryLogs, setTelemetryLogs] = useState<string[]>([
+    '[AUTH] 23:45:01 · Google OAuth ID Token verified (sub: 10744745...)',
+    '[REDIS] 23:45:04 · sliding_window: 142/10,000 tokens (ttl: 17980s)',
+    '[ROUTER] 23:45:05 · dispatch: openrouter/free (latency: 94ms)',
+    '[SESSION] 23:45:09 · 7-day HttpOnly cookie issued (SameSite=None, Secure)',
+  ]);
+
+  useEffect(() => {
+    if (clientBrowser && clientIp && clientIp !== 'Detecting network...') {
+      const timeStr = new Date().toTimeString().split(' ')[0];
+      setTelemetryLogs((prev) => [
+        `[SESSION] ${timeStr} · Handshake verified: ${clientBrowser} (${clientIp})`,
+        ...prev.slice(0, 3),
+      ]);
+    }
+  }, [clientBrowser, clientIp]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const sampleEvents = [
+        '[REDIS] sliding_window: user capacity replenished',
+        '[ROUTER] openrouter/free: 98ms first-byte stream latency',
+        '[AUTH] Google One-Tap handshake validated successfully',
+        '[MEMORY] semantic context condensator: 88% token reduction',
+        '[BLOCKLIST] stateless revocation audit: 0 revoked tokens active',
+      ];
+      const randomEvent = sampleEvents[Math.floor(Math.random() * sampleEvents.length)];
+      const timeStr = new Date().toTimeString().split(' ')[0];
+      setTelemetryLogs((prev) => [`[SEC] ${timeStr} · ${randomEvent}`, prev[0], prev[1], prev[2]]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div
+      onMouseMove={onMouseMove}
+      className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
+    >
+      <div className="space-y-2 relative z-10">
+        <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">02 // CRYPTOGRAPHIC GATEWAY</span>
+        <h4 className="text-xl font-bold text-white">Live Security Stream</h4>
+        <p className="text-xs text-zinc-400 font-light leading-relaxed">
+          Real-time event stream logging token verification, sliding-window checks, and blocklist queries.
+        </p>
+      </div>
+
+      <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono relative overflow-hidden z-10">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none group-hover:opacity-25 transition duration-700"
+          style={{ backgroundImage: `url('/thumb-scanline-face.webp')` }}
+        />
+        <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10 relative z-10">
+          <span>SECURITY TAPE</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        </div>
+        {telemetryLogs.map((log, i) => (
+          <div key={i} className="truncate text-zinc-300 relative z-10">
+            {log}
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
+        <span>RATE LIMIT: 60 REQ/MIN</span>
+        <span className="text-emerald-400 font-semibold">STREAM ACTIVE</span>
+      </div>
+    </div>
+  );
+});
+
+const ThroughputSparklineCard: React.FC<{
+  onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+}> = React.memo(({ onMouseMove }) => {
+  const [sparkPoints, setSparkPoints] = useState<number[]>([32, 45, 58, 48, 62, 75, 68, 85, 78, 92, 88, 96]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSparkPoints((prev) => {
+        const nextVal = Math.floor(40 + Math.random() * 55);
+        return [...prev.slice(1), nextVal];
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div
+      onMouseMove={onMouseMove}
+      className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
+    >
+      <div className="space-y-2 relative z-10">
+        <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">04 // OBSERVABILITY</span>
+        <h4 className="text-xl font-bold text-white">Live Stream Throughput</h4>
+        <p className="text-xs text-zinc-400 font-light leading-relaxed">
+          Streaming rate tracking with real-time sliding-window replenishment and token consumption rates.
+        </p>
+      </div>
+
+      <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden z-10">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none group-hover:scale-105 transition duration-700"
+          style={{ backgroundImage: `url('/thumb-icarus-rays.webp')` }}
+        />
+        <div className="relative z-10">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="text-zinc-400">Throughput Waveform</span>
+            <span className="text-emerald-400 font-bold">48 tokens/sec</span>
+          </div>
+          <div className="h-16 flex items-end space-x-1.5 pt-2">
+            {sparkPoints.map((val, idx) => (
+              <div
+                key={idx}
+                className="flex-1 bg-white/20 hover:bg-white rounded-t transition-all duration-300"
+                style={{ height: `${val}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
+        <span>MEDIAN LATENCY: 104MS</span>
+        <span className="text-white font-semibold">SLIDING TOKENS: 10,000</span>
+      </div>
+    </div>
+  );
+});
 
 interface LandingPageProps {
   onLaunchApp: () => void;
@@ -110,17 +238,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Modal Matrix interactive mouse proximity
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
 
-  // Live Security Stream Telemetry (Clerk style)
-  const [telemetryLogs, setTelemetryLogs] = useState<string[]>([
-    '[AUTH] 23:45:01 · Google OAuth ID Token verified (sub: 10744745...)',
-    '[REDIS] 23:45:04 · sliding_window: 142/10,000 tokens (ttl: 17980s)',
-    '[ROUTER] 23:45:05 · dispatch: openrouter/free (latency: 94ms)',
-    '[SESSION] 23:45:09 · 7-day HttpOnly cookie issued (SameSite=None, Secure)',
-  ]);
-
-  // Live sparkline simulation for Modal observability card
-  const [sparkPoints, setSparkPoints] = useState<number[]>([32, 45, 58, 48, 62, 75, 68, 85, 78, 92, 88, 96]);
-
   // Real-time Visitor Device & IP Telemetry (Identifies browser, OS, and public IP address)
   const [clientTelemetry, setClientTelemetry] = useState<ClientTelemetry>(() => {
     const initial = detectClientDevice();
@@ -141,13 +258,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         ip: detectedIp,
         loading: false,
       }));
-
-      // Inject real client handshake into the live telemetry log stream
-      const timeStr = new Date().toTimeString().split(' ')[0];
-      setTelemetryLogs((prev) => [
-        `[SESSION] ${timeStr} · Handshake verified: ${clientTelemetry.browser} (${detectedIp})`,
-        ...prev.slice(0, 3),
-      ]);
     };
 
     loadTelemetry();
@@ -156,42 +266,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, []);
 
-  // Real-time telemetry generator
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const sampleEvents = [
-        '[REDIS] sliding_window: user capacity replenished',
-        '[ROUTER] openrouter/free: 98ms first-byte stream latency',
-        '[AUTH] Google One-Tap handshake validated successfully',
-        '[MEMORY] semantic context condensator: 88% token reduction',
-        '[BLOCKLIST] stateless revocation audit: 0 revoked tokens active',
-      ];
-      const randomEvent = sampleEvents[Math.floor(Math.random() * sampleEvents.length)];
-      const timeStr = new Date().toTimeString().split(' ')[0];
-      setTelemetryLogs((prev) => [`[SEC] ${timeStr} · ${randomEvent}`, prev[0], prev[1], prev[2]]);
-
-      // Update sparkline waveform
-      setSparkPoints((prev) => {
-        const nextVal = Math.floor(40 + Math.random() * 55);
-        return [...prev.slice(1), nextVal];
-      });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleCopyPrompt = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
-  // Card mouse spotlight position tracking
+  // Card mouse spotlight position tracking throttled with requestAnimationFrame (prevents layout thrashing)
+  const rafRef = useRef<number | null>(null);
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
-    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+    const target = e.currentTarget;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (rafRef.current !== null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = target.getBoundingClientRect();
+      target.style.setProperty('--mouse-x', `${clientX - rect.left}px`);
+      target.style.setProperty('--mouse-y', `${clientY - rect.top}px`);
+      rafRef.current = null;
+    });
   };
 
   return (
@@ -1003,41 +1097,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </LazyReveal>
 
-            {/* Card 2: Live Security Feed */}
+            {/* Card 2: Live Security Feed (Isolated local component) */}
             <LazyReveal delay={150} className="md:col-span-5 flex">
-              <div
+              <SecurityStreamCard
+                clientBrowser={clientTelemetry.browser}
+                clientIp={clientTelemetry.ip}
                 onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
-              >
-                <div className="space-y-2 relative z-10">
-                  <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">02 // AUDIT FEED</span>
-                  <h4 className="text-xl font-bold text-white">Live Security Telemetry</h4>
-                  <p className="text-xs text-zinc-400 font-light leading-relaxed">
-                    Real-time event stream logging token verification, sliding-window checks, and blocklist queries.
-                  </p>
-                </div>
-
-                <div className="my-6 p-4 rounded-2xl bg-black/70 border border-white/10 space-y-2 text-[11px] font-mono relative overflow-hidden z-10">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none group-hover:opacity-25 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-scanline-face.webp')` }}
-                  />
-                  <div className="flex items-center justify-between text-zinc-500 pb-1 border-b border-white/10 relative z-10">
-                    <span>SECURITY TAPE</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  </div>
-                  {telemetryLogs.map((log, i) => (
-                    <div key={i} className="truncate text-zinc-300 relative z-10">
-                      {log}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
-                  <span>RATE LIMIT: 60 REQ/MIN</span>
-                  <span className="text-emerald-400 font-semibold">STREAM ACTIVE</span>
-                </div>
-              </div>
+              />
             </LazyReveal>
 
             {/* Card 3: Session & Device Management */}
@@ -1102,47 +1168,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </LazyReveal>
 
-            {/* Card 4: Modal Observability & Live GPU/Token Sparkline */}
+            {/* Card 4: Modal Observability & Live GPU/Token Sparkline (Isolated local component) */}
             <LazyReveal delay={200} className="md:col-span-6 flex">
-              <div
-                onMouseMove={handleCardMouseMove}
-                className="spotlight-card w-full p-7 rounded-3xl border border-white/10 bg-[#0c0d14] flex flex-col justify-between relative overflow-hidden group"
-              >
-                <div className="space-y-2 relative z-10">
-                  <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">04 // OBSERVABILITY</span>
-                  <h4 className="text-xl font-bold text-white">Live Stream Throughput</h4>
-                  <p className="text-xs text-zinc-400 font-light leading-relaxed">
-                    Streaming rate tracking with real-time sliding-window replenishment and token consumption rates.
-                  </p>
-                </div>
-
-                <div className="my-6 p-4 rounded-2xl bg-black/60 border border-white/10 space-y-2 relative overflow-hidden z-10">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none group-hover:scale-105 transition duration-700"
-                    style={{ backgroundImage: `url('/thumb-icarus-rays.webp')` }}
-                  />
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-400">Throughput Waveform</span>
-                      <span className="text-emerald-400 font-bold">48 tokens/sec</span>
-                    </div>
-                    <div className="h-16 flex items-end space-x-1.5 pt-2">
-                      {sparkPoints.map((val, idx) => (
-                        <div
-                          key={idx}
-                          className="flex-1 bg-white/20 hover:bg-white rounded-t transition-all duration-300"
-                          style={{ height: `${val}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 text-xs font-mono text-zinc-500 border-t border-white/10 flex justify-between relative z-10">
-                  <span>MEDIAN LATENCY: 104MS</span>
-                  <span className="text-white font-semibold">SLIDING TOKENS: 10,000</span>
-                </div>
-              </div>
+              <ThroughputSparklineCard onMouseMove={handleCardMouseMove} />
             </LazyReveal>
           </div>
         </div>

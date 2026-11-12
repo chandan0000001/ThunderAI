@@ -66,12 +66,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadStatuses();
-    }
-  }, [isOpen]);
-
   const loadStatuses = async () => {
     try {
       const res = await api.byok.getStatus();
@@ -84,6 +78,12 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
       console.warn('Could not load BYOK statuses:', e.message);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadStatuses();
+    }
+  }, [isOpen]);
 
   const showNotice = (type: 'success' | 'error', message: string) => {
     setNotice({ type, message });

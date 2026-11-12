@@ -46,10 +46,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
   const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword?: string } | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  useEffect(() => {
-    fetchUsersAndStats();
-  }, [searchQuery, selectedRole, page]);
-
   const fetchUsersAndStats = async () => {
     try {
       setLoading(true);
@@ -72,6 +68,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsersAndStats();
+  }, [searchQuery, selectedRole, page]);
 
   const showNotice = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });

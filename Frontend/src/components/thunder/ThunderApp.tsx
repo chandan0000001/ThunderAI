@@ -5,6 +5,7 @@ import type { User, Chat, Message, AvailableModel } from '../../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ProfileModal } from '../profile/ProfileModal';
 import { ApiKeyModal } from '../byok/ApiKeyModal';
+import { UserAvatar } from '../common/UserAvatar';
 import {
   Menu,
   Plus,
@@ -916,24 +917,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
           >
             <div className="flex items-center space-x-2.5">
               <div className="w-7 h-7 rounded-full border border-white/20 bg-white/10 p-[1px] shrink-0 overflow-hidden flex items-center justify-center">
-                {currentUser?.avatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser?.name || 'User profile avatar'}
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextElementSibling) {
-                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                ) : null}
-                <span className={`${currentUser?.avatar ? 'hidden' : 'flex'} w-full h-full items-center justify-center font-bold text-xs text-white`}>
-                  {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                </span>
+                <UserAvatar avatar={currentUser?.avatar} name={currentUser?.name} />
               </div>
               {sidebarOpen && (
                 <div className="overflow-hidden">
@@ -1175,24 +1159,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               aria-label="Profile and Settings"
             >
               <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold overflow-hidden bg-[#131314] text-white">
-                {currentUser?.avatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser?.name || 'User profile avatar'}
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextElementSibling) {
-                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                ) : null}
-                <span className={`${currentUser?.avatar ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
-                  {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                </span>
+                <UserAvatar avatar={currentUser?.avatar} name={currentUser?.name} />
               </div>
             </button>
           </div>
