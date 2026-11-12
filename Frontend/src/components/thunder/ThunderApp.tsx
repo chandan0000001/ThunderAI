@@ -429,13 +429,10 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
       text = `Please analyze the attached document: ${attachedFile.fileName}`;
     }
 
-    if (webSearchActive) {
-      text = `[Live Web Grounding Enabled]\n${text}`;
-    }
-
     setErrorMessage(null);
     setSending(true);
 
+    const isWebSearch = webSearchActive;
     const currentAttachment = attachedFile
       ? {
           fileName: attachedFile.fileName,
@@ -486,6 +483,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
           model: selectedModel,
           useThunderEngine,
           attachment: currentAttachment,
+          webSearch: isWebSearch,
         },
         {
           onStart: (startData) => {
@@ -591,6 +589,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             model: selectedModel,
             useThunderEngine,
             attachment: currentAttachment,
+            webSearch: isWebSearch,
           });
 
           if (!currentChatId && fallbackRes.chatId) {
@@ -1359,7 +1358,11 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                           {msg._id === streamingMessageId && !msg.content ? (
                             <div className="flex items-center space-x-2 text-xs font-mono text-yellow-500 py-1.5">
                               <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping" />
-                              <span className="animate-pulse">Synthesizing intelligence stream...</span>
+                              <span className="animate-pulse">
+                                {webSearchActive
+                                  ? 'Searching live web via Tavily & synthesizing...'
+                                  : 'Synthesizing intelligence stream...'}
+                              </span>
                             </div>
                           ) : (
                             <div className="relative">

@@ -10,6 +10,7 @@ import { redisClient } from "../config/redis.js";
 import { logTelemetry } from "../services/streamService.js";
 import { processDocumentJob } from "../services/queueService.js";
 import { inspectUploadedFile, FileSecurityError } from "../services/fileSecurityService.js";
+import { searchWeb } from "../services/searchService.js";
 
 
 // getMessage, sendMessage
@@ -56,7 +57,7 @@ export const getMessage = async(req,res)=>{
 export const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { content, model, useThunderEngine = true, attachment } = req.body;
+    const { content, model, useThunderEngine = true, attachment, webSearch = false } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -110,7 +111,7 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    // Build context with optional attached document
+    // Build context with optional attached document and live web grounding
     const oldMessages = await Message.find({
       chatId: chat._id,
     })
@@ -121,9 +122,16 @@ export const sendMessage = async (req, res) => {
       ? `[File Attached: ${attachment.fileName}]\n\n${content.trim()}`
       : content.trim();
 
-    const promptForAI = attachment && attachment.textContent
+    let promptForAI = attachment && attachment.textContent
       ? `${content.trim()}\n\n---\n[Attached Document: ${attachment.fileName || "File"}]\n${attachment.textContent}`
       : content.trim();
+
+    if (webSearch) {
+      const searchGrounding = await searchWeb(content);
+      if (searchGrounding) {
+        promptForAI = `${promptForAI}\n\n---\n${searchGrounding}`;
+      }
+    }
 
     const messagesForAI = buildMessagesForAI({
       chat,
@@ -211,7 +219,7 @@ export const sendMessageStream = async (req, res) => {
   let chat = null;
   try {
     const { chatId } = req.params;
-    const { content, model, useThunderEngine = true, attachment } = req.body;
+    const { content, model, useThunderEngine = true, attachment, webSearch = false } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -260,7 +268,7 @@ export const sendMessageStream = async (req, res) => {
       });
     }
 
-    // Prepare context with optional attachment
+    // Prepare context with optional attachment and live web grounding
     const oldMessages = await Message.find({
       chatId: chat._id,
     })
@@ -271,9 +279,16 @@ export const sendMessageStream = async (req, res) => {
       ? `[File Attached: ${attachment.fileName}]\n\n${content.trim()}`
       : content.trim();
 
-    const promptForAI = attachment && attachment.textContent
+    let promptForAI = attachment && attachment.textContent
       ? `${content.trim()}\n\n---\n[Attached Document: ${attachment.fileName || "File"}]\n${attachment.textContent}`
       : content.trim();
+
+    if (webSearch) {
+      const searchGrounding = await searchWeb(content);
+      if (searchGrounding) {
+        promptForAI = `${promptForAI}\n\n---\n${searchGrounding}`;
+      }
+    }
 
     const messagesForAI = buildMessagesForAI({
       chat,
@@ -295,6 +310,7 @@ export const sendMessageStream = async (req, res) => {
       chatId: chat._id.toString(),
       model: chat.model,
       hasAttachment: Boolean(attachment && attachment.textContent),
+      webSearch: Boolean(webSearch),
     });
 
     // Setup SSE response headers

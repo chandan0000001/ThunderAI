@@ -193,12 +193,14 @@ export const api = {
       model?: string;
       useThunderEngine?: boolean;
       attachment?: { fileName: string; textContent: string };
+      webSearch?: boolean;
     }): Promise<SendMessageResponse> => {
       const endpoint = params.chatId ? `/msg/${params.chatId}` : '/msg/';
       const bodyPayload: any = {
         content: params.content,
         useThunderEngine: params.useThunderEngine ?? true,
         attachment: params.attachment,
+        webSearch: params.webSearch ?? false,
       };
       if (!params.chatId && params.model) {
         bodyPayload.model = params.model;
@@ -217,6 +219,7 @@ export const api = {
         model?: string;
         useThunderEngine?: boolean;
         attachment?: { fileName: string; textContent: string };
+        webSearch?: boolean;
       },
       callbacks: StreamMessageCallbacks = {}
     ): Promise<SendMessageResponse> => {
@@ -225,6 +228,7 @@ export const api = {
         content: params.content,
         useThunderEngine: params.useThunderEngine ?? true,
         attachment: params.attachment,
+        webSearch: params.webSearch ?? false,
       };
       if (!params.chatId && params.model) {
         bodyPayload.model = params.model;
