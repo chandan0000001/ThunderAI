@@ -98,10 +98,10 @@ if (fs.existsSync(frontendDistPath)) {
 
 const startServer = async () => {
     try {
-        // Critical secret verification at application bootstrap
-        if (!process.env.JWT_SECRET) {
-            throw new Error("Critical startup failure: JWT_SECRET is not configured.");
-        }
+        // F-23 Remediation: Validate JWT secret and token TTL configurations at application bootstrap
+        const { validateTokenConfig } = await import("./services/tokenService.js");
+        validateTokenConfig();
+
         if (!process.env.MONGO_URI) {
             throw new Error("Critical startup failure: MONGO_URI is not configured.");
         }

@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { redisClient } from "../config/redis.js";
 import User from "../model/userSchema.js";
+import { getRefreshTokenTTLSeconds } from "../services/tokenService.js";
 
 /**
  * F-09 & Section 4: Strict Authentication & Session Validation Middleware
@@ -83,34 +85,52 @@ const authUserMiddleware = async (req, res, next) => {
             });
         }
 
-        // Validate tokenVersion against Redis active session cache or database
+        // F-20 Remediation: Authoritative TokenVersion Verification
+        // Do not accept stale Redis cache after database changes. MongoDB is authoritative.
         const cacheKey = `user:tokenVersion:${userId}`;
-        let currentVersion = null;
-        try {
-            if (redisClient && redisClient.isOpen) {
-                currentVersion = await redisClient.get(cacheKey);
-            }
-        } catch (err) {
-            console.warn("Redis error reading tokenVersion cache:", err.message);
-        }
 
-        if (currentVersion === null) {
+        if (mongoose.connection && mongoose.connection.readyState === 1) {
             const user = await User.findById(userId).select("tokenVersion").lean();
             if (!user) {
                 return res.status(401).json({ message: "User account no longer exists." });
             }
-            currentVersion = (user.tokenVersion || 0).toString();
+            const authoritativeVersion = user.tokenVersion || 0;
+
+            // Heal and synchronize Redis cache with authoritative database state
             try {
                 if (redisClient && redisClient.isOpen) {
-                    await redisClient.set(cacheKey, currentVersion, { EX: 604800 });
+                    await redisClient.set(cacheKey, authoritativeVersion.toString(), {
+                        EX: getRefreshTokenTTLSeconds()
+                    });
                 }
             } catch {}
-        }
 
-        if (Number(currentVersion) !== Number(payload.tokenVersion)) {
-            return res.status(401).json({
-                message: "Session expired or revoked. Please log in again."
-            });
+            if (Number(authoritativeVersion) !== Number(payload.tokenVersion)) {
+                return res.status(401).json({
+                    message: "Session expired or revoked. Please log in again."
+                });
+            }
+        } else {
+            // If MongoDB is unavailable in production, fail closed
+            if (process.env.NODE_ENV === "production") {
+                return res.status(503).json({
+                    message: "Authentication service unavailable: database offline."
+                });
+            }
+
+            // In non-production testing with offline DB, verify against Redis cache if present
+            let cachedVersion = null;
+            try {
+                if (redisClient && redisClient.isOpen) {
+                    cachedVersion = await redisClient.get(cacheKey);
+                }
+            } catch {}
+
+            if (cachedVersion !== null && Number(cachedVersion) !== Number(payload.tokenVersion)) {
+                return res.status(401).json({
+                    message: "Session expired or revoked. Please log in again."
+                });
+            }
         }
 
         req.userId = userId;

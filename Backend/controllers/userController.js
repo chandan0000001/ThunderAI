@@ -16,7 +16,8 @@ import {
     clearAuthCookies,
     rotateRefreshToken,
     getAccessTokenCookieOptions,
-    getRefreshTokenCookieOptions
+    getRefreshTokenCookieOptions,
+    getRefreshTokenTTLSeconds
 } from "../services/tokenService.js";
 
 const googleClient = new OAuth2Client();
@@ -337,7 +338,7 @@ export const logout = async (req, res) => {
         });
     } catch (error) {
         console.error("Logout error:", error);
-        if (error.code === "REVOCATION_UNAVAILABLE") {
+        if (error.code === "REVOCATION_UNAVAILABLE" || error.code === "REVOCATION_FAILED") {
             return res.status(503).json({
                 message: "Service unavailable: unable to confirm server-side session revocation. Please try again."
             });
@@ -365,7 +366,11 @@ export const refreshToken = async (req, res) => {
         const result = await rotateRefreshToken(token);
 
         res.cookie("token", result.accessToken, getAccessTokenCookieOptions());
-        res.cookie("refreshToken", result.refreshToken, getRefreshTokenCookieOptions());
+        res.cookie(
+            "refreshToken",
+            result.refreshToken,
+            getRefreshTokenCookieOptions(result.remainingTTL ? result.remainingTTL * 1000 : null)
+        );
 
         return res.status(200).json({
             message: "Session refreshed successfully",
@@ -377,6 +382,13 @@ export const refreshToken = async (req, res) => {
             }
         });
     } catch (err) {
+        // F-19 Remediation: If database is unavailable, fail closed with 503 without clearing active cookies
+        if (err.code === "SERVICE_UNAVAILABLE" || err.code === "DATABASE_UNAVAILABLE") {
+            return res.status(503).json({
+                message: "Authentication service temporarily unavailable: database offline."
+            });
+        }
+
         const clearOpts = {
             httpOnly: true,
             secure: isProduction,
@@ -800,12 +812,22 @@ export const resetPassword = async (req, res) => {
         user.password = hashedPassword;
         user.isVerified = true;
 
+        // F-20 Remediation: Invalidate old tokenVersion cache before incrementing
+        const userCacheKey = `user:tokenVersion:${user._id.toString()}`;
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.del(userCacheKey);
+        }
+
         // F-07 Remediation: Increment tokenVersion to immediately revoke all existing active sessions
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
 
         // Update active session cache in Redis to instantly reject existing JWTs across all devices
-        await redisClient.set(`user:tokenVersion:${user._id.toString()}`, user.tokenVersion.toString(), { EX: 604800 });
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.set(userCacheKey, user.tokenVersion.toString(), {
+                EX: getRefreshTokenTTLSeconds()
+            });
+        }
 
         // Invalidate lookup key
         await redisClient.del(`password-reset-email:${email}`);

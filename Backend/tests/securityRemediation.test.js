@@ -2,8 +2,15 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "crypto";
 import fs from "fs";
+import path from "path";
 import { spawnSync } from "child_process";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+
+import connectionDB from "../config/database.js";
+import { redisClient, connectRedis } from "../config/redis.js";
+import User from "../model/userSchema.js";
+import { login, logout, refreshToken } from "../controllers/userController.js";
 
 import {
     getEncryptionKey,
@@ -18,35 +25,67 @@ import {
     hashRefreshToken,
     storeRefreshToken,
     rotateRefreshToken,
-    clearAuthCookies
+    clearAuthCookies,
+    validateTokenConfig,
+    parseDurationToSeconds,
+    getAccessTokenCookieOptions,
+    getRefreshTokenCookieOptions,
+    getAccessTokenTTLSeconds,
+    getAccessTokenTTLMs,
+    getRefreshTokenTTLSeconds,
+    getRefreshTokenTTLMs
 } from "../services/tokenService.js";
 
 import fallbackLimiter from "../utils/fallbackRateLimiter.js";
 import { isAllowedOrigin } from "../utils/originUtils.js";
 import csrfProtection from "../middleware/csrfProtection.js";
 import authUserMiddleware from "../middleware/authUserMiddleware.js";
-import { redisClient, connectRedis } from "../config/redis.js";
-import User from "../model/userSchema.js";
-import { login, logout } from "../controllers/userController.js";
 
 const VALID_KEY_64_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const TEST_JWT_SECRET = "test-jwt-secret-very-secure-32chars-minimum!";
 
 describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     const origEnv = { ...process.env };
+    let testUser = null;
+    let TEST_USER_ID = null;
 
     before(async () => {
         process.env.JWT_SECRET = TEST_JWT_SECRET;
         process.env.BYOK_ENCRYPTION_KEY = VALID_KEY_64_HEX;
-        try {
-            await connectRedis();
-        } catch (e) {
-            console.warn("Redis connection warning in test setup:", e.message);
+
+        await connectRedis();
+        assert.ok(redisClient && redisClient.isOpen, "Redis must be connected for security tests");
+
+        await connectionDB();
+        assert.strictEqual(mongoose.connection.readyState, 1, "MongoDB must be connected for security tests");
+
+        testUser = await User.findOne({ email: "test-session-runner@thunder.ai" });
+        if (!testUser) {
+            testUser = await User.create({
+                name: "Session Test Runner",
+                email: "test-session-runner@thunder.ai",
+                password: "SecureHashedPassword123!",
+                role: "user",
+                isVerified: true,
+                tokenVersion: 0
+            });
+        } else {
+            testUser.tokenVersion = 0;
+            await testUser.save();
         }
+        TEST_USER_ID = testUser._id.toString();
     });
 
     after(async () => {
         process.env = origEnv;
+        try {
+            if (testUser) {
+                await User.deleteOne({ _id: testUser._id });
+            }
+        } catch {}
+        try {
+            await mongoose.disconnect();
+        } catch {}
         try {
             if (redisClient && redisClient.isOpen) {
                 await redisClient.quit();
@@ -107,7 +146,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             process.env.BYOK_ENCRYPTION_KEY = VALID_KEY_64_HEX;
             const encrypted = encryptAES("my-secret-key");
             const parts = encrypted.split(":");
-            // Tamper with ciphertext
             parts[2] = Buffer.from("tampered_cipher").toString("base64");
             const tampered = parts.join(":");
 
@@ -126,7 +164,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     });
 
     // ==========================================
-    // F-09: Token-Version Validation
+    // F-09: Token-Version Enforcement
     // ==========================================
     describe("F-09: Token-Version Enforcement", () => {
         before(() => {
@@ -135,7 +173,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
 
         test("Rejects JWT missing tokenVersion claim", async () => {
             const oldTokenWithoutVersion = jwt.sign(
-                { id: "65a000000000000000000001", email: "test@example.com" },
+                { id: TEST_USER_ID, email: "test@example.com" },
                 TEST_JWT_SECRET,
                 { algorithm: "HS256", issuer: "thunder-ai", audience: "thunder-ai-client" }
             );
@@ -162,7 +200,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
         test("Rejects JWT with invalid/malformed tokenVersion (string or negative)", async () => {
             for (const badVersion of ["1", -1, 3.14, null]) {
                 const badToken = jwt.sign(
-                    { id: "65a000000000000000000001", email: "test@example.com", tokenVersion: badVersion },
+                    { id: TEST_USER_ID, email: "test@example.com", tokenVersion: badVersion },
                     TEST_JWT_SECRET,
                     { algorithm: "HS256", issuer: "thunder-ai", audience: "thunder-ai-client" }
                 );
@@ -178,7 +216,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
 
         test("Rejects JWT with wrong issuer or audience", async () => {
             const badIssuerToken = jwt.sign(
-                { id: "65a000000000000000000001", email: "test@example.com", tokenVersion: 0 },
+                { id: TEST_USER_ID, email: "test@example.com", tokenVersion: 0 },
                 TEST_JWT_SECRET,
                 { algorithm: "HS256", issuer: "wrong-issuer", audience: "thunder-ai-client" }
             );
@@ -193,7 +231,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     });
 
     // ==========================================
-    // F-10: Production Redis Availability
+    // F-10: Production Redis Configuration Policy
     // ==========================================
     describe("F-10: Production Redis Configuration Policy", () => {
         test("In production mode, missing REDIS_URL throws fail-closed error", async () => {
@@ -202,7 +240,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             process.env.NODE_ENV = "production";
             delete process.env.REDIS_URL;
 
-            // Dynamically import fresh or test configuration assertion
             assert.throws(() => {
                 if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL) {
                     throw new Error("FAIL_CLOSED: REDIS_URL is required in production");
@@ -218,7 +255,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
                 process.execPath,
                 ["--input-type=module", "-e", "import('./config/redis.js')"],
                 {
-                    cwd: process.cwd(),
+                    cwd: path.resolve(import.meta.dirname, ".."),
                     env: {
                         ...process.env,
                         NODE_ENV: "production",
@@ -265,45 +302,35 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
 
         test("Enforces memory bounds with safe pruning", () => {
             fallbackLimiter.store.clear();
-            // Populate multiple keys
             for (let i = 0; i < 100; i++) {
                 fallbackLimiter.checkLimit(`user-churn-${i}`, 10, 60);
             }
-            // Consume key 0 again
             const res = fallbackLimiter.checkLimit("user-churn-0", 10, 60);
             assert.strictEqual(res.allowed, true);
         });
     });
 
     // ==========================================
-    // Section 4: Refresh Token & Session Lifecycle
+    // Section 4 & F-14, F-15, F-22: Refresh Token Lifecycle
     // ==========================================
     describe("Section 4: Complete Session Lifecycle & Rotation", () => {
-        test("Generates 15-minute access token with standard claims", () => {
-            const fakeUser = {
-                _id: "65a000000000000000000001",
-                email: "dev@thunder.ai",
-                role: "user",
-                tokenVersion: 2
-            };
-
-            const token = generateAccessToken(fakeUser);
+        test("Generates access token matching validated TTL configuration", () => {
+            const token = generateAccessToken(testUser);
             const decoded = jwt.verify(token, TEST_JWT_SECRET, {
                 algorithms: ["HS256"],
                 issuer: "thunder-ai",
                 audience: "thunder-ai-client"
             });
 
-            assert.strictEqual(decoded.sub, fakeUser._id);
-            assert.strictEqual(decoded.id, fakeUser._id);
-            assert.strictEqual(decoded.email, fakeUser.email);
-            assert.strictEqual(decoded.tokenVersion, 2);
+            assert.strictEqual(decoded.sub, TEST_USER_ID);
+            assert.strictEqual(decoded.id, TEST_USER_ID);
+            assert.strictEqual(decoded.email, testUser.email);
+            assert.strictEqual(decoded.tokenVersion, 0);
             assert.strictEqual(decoded.iss, "thunder-ai");
             assert.strictEqual(decoded.aud, "thunder-ai-client");
 
-            // Expiry should be approx 15 minutes (900 seconds)
             const remainingSeconds = decoded.exp - decoded.iat;
-            assert.strictEqual(remainingSeconds, 900);
+            assert.strictEqual(remainingSeconds, getAccessTokenTTLSeconds());
         });
 
         test("Refresh token is 256 bits (64 hex characters) and hashed at rest", () => {
@@ -318,52 +345,38 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
         });
 
         test("Stores and rotates refresh token atomically with family tracking", async () => {
-            if (!redisClient || !redisClient.isOpen) {
-                console.warn("Skipping live Redis test: Redis client not connected");
-                return;
-            }
-
-            const userId = "65a123456789012345678901";
             const email = "lifecycle@thunder.ai";
             const familyId = crypto.randomUUID();
             const token1 = generateRefreshToken();
 
-            await storeRefreshToken(token1, userId, email, familyId, 0);
+            await storeRefreshToken(token1, TEST_USER_ID, email, familyId, 0);
 
-            // Hash exists in redis, raw token does NOT
             const hash1 = hashRefreshToken(token1);
             const stored = await redisClient.get(`refresh_token:${hash1}`);
             assert.ok(stored);
             const parsed = JSON.parse(stored);
-            assert.strictEqual(parsed.userId, userId);
+            assert.strictEqual(parsed.userId, TEST_USER_ID);
             assert.strictEqual(parsed.familyId, familyId);
 
-            // Family is active
             const famStatus = await redisClient.get(`refresh_family:${familyId}`);
             assert.strictEqual(famStatus, "active");
 
-            // Clean up test keys
             await redisClient.del(`refresh_token:${hash1}`);
             await redisClient.del(`refresh_family:${familyId}`);
         });
 
         test("Reuse of an already rotated refresh token revokes token family and invalidates all sessions", async () => {
-            if (!redisClient || !redisClient.isOpen) return;
-
-            const userId = "65a123456789012345678902";
             const familyId = crypto.randomUUID();
             const tokenA = generateRefreshToken();
             const hashA = hashRefreshToken(tokenA);
 
-            // Record tokenA as already revoked/rotated
             await redisClient.set(
                 `refresh_revoked:${hashA}`,
-                JSON.stringify({ familyId, userId, rotatedAt: Date.now() }),
-                { EX: 60 }
+                JSON.stringify({ familyId, userId: TEST_USER_ID, rotatedAt: Date.now() }),
+                { EX: 604800 }
             );
-            await redisClient.set(`refresh_family:${familyId}`, "active", { EX: 60 });
+            await redisClient.set(`refresh_family:${familyId}`, "active", { EX: 604800 });
 
-            // Now attempt to rotate tokenA again -> Must trigger TOKEN_REUSE and revoke family
             await assert.rejects(
                 () => rotateRefreshToken(tokenA),
                 (err) => {
@@ -372,7 +385,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
                 }
             );
 
-            // Verify family is now immediately deleted
             const familyCheck = await redisClient.get(`refresh_family:${familyId}`);
             assert.strictEqual(familyCheck, null);
 
@@ -380,17 +392,16 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
         });
 
         test("F-14: Concurrent rotation of the same refresh token yields exactly 1 success and 1 TOKEN_REUSE", async () => {
-            if (!redisClient || !redisClient.isOpen) return;
+            const userDoc = await User.findById(TEST_USER_ID);
+            const currentVer = userDoc ? (userDoc.tokenVersion || 0) : 0;
 
-            const userId = "65a123456789012345678999";
             const email = "concurrency@thunder.ai";
             const familyId = crypto.randomUUID();
             const token = generateRefreshToken();
             const tokenHash = hashRefreshToken(token);
 
-            await storeRefreshToken(token, userId, email, familyId, 0);
+            await storeRefreshToken(token, TEST_USER_ID, email, familyId, currentVer);
 
-            // Execute concurrent rotation requests
             const [result1, result2] = await Promise.allSettled([
                 rotateRefreshToken(token),
                 rotateRefreshToken(token)
@@ -403,7 +414,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             assert.strictEqual(rejected.length, 1, "Exactly one rotation must fail");
             assert.strictEqual(rejected[0].reason?.code, "TOKEN_REUSE");
 
-            // Clean up
             await redisClient.del(`refresh_token:${tokenHash}`);
             await redisClient.del(`refresh_revoked:${tokenHash}`);
             await redisClient.del(`refresh_family:${familyId}`);
@@ -414,28 +424,268 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
         });
 
         test("F-15: Retains consumed-token reuse markers for the full family lifetime (>600000s)", async () => {
-            if (!redisClient || !redisClient.isOpen) return;
+            const userDoc = await User.findById(TEST_USER_ID);
+            const currentVer = userDoc ? (userDoc.tokenVersion || 0) : 0;
 
-            const userId = "65a123456789012345678998";
             const email = "lifetime@thunder.ai";
             const familyId = crypto.randomUUID();
             const token = generateRefreshToken();
             const tokenHash = hashRefreshToken(token);
 
-            await storeRefreshToken(token, userId, email, familyId, 0);
+            await storeRefreshToken(token, TEST_USER_ID, email, familyId, currentVer);
             const rotated = await rotateRefreshToken(token);
 
             const ttl = await redisClient.ttl(`refresh_revoked:${tokenHash}`);
-            // REFRESH_TOKEN_TTL_SECONDS is 604800 (7 days). Must be far greater than legacy 60s.
             assert.ok(ttl > 600000, `Expected TTL > 600000s, got ${ttl}s`);
 
-            // Clean up
             await redisClient.del(`refresh_revoked:${tokenHash}`);
             await redisClient.del(`refresh_family:${familyId}`);
             if (rotated?.refreshToken) {
                 const newHash = hashRefreshToken(rotated.refreshToken);
                 await redisClient.del(`refresh_token:${newHash}`);
             }
+        });
+
+        test("F-22: Replacement token and cookie TTL are capped at remaining family TTL", async () => {
+            const userDoc = await User.findById(TEST_USER_ID);
+            const currentVer = userDoc ? (userDoc.tokenVersion || 0) : 0;
+
+            const familyId = crypto.randomUUID();
+            const token = generateRefreshToken();
+            const tokenHash = hashRefreshToken(token);
+
+            // Seed family with capped 3000 seconds remaining lifetime
+            await redisClient.set(`refresh_family:${familyId}`, "active", { EX: 3000 });
+            await redisClient.set(
+                `refresh_token:${tokenHash}`,
+                JSON.stringify({ userId: TEST_USER_ID, email: testUser.email, familyId, tokenVersion: currentVer, createdAt: Date.now() }),
+                { EX: 3000 }
+            );
+
+            const rotated = await rotateRefreshToken(token);
+            assert.ok(rotated.remainingTTL <= 3000, `Expected remainingTTL <= 3000, got ${rotated.remainingTTL}`);
+
+            const newHash = hashRefreshToken(rotated.refreshToken);
+            const newTtl = await redisClient.ttl(`refresh_token:${newHash}`);
+            assert.ok(newTtl <= 3000, `Replacement token TTL in Redis must be capped at ${rotated.remainingTTL}`);
+
+            // Verify cookie options respect remaining TTL
+            const cookieOpts = getRefreshTokenCookieOptions(rotated.remainingTTL * 1000);
+            assert.strictEqual(cookieOpts.maxAge, rotated.remainingTTL * 1000);
+
+            // Clean up
+            await redisClient.del(`refresh_token:${newHash}`);
+            await redisClient.del(`refresh_revoked:${tokenHash}`);
+            await redisClient.del(`refresh_family:${familyId}`);
+        });
+    });
+
+    // ==========================================
+    // F-19: Database-Outage Fail-Closed Behavior
+    // ==========================================
+    describe("F-19: Refresh-Token Database Outage Fail-Closed", () => {
+        test("Simulated MongoDB disconnected fails rotation with SERVICE_UNAVAILABLE (HTTP 503)", async () => {
+            Object.defineProperty(mongoose.connection, "readyState", { value: 0, configurable: true });
+
+            const fakeToken = generateRefreshToken();
+
+            try {
+                await assert.rejects(
+                    () => rotateRefreshToken(fakeToken),
+                    (err) => {
+                        assert.strictEqual(err.code, "SERVICE_UNAVAILABLE");
+                        return true;
+                    }
+                );
+
+                let statusSent = null;
+                let bodySent = null;
+                let cookiesSet = [];
+                const req = { cookies: { refreshToken: fakeToken } };
+                const res = {
+                    status: (code) => {
+                        statusSent = code;
+                        return { json: (data) => { bodySent = data; } };
+                    },
+                    cookie: (name, val) => cookiesSet.push(name),
+                    clearCookie: () => {}
+                };
+
+                await refreshToken(req, res);
+                assert.strictEqual(statusSent, 503);
+                assert.strictEqual(cookiesSet.length, 0, "No cookies may be minted during DB outage");
+                assert.match(bodySent.message, /database offline/i);
+            } finally {
+                delete mongoose.connection.readyState;
+            }
+        });
+    });
+
+    // ==========================================
+    // F-20: Authoritative TokenVersion & Cache Invalidation
+    // ==========================================
+    describe("F-20: Authoritative TokenVersion Verification & Cache Reconciliation", () => {
+        test("Seed old cache, bump DB version, force cache write to fail -> Old token is rejected (401)", async () => {
+            const cacheKey = `user:tokenVersion:${TEST_USER_ID}`;
+            // 1. Seed old version 0 in Redis cache
+            await redisClient.set(cacheKey, "0", { EX: 3600 });
+
+            // 2. Bump DB version directly to 1 (simulating password reset or revocation)
+            await User.findByIdAndUpdate(TEST_USER_ID, { $set: { tokenVersion: 1 } });
+
+            // 3. Create access token with old version 0
+            const oldToken = jwt.sign(
+                { id: TEST_USER_ID, sub: TEST_USER_ID, email: testUser.email, tokenVersion: 0 },
+                TEST_JWT_SECRET,
+                { algorithm: "HS256", issuer: "thunder-ai", audience: "thunder-ai-client", expiresIn: "15m" }
+            );
+
+            let statusSent = null;
+            let bodySent = null;
+            let nextCalled = false;
+            const req = { cookies: { token: oldToken }, headers: {} };
+            const res = {
+                status: (code) => {
+                    statusSent = code;
+                    return { json: (data) => { bodySent = data; } };
+                }
+            };
+            const next = () => { nextCalled = true; };
+
+            await authUserMiddleware(req, res, next);
+
+            // Must reject because DB authoritatively has version 1
+            assert.strictEqual(statusSent, 401);
+            assert.strictEqual(nextCalled, false);
+            assert.match(bodySent.message, /expired or revoked/i);
+
+            // Verify Redis cache was healed to version 1
+            const healed = await redisClient.get(cacheKey);
+            assert.strictEqual(healed, "1");
+
+            // Reset DB version to 0
+            await User.findByIdAndUpdate(TEST_USER_ID, { $set: { tokenVersion: 0 } });
+            await redisClient.del(cacheKey);
+        });
+    });
+
+    // ==========================================
+    // F-21: Fail-Closed Logout Revocation Guarantee
+    // ==========================================
+    describe("F-21: Fail-Closed Logout Revocation Guarantee", () => {
+        test("clearAuthCookies throws REVOCATION_UNAVAILABLE when Redis is offline", async () => {
+            const fakeReq = { cookies: { refreshToken: "fake-refresh-token" } };
+            const fakeRes = { clearCookie: () => {} };
+
+            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
+
+            try {
+                await assert.rejects(
+                    () => clearAuthCookies(fakeReq, fakeRes),
+                    (err) => {
+                        assert.strictEqual(err.code, "REVOCATION_UNAVAILABLE");
+                        return true;
+                    }
+                );
+            } finally {
+                delete redisClient.isOpen;
+            }
+        });
+
+        test("logout controller returns HTTP 503 when DB version increment fails during cross-device revocation", async () => {
+            const fakeReq = {
+                userId: TEST_USER_ID,
+                token: "some-access-token",
+                tokenPayload: { exp: Math.floor(Date.now() / 1000) + 900 },
+                cookies: {}
+            };
+            let statusSent = null;
+            let bodySent = null;
+            let cookiesCleared = [];
+            const fakeRes = {
+                status: (code) => {
+                    statusSent = code;
+                    return { json: (data) => { bodySent = data; } };
+                },
+                clearCookie: (name) => cookiesCleared.push(name)
+            };
+
+            // Injected failure: mock User.findByIdAndUpdate to throw
+            const origFindByIdAndUpdate = User.findByIdAndUpdate;
+            User.findByIdAndUpdate = async () => {
+                throw new Error("Simulated database write failure");
+            };
+
+            try {
+                await logout(fakeReq, fakeRes);
+                assert.strictEqual(statusSent, 503);
+                assert.strictEqual(cookiesCleared.length, 0, "Cookies must NOT be cleared when server revocation fails");
+                assert.match(bodySent.message, /unable to confirm server-side session revocation/i);
+            } finally {
+                User.findByIdAndUpdate = origFindByIdAndUpdate;
+            }
+        });
+    });
+
+    // ==========================================
+    // F-23: Strict Token TTL and Secret Validation
+    // ==========================================
+    describe("F-23: Strict Token TTL and JWT Secret Validation", () => {
+        test("Rejects missing or short (<32 chars) JWT_SECRET", () => {
+            const origSecret = process.env.JWT_SECRET;
+            delete process.env.JWT_SECRET;
+            assert.throws(() => validateTokenConfig(), /JWT_SECRET is required/);
+
+            process.env.JWT_SECRET = "short-secret-under-32-chars";
+            assert.throws(() => validateTokenConfig(), /at least 32 characters/);
+
+            process.env.JWT_SECRET = origSecret;
+        });
+
+        test("Rejects trivial repeating or placeholder JWT_SECRET", () => {
+            const origSecret = process.env.JWT_SECRET;
+            process.env.JWT_SECRET = "a".repeat(32);
+            assert.throws(() => validateTokenConfig(), /trivial repeated or placeholder/);
+
+            process.env.JWT_SECRET = "your_jwt_secret_key_minimum_32_characters";
+            assert.throws(() => validateTokenConfig(), /trivial repeated or placeholder/);
+
+            process.env.JWT_SECRET = origSecret;
+        });
+
+        test("Rejects out-of-bounds ACCESS_TOKEN_TTL (<60s or >3600s)", () => {
+            const origAccessTtl = process.env.ACCESS_TOKEN_TTL;
+            process.env.ACCESS_TOKEN_TTL = "30s";
+            assert.throws(() => validateTokenConfig(), /ACCESS_TOKEN_TTL must be between 60 seconds/);
+
+            process.env.ACCESS_TOKEN_TTL = "2h";
+            assert.throws(() => validateTokenConfig(), /ACCESS_TOKEN_TTL must be between 60 seconds/);
+
+            process.env.ACCESS_TOKEN_TTL = origAccessTtl;
+        });
+
+        test("Rejects out-of-bounds REFRESH_TOKEN_TTL_SECONDS (<3600s or >2592000s)", () => {
+            const origRefreshTtl = process.env.REFRESH_TOKEN_TTL_SECONDS;
+            process.env.JWT_SECRET = TEST_JWT_SECRET;
+            process.env.ACCESS_TOKEN_TTL = "15m";
+
+            process.env.REFRESH_TOKEN_TTL_SECONDS = "1800";
+            assert.throws(() => validateTokenConfig(), /REFRESH_TOKEN_TTL_SECONDS must be between 3600/);
+
+            process.env.REFRESH_TOKEN_TTL_SECONDS = "3000000";
+            assert.throws(() => validateTokenConfig(), /REFRESH_TOKEN_TTL_SECONDS must be between 3600/);
+
+            process.env.REFRESH_TOKEN_TTL_SECONDS = origRefreshTtl;
+        });
+
+        test("Access cookie maxAge matches validated JWT expiry exactly", () => {
+            process.env.JWT_SECRET = TEST_JWT_SECRET;
+            process.env.ACCESS_TOKEN_TTL = "20m";
+            const cookieOpts = getAccessTokenCookieOptions();
+            assert.strictEqual(cookieOpts.maxAge, 20 * 60 * 1000);
+            assert.strictEqual(getAccessTokenTTLSeconds(), 1200);
+
+            process.env.ACCESS_TOKEN_TTL = "15m";
         });
     });
 
@@ -444,15 +694,16 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     // ==========================================
     describe("F-12: Ordinary Application Startup Admin Invariance", () => {
         test("Startup routine does not query or mutate admin roles or credentials", () => {
-            const indexSource = fs.readFileSync("index.js", "utf8");
+            const indexSource = fs.readFileSync(path.resolve(import.meta.dirname, "../index.js"), "utf8");
             assert.strictEqual(indexSource.includes("existingAdmin"), false);
             assert.strictEqual(indexSource.includes("ADMIN_EMAILS"), false);
             assert.strictEqual(indexSource.includes("ADMIN_PASSWORD"), false);
         });
 
         test("seedAdmin script exists as dedicated explicit operator CLI utility", () => {
-            assert.strictEqual(fs.existsSync("seedAdmin.js"), true);
-            const seedSource = fs.readFileSync("seedAdmin.js", "utf8");
+            const seedPath = path.resolve(import.meta.dirname, "../seedAdmin.js");
+            assert.strictEqual(fs.existsSync(seedPath), true);
+            const seedSource = fs.readFileSync(seedPath, "utf8");
             assert.ok(seedSource.includes("seedAdmin"));
             assert.ok(seedSource.includes("[AUDIT"));
         });
@@ -463,8 +714,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     // ==========================================
     describe("F-13: Atomic Password-Reset Token Consumption", () => {
         test("Concurrent redemption: exactly one request succeeds, second returns null", async () => {
-            if (!redisClient || !redisClient.isOpen) return;
-
             const token = "secure-reset-token-concurrent-test";
             const redisKey = `password-reset:${token}`;
             await redisClient.set(redisKey, "user@thunder.ai", { EX: 60 });
@@ -490,13 +739,14 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     // CSRF & Origin Defense
     // ==========================================
     describe("CSRF & CORS Defense", () => {
-        test("Safe HTTP methods pass through without custom header", (t, done) => {
+        test("Safe HTTP methods pass through without custom header", () => {
             const req = { method: "GET", headers: {}, cookies: {} };
             const res = {};
+            let nextCalled = false;
             csrfProtection(req, res, () => {
-                assert.ok(true);
-                done();
+                nextCalled = true;
             });
+            assert.strictEqual(nextCalled, true);
         });
 
         test("State-changing requests from untrusted origin are rejected (403)", () => {
@@ -535,66 +785,18 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             assert.strictEqual(statusSent, 403);
         });
 
-        test("Cookie-authenticated POST with X-Requested-With header passes", (t, done) => {
+        test("Cookie-authenticated POST with X-Requested-With header passes", () => {
             const req = {
                 method: "POST",
                 headers: { "x-requested-with": "XMLHttpRequest" },
                 cookies: { token: "some-jwt-token" }
             };
             const res = {};
+            let nextCalled = false;
             csrfProtection(req, res, () => {
-                assert.ok(true);
-                done();
+                nextCalled = true;
             });
-        });
-    });
-
-    // ==========================================
-    // F-16: Fail-Closed Logout Revocation Guarantee
-    // ==========================================
-    describe("F-16: Fail-Closed Logout Revocation Guarantee", () => {
-        test("clearAuthCookies throws REVOCATION_UNAVAILABLE when Redis client is disconnected", async () => {
-            const fakeReq = { cookies: { refreshToken: "fake-refresh-token" } };
-            const fakeRes = { clearCookie: () => {} };
-
-            const originalIsOpen = redisClient.isOpen;
-            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
-
-            try {
-                await assert.rejects(
-                    () => clearAuthCookies(fakeReq, fakeRes),
-                    (err) => {
-                        assert.strictEqual(err.code, "REVOCATION_UNAVAILABLE");
-                        return true;
-                    }
-                );
-            } finally {
-                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
-            }
-        });
-
-        test("logout controller returns HTTP 503 when session store revocation fails", async () => {
-            const fakeReq = { cookies: { refreshToken: "fake-refresh-token" } };
-            let statusSent = null;
-            let bodySent = null;
-            const fakeRes = {
-                status: (code) => {
-                    statusSent = code;
-                    return { json: (data) => { bodySent = data; } };
-                },
-                clearCookie: () => {}
-            };
-
-            const originalIsOpen = redisClient.isOpen;
-            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
-
-            try {
-                await logout(fakeReq, fakeRes);
-                assert.strictEqual(statusSent, 503);
-                assert.match(bodySent.message, /service unavailable: unable to confirm server-side session revocation/i);
-            } finally {
-                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
-            }
+            assert.strictEqual(nextCalled, true);
         });
     });
 
@@ -603,14 +805,14 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
     // ==========================================
     describe("F-17: Elimination of Login Master-Password Fallback & Auto-Promotion", () => {
         test("Application code contains zero references to ADMIN_PASSWORD in controllers and routes", () => {
-            const userControllerSrc = fs.readFileSync("controllers/userController.js", "utf8");
+            const userControllerSrc = fs.readFileSync(path.resolve(import.meta.dirname, "../controllers/userController.js"), "utf8");
             assert.strictEqual(userControllerSrc.includes("ADMIN_PASSWORD"), false);
             assert.strictEqual(userControllerSrc.includes("ADMIN_EMAILS"), false);
 
-            const userRouterSrc = fs.readFileSync("routes/userRouter.js", "utf8");
+            const userRouterSrc = fs.readFileSync(path.resolve(import.meta.dirname, "../routes/userRouter.js"), "utf8");
             assert.strictEqual(userRouterSrc.includes("ADMIN_PASSWORD"), false);
 
-            const adminRouterSrc = fs.readFileSync("routes/adminRouter.js", "utf8");
+            const adminRouterSrc = fs.readFileSync(path.resolve(import.meta.dirname, "../routes/adminRouter.js"), "utf8");
             assert.strictEqual(adminRouterSrc.includes("ADMIN_PASSWORD"), false);
         });
 
@@ -633,7 +835,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
 
             const origFindOne = User.findOne;
             try {
-                // Mock user with a distinct legitimate password
                 User.findOne = async () => ({
                     _id: "65a000000000000000000001",
                     email: "member@thunder.ai",
@@ -661,7 +862,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             process.env.NODE_ENV = "production";
 
             const validToken = jwt.sign(
-                { id: "65a000000000000000000001", email: "prod@thunder.ai", tokenVersion: 1 },
+                { id: TEST_USER_ID, email: "prod@thunder.ai", tokenVersion: 1 },
                 TEST_JWT_SECRET,
                 { algorithm: "HS256", issuer: "thunder-ai", audience: "thunder-ai-client" }
             );
@@ -679,7 +880,6 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             };
             const next = () => { nextCalled = true; };
 
-            const originalIsOpen = redisClient.isOpen;
             Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
 
             try {
@@ -688,7 +888,7 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
                 assert.strictEqual(nextCalled, false);
                 assert.match(bodySent.message, /authentication service unavailable/i);
             } finally {
-                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
+                delete redisClient.isOpen;
                 process.env.NODE_ENV = prevEnv;
             }
         });

@@ -91,7 +91,13 @@ flowchart LR
    ```
 
    > [!IMPORTANT]
-   > Administrator accounts are provisioned via explicit operator CLI tooling, not through ambient runtime environment variables or login master-password bypasses. Once deployed, run the audited seeding task in Railway's shell or one-off runner:
+   > **Security Baseline & Fail-Closed Invariants (Audit Remediation v4)**:
+   > - `JWT_SECRET` must be at least 32 characters long, high-entropy, and non-trivial (startup validates and fails fast if insecure).
+   > - `ACCESS_TOKEN_TTL` must be bounded between `60s` and `3600s` (e.g., `15m`).
+   > - `REFRESH_TOKEN_TTL_SECONDS` must be bounded between `3600` and `2592000` (e.g., `604800` for 7 days).
+   > - `REDIS_URL` is strictly mandatory in production mode (`NODE_ENV=production`); the server rejects localhost fallbacks and refuses to start if missing.
+   > - Refresh token rotation enforces an Absolute Family Lifetime Policy capped at the remaining family TTL to eliminate session immortality.
+   > - Administrator accounts are provisioned via explicit operator CLI tooling, not through ambient runtime environment variables or login master-password bypasses. Once deployed, run the audited seeding task in Railway's shell or one-off runner:
    > ```bash
    > ADMIN_EMAIL=admin@thunderai.com ADMIN_PASSWORD="your_strong_admin_password" npm run seed:admin
    > ```
