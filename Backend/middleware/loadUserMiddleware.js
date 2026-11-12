@@ -1,5 +1,4 @@
 import User from "../model/userSchema.js";
-import { isAdminEmail } from "../utils/adminUtils.js";
 
 const loadUserMiddleware = async (req, res, next) => {
     try {
@@ -11,12 +10,8 @@ const loadUserMiddleware = async (req, res, next) => {
             });
         }
 
-        // Auto-grant admin role to verified admin email accounts configured in environment
-        if (existingUser.email && isAdminEmail(existingUser.email) && existingUser.role !== "admin") {
-            existingUser.role = "admin";
-            existingUser.isVerified = true;
-            await existingUser.save();
-        }
+        // VULN-04: Privilege escalation guard - Admin roles are strictly provisioned
+        // via seedAdmin script or designated admin endpoints, never via silent auto-promote in hot middleware.
 
         if (!existingUser.isVerified) {
             return res.status(403).json({

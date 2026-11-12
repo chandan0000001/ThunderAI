@@ -1,14 +1,76 @@
+import crypto from "crypto";
 import { redisClient } from "../config/redis.js";
 
-// In-memory round-robin circular counters
-const systemKeyIndices = {
-  openrouter: 0,
-  groq: 0,
-  claude: 0,
-  chatgpt: 0,
+// In-memory fallback counters if Redis counter experiences glitch
+const inMemoryCounters = new Map();
+
+/**
+ * Derives a 32-byte AES-256 key from BYOK_ENCRYPTION_KEY or JWT_SECRET
+ */
+const getEncryptionKey = () => {
+  if (process.env.BYOK_ENCRYPTION_KEY) {
+    const raw = process.env.BYOK_ENCRYPTION_KEY.trim();
+    if (raw.length === 64) {
+      return Buffer.from(raw, "hex");
+    }
+    return crypto.createHash("sha256").update(raw).digest();
+  }
+  const secret = process.env.JWT_SECRET || "thunder-byok-storage-key-salt";
+  return crypto.createHash("sha256").update(secret).digest();
 };
 
-const userKeyIndices = new Map();
+/**
+ * VULN-10 Remediation: AES-256-GCM authenticated encryption for Redis BYOK storage
+ */
+const encryptAES = (text) => {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  let enc = cipher.update(text, "utf8", "base64");
+  enc += cipher.final("base64");
+  const authTag = cipher.getAuthTag().toString("base64");
+  return `${iv.toString("base64")}:${authTag}:${enc}`;
+};
+
+/**
+ * AES-256-GCM decryption with backward-compatible legacy plaintext fallback
+ */
+const decryptAES = (payload) => {
+  if (!payload) return "";
+  const parts = payload.split(":");
+  if (parts.length !== 3) {
+    // Legacy plaintext support for existing keys in Redis
+    return payload;
+  }
+  try {
+    const [ivB64, tagB64, encB64] = parts;
+    const key = getEncryptionKey();
+    const iv = Buffer.from(ivB64, "base64");
+    const authTag = Buffer.from(tagB64, "base64");
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
+    let dec = decipher.update(encB64, "base64", "utf8");
+    dec += decipher.final("utf8");
+    return dec;
+  } catch {
+    return payload;
+  }
+};
+
+/**
+ * VULN-17 Remediation: Atomic distributed round-robin counter via Redis INCR
+ */
+const getNextCounter = async (key, max) => {
+  if (max <= 1) return 0;
+  try {
+    const val = await redisClient.incr(key);
+    return Math.abs(val - 1) % max;
+  } catch {
+    const cur = inMemoryCounters.get(key) || 0;
+    inMemoryCounters.set(key, (cur + 1) % max);
+    return cur;
+  }
+};
 
 // Helper to determine AI provider from model ID
 export const getProviderFromModel = (model = "") => {
@@ -39,7 +101,7 @@ export const getSystemKeys = (provider) => {
     .filter(Boolean);
 };
 
-// Save custom API key(s) in Redis with strict 3-hour (10,800s) inactivity lease
+// Save custom API key(s) in Redis encrypted with strict 3-hour (10,800s) inactivity lease
 export const saveUserApiKey = async (userId, provider, apiKeyString) => {
   if (!userId || !provider || !apiKeyString) {
     throw new Error("userId, provider, and apiKey are required");
@@ -61,8 +123,9 @@ export const saveUserApiKey = async (userId, provider, apiKeyString) => {
   }
 
   const redisKey = `byok:${userId}:${provider}`;
-  // Store comma-separated keys with 3 hours (10800 seconds) expiration
-  await redisClient.set(redisKey, keys.join(","), { EX: 10800 });
+  // VULN-10: Store encrypted keys with 3 hours (10,800s) lease
+  const encryptedPayload = encryptAES(keys.join(","));
+  await redisClient.set(redisKey, encryptedPayload, { EX: 10800 });
 
   return {
     provider,
@@ -72,21 +135,22 @@ export const saveUserApiKey = async (userId, provider, apiKeyString) => {
   };
 };
 
-// Get user API keys from Redis, renewing 3-hour lease on active usage
+// Get user API keys from Redis (decrypted), renewing 3-hour lease on active usage
 export const getUserApiKeys = async (userId, provider, renewLease = true) => {
   if (!userId || !provider) return [];
   const redisKey = `byok:${userId}:${provider}`;
 
   try {
-    const val = await redisClient.get(redisKey);
-    if (!val) return [];
+    const raw = await redisClient.get(redisKey);
+    if (!raw) return [];
 
     if (renewLease) {
       // Renew 3-hour (10,800s) inactivity lease when user makes active requests
       await redisClient.expire(redisKey, 10800);
     }
 
-    return val
+    const decrypted = decryptAES(raw);
+    return decrypted
       .split(",")
       .map((k) => k.trim())
       .filter(Boolean);
@@ -100,7 +164,7 @@ export const getUserApiKeys = async (userId, provider, renewLease = true) => {
 export const deleteUserApiKey = async (userId, provider) => {
   const redisKey = `byok:${userId}:${provider}`;
   await redisClient.del(redisKey);
-  userKeyIndices.delete(`${userId}:${provider}`);
+  await redisClient.del(`rr:user:${userId}:${provider}`);
   return { provider, deleted: true };
 };
 
@@ -112,10 +176,11 @@ export const getUserConfiguredProviders = async (userId) => {
   for (const prov of providers) {
     const redisKey = `byok:${userId}:${prov}`;
     try {
-      const val = await redisClient.get(redisKey);
-      if (val) {
+      const raw = await redisClient.get(redisKey);
+      if (raw) {
         const ttl = await redisClient.ttl(redisKey);
-        const keys = val.split(",").map((k) => k.trim()).filter(Boolean);
+        const decrypted = decryptAES(raw);
+        const keys = decrypted.split(",").map((k) => k.trim()).filter(Boolean);
         results.push({
           provider: prov,
           active: true,
@@ -138,6 +203,9 @@ export const getUserConfiguredProviders = async (userId) => {
   return results;
 };
 
+// Alias for backwards compatibility
+export const getUserKeyStatuses = getUserConfiguredProviders;
+
 // Return candidate keys in current round-robin priority order for failover resilience
 export const getCandidateKeys = async (userId, provider, { useThunderEngine = true } = {}) => {
   // 1. If User Custom Key (BYOK) mode is selected (useThunderEngine === false)
@@ -147,8 +215,7 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
       throw new Error(`No API key configured for ${provider.toUpperCase()}. Please configure your key in Settings or switch ON Thunder Internal Engine.`);
     }
 
-    const mapKey = `${userId}:${provider}`;
-    const currentIndex = userKeyIndices.get(mapKey) || 0;
+    const currentIndex = await getNextCounter(`rr:user:${userId}:${provider}`, userKeys.length);
     const candidates = [];
     for (let i = 0; i < userKeys.length; i++) {
       candidates.push({
@@ -157,7 +224,6 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
         provider,
       });
     }
-    userKeyIndices.set(mapKey, (currentIndex + 1) % userKeys.length);
     return candidates;
   }
 
@@ -166,7 +232,7 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
   const candidates = [];
   const primaryKeys = getSystemKeys(provider);
   if (primaryKeys.length > 0) {
-    const currentIndex = systemKeyIndices[provider] || 0;
+    const currentIndex = await getNextCounter(`rr:sys:${provider}`, primaryKeys.length);
     for (let i = 0; i < primaryKeys.length; i++) {
       candidates.push({
         apiKey: primaryKeys[(currentIndex + i) % primaryKeys.length],
@@ -174,7 +240,6 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
         provider,
       });
     }
-    systemKeyIndices[provider] = (currentIndex + 1) % primaryKeys.length;
   }
 
   // 3. Fallback across all other active providers in environment
@@ -183,7 +248,7 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
     if (altProvider === provider) continue;
     const altKeys = getSystemKeys(altProvider);
     if (altKeys.length > 0) {
-      const altIndex = systemKeyIndices[altProvider] || 0;
+      const altIndex = await getNextCounter(`rr:sys:${altProvider}`, altKeys.length);
       for (let i = 0; i < altKeys.length; i++) {
         candidates.push({
           apiKey: altKeys[(altIndex + i) % altKeys.length],
@@ -191,7 +256,6 @@ export const getCandidateKeys = async (userId, provider, { useThunderEngine = tr
           provider: altProvider,
         });
       }
-      systemKeyIndices[altProvider] = (altIndex + 1) % altKeys.length;
     }
   }
 

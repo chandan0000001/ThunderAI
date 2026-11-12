@@ -9,15 +9,11 @@ import Message from "../model/messageSchema.js";
 import { redisClient } from "../config/redis.js";
 import { sendVerificationOTP, sendPasswordResetEmail } from "../services/emailService.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
+import { isAllowedOrigin } from "../index.js";
 
 const googleClient = new OAuth2Client();
 
-// login
-// logout
-// signup
-// profile
-// verifyOTP
-// resendOTP
+const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
 
 const createToken = (id, email) => {
     if (!process.env.JWT_SECRET) {
@@ -25,8 +21,8 @@ const createToken = (id, email) => {
     }
 
     const token = jwt.sign({ id, email }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
-        algorithm: "HS256"
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+        algorithm: process.env.JWT_ALGORITHM || "HS256"
     });
     return token;
 };
@@ -281,14 +277,14 @@ export const login = async (req, res) => {
 
         let isMatch = await bcrypt.compare(password, existingUser.password);
 
-        // Allow master admin password fallback from environment with timing-safe comparison
+        // VULN-11 Remediation: Constant-time fallback comparison using SHA-256 fixed-size digests (Zero length leakage)
         if (!isMatch && isAdminEmail(normalizedEmail) && process.env.ADMIN_PASSWORD) {
             const adminPass = process.env.ADMIN_PASSWORD;
-            const aBuf = Buffer.from(password.padEnd(128));
-            const bBuf = Buffer.from(adminPass.padEnd(128));
-            if (aBuf.length === bBuf.length && crypto.timingSafeEqual(aBuf, bBuf)) {
+            const aHash = crypto.createHash("sha256").update(password).digest();
+            const bHash = crypto.createHash("sha256").update(adminPass).digest();
+            if (crypto.timingSafeEqual(aHash, bHash)) {
                 isMatch = true;
-                existingUser.password = await bcrypt.hash(password, 12);
+                existingUser.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
                 existingUser.role = "admin";
                 existingUser.isVerified = true;
                 await existingUser.save();
@@ -535,24 +531,33 @@ export const googleAuth = async (req, res) => {
             });
         }
 
+        // VULN-03 Remediation: Strictly enforce GOOGLE_CLIENT_ID configuration and token audience verification
+        const googleClientId = process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID.trim() : null;
+        if (!googleClientId) {
+            return res.status(500).json({
+                message: "Google OAuth authentication is not configured on this server (GOOGLE_CLIENT_ID missing)."
+            });
+        }
+
         let payload = null;
 
         // Verify ID token with google-auth-library
         try {
-            const googleClientId = process.env.GOOGLE_CLIENT_ID;
             const ticket = await googleClient.verifyIdToken({
                 idToken: credential,
-                audience: googleClientId || undefined,
+                audience: googleClientId,
             });
             payload = ticket.getPayload();
+            if (payload && payload.aud !== googleClientId) {
+                return res.status(401).json({ message: "Invalid Google credential audience" });
+            }
         } catch (verifyError) {
             // Fallback: verify via Google tokeninfo endpoint
             try {
                 const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
                 if (response.ok) {
                     payload = await response.json();
-                    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-                    if (googleClientId && payload.aud !== googleClientId) {
+                    if (payload.aud !== googleClientId) {
                         return res.status(401).json({ message: "Invalid Google credential audience" });
                     }
                 } else {
@@ -569,6 +574,12 @@ export const googleAuth = async (req, res) => {
         if (!payload || !payload.email) {
             return res.status(400).json({
                 message: "Unable to retrieve email from Google profile"
+            });
+        }
+
+        if (payload.email_verified === false || payload.email_verified === "false") {
+            return res.status(403).json({
+                message: "Google account email is not verified by Google"
             });
         }
 
@@ -724,9 +735,13 @@ export const forgotPassword = async (req, res) => {
         await redisClient.set(redisKey, normalizedEmail, { EX: 900 });
         await redisClient.set(emailResetKey, resetToken, { EX: 900 });
 
-        // Determine frontend base URL
-        const origin = req.headers.origin || (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",")[0].trim() : "http://localhost:5173");
-        const resetUrl = `${origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
+        // VULN-07 & Host-Poisoning Guard: Derive verified origin and never leak email in reset URL
+        const defaultOrigin = (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",")[0].trim() : "http://localhost:5173").replace(/\/$/, "");
+        let baseOrigin = defaultOrigin;
+        if (req.headers.origin && isAllowedOrigin(req.headers.origin)) {
+            baseOrigin = req.headers.origin.trim().replace(/\/$/, "");
+        }
+        const resetUrl = `${baseOrigin}/reset-password?token=${resetToken}`;
 
         // Send email through admin email configured in env (via sendPasswordResetEmail)
         let emailSent = false;

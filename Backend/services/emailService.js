@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
 /**
- * Creates and returns the nodemailer transporter using Gmail SMTP.
+ * Creates and returns the nodemailer transporter using configured SMTP (defaults to Gmail).
  */
 const getTransporter = () => {
   const user = process.env.EMAIL_USER;
@@ -11,16 +11,21 @@ const getTransporter = () => {
     return null;
   }
 
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const secure = port === 465;
+
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    host,
+    port,
+    secure,
     auth: {
       user: user.trim(),
       pass: pass.trim().replace(/\s+/g, ''), // Strip spaces from Google App Password
     },
+    // VULN-05: Strict TLS verification enabled (MITM protection)
     tls: {
-      rejectUnauthorized: false,
+      rejectUnauthorized: true,
     },
     // Fast 5-second timeouts so Render firewall drops don't freeze the process for 2 minutes
     connectionTimeout: 5000,
@@ -274,23 +279,28 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
       console.log(`✅ [EmailService] Verification OTP successfully sent to ${email} (Message ID: ${info.messageId})`);
       return true;
     } catch (error) {
-      console.error(`❌ [EmailService] Gmail SMTP failed to send to ${email}:`, error.message);
-      console.log(`\n======================================================`);
-      console.log(`⚡ [RENDER FREE TIER OTP BACKUP]`);
-      console.log(`✉️  User: ${email}`);
-      console.log(`🔑  OTP Code: ${otp}`);
-      console.log(`======================================================\n`);
+      console.error(`❌ [EmailService] SMTP delivery failed to send to ${email}:`, error.message);
+      // VULN-09: Never leak OTP in console or logs in production environments
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n======================================================`);
+        console.log(`⚡ [DEV ONLY OTP LOG BACKUP]`);
+        console.log(`✉️  User: ${email}`);
+        console.log(`🔑  OTP Code: ${otp}`);
+        console.log(`======================================================\n`);
+      }
       throw error;
     }
   }
 
-  // If neither service is active, log OTP to console
-  console.log(`\n======================================================`);
-  console.log(`⚡ [RENDER FREE TIER OTP BACKUP]`);
-  console.log(`✉️  User: ${email}`);
-  console.log(`🔑  OTP Code: ${otp}`);
-  console.log(`======================================================\n`);
-  throw new Error('SMTP connection timed out or blocked on Render free tier. Use the OTP from server logs or configure RESEND_API_KEY.');
+  // If neither service is active
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n======================================================`);
+    console.log(`⚡ [DEV ONLY OTP LOG BACKUP]`);
+    console.log(`✉️  User: ${email}`);
+    console.log(`🔑  OTP Code: ${otp}`);
+    console.log(`======================================================\n`);
+  }
+  throw new Error('Email service unavailable. Please configure RESEND_API_KEY or valid SMTP credentials.');
 };
 
 /**
@@ -500,23 +510,107 @@ export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator')
 
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.log(`✅ [EmailService] Password reset email sent to ${email} via Gmail SMTP (${info.messageId})`);
+      console.log(`✅ [EmailService] Password reset email sent to ${email} via SMTP (${info.messageId})`);
       return true;
     } catch (err) {
-      console.error(`❌ [EmailService] Gmail SMTP error sending to ${email}:`, err.message);
-      console.log(`\n======================================================`);
-      console.log(`⚡ [RENDER FREE TIER RESET LINK BACKUP]`);
-      console.log(`✉️  User: ${email}`);
-      console.log(`🔗  Link: ${resetUrl}`);
-      console.log(`======================================================\n`);
+      console.error(`❌ [EmailService] SMTP error sending password reset to ${email}:`, err.message);
+      // VULN-09: Never leak password reset link in production logs
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n======================================================`);
+        console.log(`⚡ [DEV ONLY RESET LINK BACKUP]`);
+        console.log(`✉️  User: ${email}`);
+        console.log(`🔗  Link: ${resetUrl}`);
+        console.log(`======================================================\n`);
+      }
       throw err;
     }
   }
 
-  console.log(`\n======================================================`);
-  console.log(`⚡ [RENDER FREE TIER RESET LINK BACKUP]`);
-  console.log(`✉️  User: ${email}`);
-  console.log(`🔗  Link: ${resetUrl}`);
-  console.log(`======================================================\n`);
-  throw new Error('SMTP connection timed out or blocked on Render free tier. Use link from server logs or configure RESEND_API_KEY.');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n======================================================`);
+    console.log(`⚡ [DEV ONLY RESET LINK BACKUP]`);
+    console.log(`✉️  User: ${email}`);
+    console.log(`🔗  Link: ${resetUrl}`);
+    console.log(`======================================================\n`);
+  }
+  throw new Error('Email service unavailable. Please configure RESEND_API_KEY or valid SMTP credentials.');
+};
+
+/**
+ * VULN-15 Remediation: Dedicated Admin Invitation Email Dispatch
+ * Sends a clean invitation notice without misrepresenting passwords as 6-digit OTP codes.
+ */
+export const sendAdminInviteEmail = async (email, tempPassword, name = 'Operator') => {
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@thunder.ai';
+  const loginUrl = (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0].trim() : 'https://thunder-ai.pages.dev') + '/';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>You have been invited to Thunder AI</title>
+</head>
+<body style="margin:0;padding:0;background-color:#090a0f;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#e4e4e7;">
+  <div style="max-width:600px;margin:40px auto;background:#10141f;border:1px solid #1e293b;border-radius:16px;padding:36px;">
+    <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:18px;">⚡ THUNDER AI // INVITATION</div>
+    <p style="font-size:15px;color:#cbd5e1;line-height:1.6;">Hello ${name},</p>
+    <p style="font-size:15px;color:#cbd5e1;line-height:1.6;">An administrator has provisioned an account for you on the Thunder AI Intelligence Platform.</p>
+    <div style="background:#090a0f;border:1px solid #334155;border-radius:12px;padding:20px;margin:24px 0;">
+      <div style="font-size:12px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Temporary Credentials</div>
+      <div style="font-size:14px;color:#cbd5e1;margin-bottom:6px;"><strong>Email:</strong> ${email}</div>
+      <div style="font-size:14px;color:#38bdf8;font-family:monospace;letter-spacing:1px;"><strong>Temporary Password:</strong> ${tempPassword}</div>
+    </div>
+    <p style="font-size:13px;color:#f59e0b;margin-bottom:24px;">⚠️ For security, you are required to change your password immediately upon your first login.</p>
+    <a href="${loginUrl}" style="display:inline-block;padding:12px 28px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Sign In to Thunder AI</a>
+  </div>
+</body>
+</html>
+  `;
+
+  // Option 1: Resend HTTP REST API
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const apiKey = process.env.RESEND_API_KEY.trim();
+      const senderEmail = process.env.RESEND_FROM_EMAIL || adminEmail;
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `Thunder AI Administration <${senderEmail}>`,
+          to: [email],
+          subject: '⚡ Your Thunder AI Invitation & Temporary Access Credentials',
+          html: htmlContent,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ [EmailService] Admin invite email sent to ${email} via Resend`);
+        return true;
+      }
+    } catch (err) {
+      console.warn(`Resend failed for invite email:`, err.message);
+    }
+  }
+
+  // Option 2: SMTP
+  const transporter = getTransporter();
+  if (transporter) {
+    const mailOptions = {
+      from: `"Thunder AI Administration" <${adminEmail}>`,
+      to: email,
+      subject: '⚡ Your Thunder AI Invitation & Temporary Access Credentials',
+      text: `Hello ${name},\n\nYou have been invited to Thunder AI.\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nPlease sign in at ${loginUrl} and change your password immediately.`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ [EmailService] Admin invite sent to ${email} via SMTP (${info.messageId})`);
+    return true;
+  }
+
+  throw new Error('Email service unavailable for dispatching admin invite.');
 };

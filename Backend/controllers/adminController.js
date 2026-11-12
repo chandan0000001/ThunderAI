@@ -4,7 +4,7 @@ import Message from "../model/messageSchema.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { redisClient } from "../config/redis.js";
-import { sendVerificationOTP } from "../services/emailService.js";
+import { sendAdminInviteEmail } from "../services/emailService.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
 
 // GET /admin/users - List all users with telemetry
@@ -147,22 +147,24 @@ export const inviteUser = async (req, res) => {
             });
         }
 
-        // Try to dispatch email notice
+        // Dispatch dedicated admin invitation notice with temporary credentials
         let mailSent = false;
         try {
-            await sendVerificationOTP(
+            await sendAdminInviteEmail(
                 normalizedEmail,
                 tempPassword,
-                `Admin invited you to Thunder AI! Your temporary password is: ${tempPassword}`
+                user.name
             );
             mailSent = true;
         } catch (mailErr) {
             console.warn("Invite email delivery note:", mailErr.message);
         }
 
+        // VULN-06 Remediation: Never return plaintext temporary passwords in HTTP response bodies
         res.status(200).json({
-            message: `User ${normalizedEmail} successfully invited and activated!`,
-            tempPassword,
+            message: mailSent
+                ? `User ${normalizedEmail} successfully invited. Login credentials sent to their email.`
+                : `User ${normalizedEmail} successfully activated. Email service unavailable; please instruct user to reset their password via Forgot Password.`,
             emailSent: mailSent,
             user: {
                 _id: user._id,

@@ -30,14 +30,14 @@ userRouter.post("/verify-otp", unauthenticatedRateLimiter, verifyOTP);
 userRouter.post("/resend-otp", unauthenticatedRateLimiter, resendOTP);
 userRouter.post("/forgot-password", unauthenticatedRateLimiter, forgotPassword);
 userRouter.post("/reset-password", unauthenticatedRateLimiter, resetPassword);
-userRouter.get("/client-info", getClientInfo);
+userRouter.get("/client-info", unauthenticatedRateLimiter, getClientInfo);
 userRouter.get("/profile", authUserMiddleware, authenticatedRateLimiter, loadUserMiddleware, profile);
 userRouter.delete("/delete", authUserMiddleware, loadUserMiddleware, deleteAccount);
 
-// BYOK (Bring Your Own API Key) routes with 3-hour lease
-userRouter.get("/custom-api-key", authUserMiddleware, getCustomApiKeys);
-userRouter.post("/custom-api-key", authUserMiddleware, setCustomApiKey);
-userRouter.delete("/custom-api-key/:provider", authUserMiddleware, removeCustomApiKey);
+// BYOK (Bring Your Own API Key) routes with 3-hour lease (VULN-16: Guarded by auth + rate-limit + loadUser)
+userRouter.get("/custom-api-key", authUserMiddleware, authenticatedRateLimiter, loadUserMiddleware, getCustomApiKeys);
+userRouter.post("/custom-api-key", authUserMiddleware, authenticatedRateLimiter, loadUserMiddleware, setCustomApiKey);
+userRouter.delete("/custom-api-key/:provider", authUserMiddleware, authenticatedRateLimiter, loadUserMiddleware, removeCustomApiKey);
 
 
 export default userRouter;

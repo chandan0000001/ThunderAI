@@ -34,7 +34,7 @@ async function seedAdmin() {
       console.log(`[SUCCESS] Updated existing user ${email} with role 'admin' and updated password.`);
     } else {
       user = await User.create({
-        name: "Chandan Admin",
+        name: process.env.ADMIN_NAME || "System Administrator",
         email,
         password: hashedPassword,
         role: "admin",

@@ -24,38 +24,59 @@ import helmet from "helmet";
 
 const app = express();
 
-// Trust proxy for accurate client IP identification on Render / Vercel / Cloudflare
-app.set("trust proxy", true);
+// Trust exactly 1 upstream proxy hop (Render / Railway / Cloudflare / Vercel)
+// Preventing X-Forwarded-For spoofing attacks (CWE-290 / VULN-02)
+app.set("trust proxy", 1);
 
-// V-10: Helmet HTTP Security Headers
+// HTTP Security Headers
 app.use(helmet({
     contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-const allowedOrigins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://thunder-ai-mu.vercel.app"
-];
+// Build strict explicit CORS allowlist from environment configuration
+const allowedOriginsSet = new Set();
 
-if (process.env.FRONTEND_URL) {
-    process.env.FRONTEND_URL.split(",").forEach(url => {
+// 1. Explicit CORS allowlist from environment
+if (process.env.CORS_ALLOWED_ORIGINS) {
+    process.env.CORS_ALLOWED_ORIGINS.split(",").forEach(url => {
         const trimmed = url.trim().replace(/\/$/, "");
-        if (trimmed) allowedOrigins.push(trimmed);
+        if (trimmed) allowedOriginsSet.add(trimmed);
     });
 }
 
-// V-01 & V-15: Strict Origin Validation with anchored Regex (No bypasses)
-const isAllowedOrigin = (origin) => {
-    if (!origin) return true;
-    if (allowedOrigins.includes(origin)) return true;
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
-    if (/^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin)) return true;
-    if (/^https:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/.test(origin)) return true;
-    if (/^https:\/\/([a-zA-Z0-9-]+\.)*pages\.dev$/.test(origin)) return true;
+// 2. Production Frontend URL
+if (process.env.FRONTEND_URL) {
+    process.env.FRONTEND_URL.split(",").forEach(url => {
+        const trimmed = url.trim().replace(/\/$/, "");
+        if (trimmed) allowedOriginsSet.add(trimmed);
+    });
+}
+
+// 3. Known production deployment endpoints (exact matches only - NO wildcards)
+allowedOriginsSet.add("https://thunder-ai-mu.vercel.app");
+allowedOriginsSet.add("https://thunder-ai.pages.dev");
+
+// 4. Development origins (always permitted in dev, or when explicitly allowed)
+const devOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+];
+if (process.env.NODE_ENV !== "production") {
+    devOrigins.forEach(origin => allowedOriginsSet.add(origin));
+}
+
+// VULN-01 Remediation: Strict Origin Validation with exact allowlist matching (No wildcards)
+export const isAllowedOrigin = (origin) => {
+    if (!origin) return true; // Allow non-browser requests (mobile apps, server-to-server, healthchecks)
+    const normalized = origin.trim().replace(/\/$/, "");
+    if (allowedOriginsSet.has(normalized)) return true;
+    if (process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalized)) {
+        return true;
+    }
     return false;
 };
 

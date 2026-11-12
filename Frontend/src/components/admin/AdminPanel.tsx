@@ -665,7 +665,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
                   </p>
                 </div>
 
-                {inviteResult.tempPassword && (
+                {inviteResult.tempPassword ? (
                   <div className="p-3.5 rounded-xl border border-white/15 bg-black space-y-1.5">
                     <span className="text-[10px] text-zinc-500 uppercase block">Temporary Password</span>
                     <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg">
@@ -682,6 +682,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUserId }) => {
                         {copiedKey ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
                       </button>
                     </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.02] text-xs text-zinc-400 leading-relaxed">
+                    Access credentials and sign-in instructions have been securely dispatched to the user's email address.
                   </div>
                 )}
 

@@ -17,12 +17,15 @@ const normalizeModelForProvider = (provider, model = "") => {
     if (model.includes("gpt-4o-mini")) return "gpt-4o-mini";
     return "gpt-4o";
   }
-  // OpenRouter models: default to verified operational free model
+  // OpenRouter models: default to configured free model
   if (model === "openrouter/free" || !model || !model.includes("/") || model.includes("gemini")) {
-    return "nvidia/nemotron-3.5-lightning:free";
+    return process.env.DEFAULT_FREE_MODEL || "nvidia/nemotron-3.5-lightning:free";
   }
   return model;
 };
+
+const getOpenRouterReferer = () => process.env.OPENROUTER_REFERER || process.env.APP_PUBLIC_URL || "https://thunder-ai.app";
+const getClaudeMaxTokens = () => parseInt(process.env.CLAUDE_MAX_TOKENS || "4096", 10);
 
 // Dispatch non-streaming AI response with multi-key and multi-provider failover
 export const generateAIResponse = async ({ model, messages, userId, useThunderEngine = true }) => {
@@ -51,7 +54,7 @@ export const generateAIResponse = async ({ model, messages, userId, useThunderEn
           Authorization: `Bearer ${apiKey}`,
           ...(activeProvider === "openrouter"
             ? {
-                "HTTP-Referer": "https://thunder-ai.app",
+                "HTTP-Referer": getOpenRouterReferer(),
                 "X-Title": "Thunder AI Workspace",
               }
             : {}),
@@ -126,7 +129,7 @@ const generateClaudeResponse = async ({ apiKey, model, messages, isUserKey }) =>
       model,
       system: systemMessage,
       messages: conversationMessages,
-      max_tokens: 4096,
+      max_tokens: getClaudeMaxTokens(),
     }),
   });
 
@@ -189,7 +192,7 @@ export const generateAIStreamResponse = async ({
             model: targetModel,
             system: systemMessage,
             messages: conversationMessages,
-            max_tokens: 4096,
+            max_tokens: getClaudeMaxTokens(),
             stream: true,
           }),
         });
@@ -246,7 +249,7 @@ export const generateAIStreamResponse = async ({
             Authorization: `Bearer ${apiKey}`,
             ...(activeProvider === "openrouter"
               ? {
-                  "HTTP-Referer": "https://thunder-ai.app",
+                  "HTTP-Referer": getOpenRouterReferer(),
                   "X-Title": "Thunder AI Workspace",
                 }
               : {}),

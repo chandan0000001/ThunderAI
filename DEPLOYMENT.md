@@ -82,6 +82,7 @@ flowchart LR
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_email_app_password
    FRONTEND_URL=https://thunder-ai.pages.dev
+   CORS_ALLOWED_ORIGINS=https://thunder-ai.pages.dev
    ```
 5. In the **Settings** or **Networking** tab, click **Generate Domain** (gives you `https://thunder-ai-production.up.railway.app`).
 6. Test your backend: `https://thunder-ai-production.up.railway.app/health`.
