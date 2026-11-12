@@ -6,9 +6,11 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACK
 
 class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  data?: any;
+  constructor(message: string, status: number, data?: any) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -42,7 +44,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         );
       }
       const errorMsg = data.message || data.messages || `Request failed with status ${response.status}`;
-      throw new ApiError(errorMsg, response.status);
+      throw new ApiError(errorMsg, response.status, data);
     }
 
     return data as T;

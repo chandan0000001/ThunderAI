@@ -1,4 +1,5 @@
 import { logTelemetry } from "./streamService.js";
+import { redisClient } from "../config/redis.js";
 
 /**
  * Multi-Provider Web Search & Grounding Engine
@@ -241,9 +242,55 @@ const searchDuckDuckGo = async (query, maxResults = 5) => {
 };
 
 /**
- * Master Search Orchestrator with Multi-Provider Cascading Fallback
+ * Determines active candidate providers based on environment configuration and query intent.
  */
-export const searchWeb = async (query, { maxResults = 5, forceSearch = false } = {}) => {
+const getCandidateProviders = (query) => {
+  const pool = [];
+
+  // Provider 1: Tavily AI Search (active if API key is present)
+  if (process.env.TAVILY_API_KEY && !process.env.TAVILY_API_KEY.includes("your_tavily")) {
+    pool.push("tavily");
+  }
+
+  // Provider 2: Serper Google Search (active if API key is present)
+  if (process.env.SERPER_API_KEY && !process.env.SERPER_API_KEY.includes("your_serper")) {
+    pool.push("serper");
+  }
+
+  // Provider 3: DuckDuckGo Organic Scraper (free, zero-config, always active)
+  pool.push("duckduckgo");
+
+  // Provider 4: Wikipedia REST API (free encyclopedic search, active for conceptual/historical queries)
+  const isWikiTopic = /\b(what is|who was|history of|define|definition of|concept of|origin of|biography|wikipedia)\b/i.test(query);
+  if (isWikiTopic) {
+    pool.push("wikipedia");
+  }
+
+  return pool.length > 0 ? pool : ["duckduckgo"];
+};
+
+/**
+ * Dispatches query execution to a named search provider.
+ */
+const executeProviderSearch = async (provider, query, maxResults) => {
+  switch (provider) {
+    case "tavily":
+      return await searchTavily(query, maxResults);
+    case "serper":
+      return await searchSerper(query, maxResults);
+    case "duckduckgo":
+      return await searchDuckDuckGo(query, maxResults);
+    case "wikipedia":
+      return await searchWikipedia(query, Math.min(maxResults, 3));
+    default:
+      return null;
+  }
+};
+
+/**
+ * Master Search Orchestrator with Redis-Backed Multi-User Load Balancing & Automatic Failover
+ */
+export const searchWeb = async (query, { maxResults = 5, forceSearch = false, userId = null } = {}) => {
   const rawQuery = (query || "").trim();
   if (!rawQuery) return null;
 
@@ -261,22 +308,50 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false } =
 
   const optimalQuery = cleanSearchQuery(rawQuery).slice(0, 400);
 
-  // Cascading chain: Tavily -> Serper -> DuckDuckGo -> Wikipedia
-  let searchData = await searchTavily(optimalQuery, maxResults);
+  // 1. Build candidate search provider pool
+  const candidatePool = getCandidateProviders(optimalQuery);
 
-  if (!searchData || !searchData.results?.length) {
-    console.log("[MultiSearch] Falling back to Serper Google Search...");
-    searchData = await searchSerper(optimalQuery, maxResults);
+  // 2. Redis-backed Atomic Load Balancing across queries and users
+  let assignedIndex = 0;
+  try {
+    if (redisClient && redisClient.isOpen) {
+      const rrCounter = await redisClient.incr("search:provider:rr_counter");
+      assignedIndex = Number(rrCounter) % candidatePool.length;
+    } else {
+      assignedIndex = Math.floor(Math.random() * candidatePool.length);
+    }
+  } catch {
+    assignedIndex = Math.floor(Math.random() * candidatePool.length);
   }
 
-  if (!searchData || !searchData.results?.length) {
-    console.log("[MultiSearch] Falling back to DuckDuckGo Scraper...");
-    searchData = await searchDuckDuckGo(optimalQuery, maxResults);
+  const assignedProvider = candidatePool[assignedIndex] || candidatePool[0];
+
+  // 3. Construct prioritized execution order: Assigned provider first, then remaining candidates as failovers
+  const executionOrder = [
+    assignedProvider,
+    ...candidatePool.filter((p) => p !== assignedProvider),
+  ];
+  // Ensure Wikipedia is in failover chain if not already present
+  if (!executionOrder.includes("wikipedia")) {
+    executionOrder.push("wikipedia");
   }
 
-  if (!searchData || !searchData.results?.length) {
-    console.log("[MultiSearch] Falling back to Wikipedia...");
-    searchData = await searchWikipedia(optimalQuery, 3);
+  console.log(`[MultiSearch] Redis load-balancer assigned "${assignedProvider}" (Pool: ${candidatePool.join(", ")}) for: "${optimalQuery.slice(0, 45)}..."`);
+
+  // 4. Execute search with automatic cascading failover
+  let searchData = null;
+  for (const provider of executionOrder) {
+    try {
+      searchData = await executeProviderSearch(provider, optimalQuery, maxResults);
+      if (searchData && searchData.results && searchData.results.length > 0) {
+        if (provider !== assignedProvider) {
+          console.log(`[MultiSearch] Assigned provider "${assignedProvider}" exhausted or failed; successfully cascaded to "${provider}"`);
+        }
+        break;
+      }
+    } catch (err) {
+      console.warn(`[MultiSearch] Provider "${provider}" execution error:`, err.message);
+    }
   }
 
   if (!searchData || !searchData.results?.length) {
@@ -284,6 +359,14 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false } =
   }
 
   const { provider, answer, results } = searchData;
+
+  // Track provider usage metrics in Redis
+  try {
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.hIncrBy("search:stats:assigned", assignedProvider, 1);
+      await redisClient.hIncrBy("search:stats:succeeded", provider, 1);
+    }
+  } catch {}
 
   // Format results into clean grounding context with markdown source links
   let formattedContext = `[LIVE WEB SEARCH GROUNDING - Source: ${provider.toUpperCase()}]\nQuery: "${optimalQuery}"\n`;
@@ -304,10 +387,12 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false } =
 
   // Log telemetry to Redis Stream
   await logTelemetry("web_search_performed", {
-    provider,
+    assignedProvider,
+    successProvider: provider,
     query: optimalQuery,
     resultsCount: results.length,
     hasDirectAnswer: Boolean(answer),
+    userId: userId || "anonymous",
   });
 
   return formattedContext;

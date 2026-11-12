@@ -98,14 +98,15 @@ export const signup = async (req, res) => {
             console.warn("Email delivery note:", mailErr.message);
         }
 
-        if (!emailDelivered && process.env.NODE_ENV !== "production") {
-            console.log(`[DEV ONLY] Verification OTP for ${normalizedEmail}: ${otp}`);
+        if (process.env.NODE_ENV !== "production") {
+            console.log(`[EmailService] Generated signup OTP for ${normalizedEmail}: ${otp}`);
         }
 
         return res.status(200).json({
             message: "A 6-digit verification code has been dispatched to your email address.",
             email: normalizedEmail,
-            requiresVerification: true
+            requiresVerification: true,
+            ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
         });
     } catch (err) {
         console.error("Signup error:", err);
@@ -234,12 +235,14 @@ export const resendOTP = async (req, res) => {
             console.warn("Resend email delivery note:", mailErr.message);
         }
 
-        if (!emailDelivered && process.env.NODE_ENV !== "production") {
-            console.log(`[DEV ONLY] Resent OTP for ${normalizedEmail}: ${otp}`);
+        if (process.env.NODE_ENV !== "production") {
+            console.log(`[EmailService] Resent OTP for ${normalizedEmail}: ${otp}`);
         }
 
         return res.status(200).json({
-            message: "A new 6-digit verification code has been dispatched to your email."
+            message: "A new 6-digit verification code has been dispatched to your email.",
+            requiresVerification: true,
+            ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
         });
     } catch (err) {
         console.error("Resend OTP error:", err);
@@ -325,14 +328,15 @@ export const login = async (req, res) => {
                 console.warn("Failed to dispatch OTP during login:", mailErr.message);
             }
 
-            if (!emailDelivered && process.env.NODE_ENV !== "production") {
-                console.log(`[DEV ONLY] Login OTP for ${normalizedEmail}: ${otp}`);
+            if (process.env.NODE_ENV !== "production") {
+                console.log(`[EmailService] Login OTP for ${normalizedEmail}: ${otp}`);
             }
 
             return res.status(403).json({
                 message: "Your email is not verified yet. We have sent a new 6-digit code to your inbox.",
                 requiresVerification: true,
-                email: existingUser.email
+                email: existingUser.email,
+                ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
             });
         }
 

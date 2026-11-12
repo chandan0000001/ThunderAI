@@ -127,7 +127,7 @@ export const sendMessage = async (req, res) => {
       : content.trim();
 
     if (webSearch) {
-      const searchGrounding = await searchWeb(content);
+      const searchGrounding = await searchWeb(content, { userId: req.user?._id?.toString() });
       if (searchGrounding) {
         promptForAI = `${promptForAI}\n\n---\n${searchGrounding}`;
       }
@@ -284,7 +284,7 @@ export const sendMessageStream = async (req, res) => {
       : content.trim();
 
     if (webSearch) {
-      const searchGrounding = await searchWeb(content);
+      const searchGrounding = await searchWeb(content, { userId: req.user?._id?.toString() });
       if (searchGrounding) {
         promptForAI = `${promptForAI}\n\n---\n${searchGrounding}`;
       }

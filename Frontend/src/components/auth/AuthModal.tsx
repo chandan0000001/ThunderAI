@@ -224,9 +224,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: any) {
       if (err.status === 403 || err.message?.includes('not verified')) {
         setStep('otp');
-        setOtp('');
+        const devCode = err.data?.devOtp || '';
+        if (devCode) setOtp(devCode);
         setResendCooldown(60);
-        setSuccessBanner(err.message || 'Please verify your email address to continue.');
+        setSuccessBanner(
+          devCode
+            ? `Verification code: ${devCode}`
+            : (err.message || 'Please check your email for the 6-digit code.')
+        );
         return;
       }
       setError(err.message || 'Authentication failed. Please check credentials or ensure backend is running.');
@@ -368,7 +373,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <h3 className="text-2xl font-bold text-white tracking-tight">Verify Your Email</h3>
                 <p className="text-xs text-zinc-400 font-normal leading-relaxed">
                   Enter the 6-digit code sent to{' '}
-                  <span className="text-yellow-400 font-semibold">{email.trim().toLowerCase()}</span>
+                  <span className="text-yellow-400 font-semibold">{email.trim().toLowerCase()}</span>.
+                  <span className="block mt-1 text-[11px] text-zinc-400">
+                    If not in your inbox, please check your Spam or Junk folder.
+                  </span>
                 </p>
               </div>
 
