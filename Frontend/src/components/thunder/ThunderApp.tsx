@@ -215,6 +215,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
   // Attachment & Web Grounding State
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imagePreviewsMapRef = useRef<Map<string, string>>(new Map());
   const [attachedFile, setAttachedFile] = useState<{
     fileName: string;
     fileType?: string;
@@ -248,6 +249,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
     try {
       const res = await api.message.uploadDocument(file);
+      if (localPreview && res.fileName) {
+        imagePreviewsMapRef.current.set(res.fileName, localPreview);
+      }
       setAttachedFile({
         fileName: res.fileName,
         fileType: res.fileType || (isImg ? 'image' : 'document'),
@@ -269,6 +273,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const handleRemoveAttachment = () => {
     if (attachedFile?.previewUrl) {
       URL.revokeObjectURL(attachedFile.previewUrl);
+      if (attachedFile.fileName) {
+        imagePreviewsMapRef.current.delete(attachedFile.fileName);
+      }
     }
     setAttachedFile(null);
   };
@@ -1368,19 +1375,29 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                               const fileName = attachMatch[1].trim();
                               const promptText = attachMatch[2].trim();
                               const isImage = /\.(png|jpg|jpeg|webp)$/i.test(fileName);
+                              const previewSrc = isImage ? imagePreviewsMapRef.current.get(fileName) : undefined;
 
                               return (
                                 <div className="space-y-2.5">
                                   {/* Claude-style Visual Attachment Card in message */}
                                   {isImage ? (
-                                    <div className="inline-block rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-md">
-                                      <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/[0.05] border-b border-white/[0.05] text-[11px] font-mono text-zinc-300">
+                                    <div className="inline-block rounded-2xl overflow-hidden border border-white/15 bg-black/60 shadow-lg">
+                                      {previewSrc ? (
+                                        <div className="max-w-[240px] max-h-[180px] overflow-hidden bg-black/80">
+                                          <img
+                                            src={previewSrc}
+                                            alt={fileName}
+                                            className="w-full h-full object-cover rounded-t-2xl hover:scale-105 transition duration-300"
+                                          />
+                                        </div>
+                                      ) : null}
+                                      <div className="flex items-center space-x-2 px-3 py-2 bg-white/[0.06] text-xs font-mono text-zinc-300">
                                         <ImageIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                        <span className="truncate max-w-[220px]">{fileName}</span>
+                                        <span className="truncate max-w-[200px]">{fileName}</span>
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="inline-flex items-center space-x-2.5 px-3.5 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-xs text-zinc-200 shadow-md">
+                                    <div className="inline-flex items-center space-x-2.5 px-3.5 py-2.5 rounded-2xl bg-white/[0.08] border border-white/10 text-xs text-zinc-200 shadow-md">
                                       <FileText className="w-4 h-4 text-yellow-400 shrink-0" />
                                       <span className="font-medium text-white truncate max-w-[220px]">{fileName}</span>
                                       <span className="text-[10px] font-mono uppercase bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">
