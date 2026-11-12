@@ -66,7 +66,7 @@ export const searchWeb = async (query, maxResults = 5) => {
       formattedContext += `[${idx + 1}] "${title}"\nURL: ${url}\nSummary: ${content}\n\n`;
     });
 
-    formattedContext += `Instruction: Answer the user using the live web search findings above. Always cite references using markdown links: [Source Title](URL).`;
+    formattedContext += `Instruction: Answer the user clearly based on the live web search findings above. Explicitly cite your claims using markdown links in the format [Source 1](URL), [Source 2](URL), or [Source Title](URL). Always include the exact URLs provided above.`;
 
     // Log telemetry to Redis Stream
     await logTelemetry("web_search_performed", {
