@@ -23,7 +23,8 @@ async function seedAdmin() {
     if (!email || !plainPassword) {
       throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be configured in environment (.env)");
     }
-    const hashedPassword = await bcrypt.hash(plainPassword, 12);
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
+    const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
 
     let user = await User.findOne({ email });
     if (user) {

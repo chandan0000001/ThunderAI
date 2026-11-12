@@ -7,6 +7,8 @@ import { redisClient } from "../config/redis.js";
 import { sendAdminInviteEmail } from "../services/emailService.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
 
+const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
+
 // GET /admin/users - List all users with telemetry
 export const getAllUsers = async (req, res) => {
     try {
@@ -81,7 +83,7 @@ export const createUser = async (req, res) => {
             return res.status(409).json({ message: "A user with this email already exists" });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
         const newUser = await User.create({
             name: name.trim(),
@@ -128,7 +130,7 @@ export const inviteUser = async (req, res) => {
 
         // Generate temporary password
         const tempPassword = `Thunder#${crypto.randomBytes(3).toString("hex")}!`;
-        const hashedPassword = await bcrypt.hash(tempPassword, 12);
+        const hashedPassword = await bcrypt.hash(tempPassword, BCRYPT_SALT_ROUNDS);
 
         if (user) {
             user.name = name ? name.trim() : user.name;

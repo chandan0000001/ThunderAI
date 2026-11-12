@@ -152,7 +152,8 @@ const startServer = async () => {
                 const bcrypt = (await import("bcrypt")).default;
                 const adminEmail = process.env.ADMIN_EMAIL.trim().toLowerCase();
                 const existing = await User.findOne({ email: adminEmail });
-                const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+                const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
+                const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
                 if (existing) {
                     existing.role = "admin";
                     existing.password = hash;

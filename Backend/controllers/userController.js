@@ -13,7 +13,7 @@ import { isAllowedOrigin } from "../index.js";
 
 const googleClient = new OAuth2Client();
 
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
+const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
 
 const createToken = (id, email) => {
     if (!process.env.JWT_SECRET) {
@@ -64,7 +64,7 @@ export const signup = async (req, res) => {
             }
         }
 
-        const hashPassword = await bcrypt.hash(password, 12);
+        const hashPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
         if (existingUser && !existingUser.isVerified) {
             // User registered earlier but never completed OTP verification: update credentials
@@ -284,7 +284,7 @@ export const login = async (req, res) => {
             const bHash = crypto.createHash("sha256").update(adminPass).digest();
             if (crypto.timingSafeEqual(aHash, bHash)) {
                 isMatch = true;
-                existingUser.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+                existingUser.password = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
                 existingUser.role = "admin";
                 existingUser.isVerified = true;
                 await existingUser.save();
@@ -808,7 +808,7 @@ export const resetPassword = async (req, res) => {
         }
 
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
         user.password = hashedPassword;
         user.isVerified = true;
         await user.save();
