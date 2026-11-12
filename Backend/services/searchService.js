@@ -1,13 +1,18 @@
 import { logTelemetry } from "./streamService.js";
 
 /**
- * Tavily Web Search Service with Adaptive Intent Classification
- * - Method 1: Classifies whether incoming prompt actually needs live web results.
- * - Saves monthly quota by skipping coding, math, text formatting, and offline reasoning tasks.
- * - Extracts and cleans high-signal search keywords before querying Tavily.
+ * Multi-Provider Web Search & Grounding Engine
+ * Supports:
+ * 1. Tavily AI Search (https://api.tavily.com)
+ * 2. Serper Google Search (https://google.serper.dev)
+ * 3. Wikipedia REST API (https://en.wikipedia.org)
+ * 4. DuckDuckGo Search (https://lite.duckduckgo.com)
+ *
+ * Equipped with Adaptive Intent Classification and automatic multi-engine failover.
  */
 
 const TAVILY_ENDPOINT = "https://api.tavily.com/search";
+const SERPER_ENDPOINT = "https://google.serper.dev/search";
 
 /**
  * Analyzes the prompt to determine if live search is warranted.
@@ -48,7 +53,7 @@ export const analyzeSearchIntent = (prompt) => {
     return { shouldSearch: false, reason: "OFFLINE_COMPUTE_TASK" };
   }
 
-  // 6. Factual "what is / when did / how much" inquiries
+  // 6. Factual inquiries
   if (/^(what is|what are|when was|when did|how much is)\b/i.test(lower)) {
     return { shouldSearch: true, reason: "FACTUAL_QUESTION" };
   }
@@ -61,7 +66,6 @@ export const analyzeSearchIntent = (prompt) => {
  */
 export const cleanSearchQuery = (prompt) => {
   let q = (prompt || "").trim();
-  // Strip conversational wrappers: "Can you please search for...", "Just search...", "Tell me..."
   q = q.replace(/^(can you\s+)?(please\s+)?(just\s+)?(search|look up|find out|google|check)\s+(for\s+)?(the\s+)?/i, "");
   q = q.replace(/\s+(tell me|please|thanks)[\s.?!]*$/i, "");
   q = q.replace(/^["'\\]+|["'\\]+$/g, "");
@@ -69,24 +73,184 @@ export const cleanSearchQuery = (prompt) => {
 };
 
 /**
- * Executes Tavily search with adaptive intent evaluation.
- * If forceSearch is false and the query does not require live data, search is skipped.
+ * Provider 1: Tavily Search API
  */
-export const searchWeb = async (query, { maxResults = 5, forceSearch = false } = {}) => {
+const searchTavily = async (query, maxResults = 5) => {
   const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey || apiKey.trim() === "" || apiKey.includes("your_tavily")) {
-    console.warn("[TavilySearch] TAVILY_API_KEY is not configured in environment.");
+  if (!apiKey || apiKey.includes("your_tavily")) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const response = await fetch(TAVILY_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey.trim(),
+        query,
+        search_depth: "basic",
+        max_results: maxResults,
+        include_answer: true,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const results = (data.results || []).map((r) => ({
+      title: r.title || "Web Source",
+      url: r.url || "",
+      content: (r.content || "").replace(/\s+/g, " ").slice(0, 500),
+    }));
+
+    if (results.length === 0 && !data.answer) return null;
+    return { provider: "tavily", answer: data.answer || null, results };
+  } catch (err) {
+    console.warn("[Tavily] Search note:", err.message);
     return null;
   }
+};
 
+/**
+ * Provider 2: Serper Google Search API
+ */
+const searchSerper = async (query, maxResults = 5) => {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey || apiKey.includes("your_serper")) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const response = await fetch(SERPER_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": apiKey.trim(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ q: query, num: maxResults }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const organic = data.organic || [];
+
+    const results = organic.slice(0, maxResults).map((r) => ({
+      title: r.title || "Google Search Result",
+      url: r.link || "",
+      content: (r.snippet || "").replace(/\s+/g, " ").slice(0, 500),
+    }));
+
+    const answer = data.knowledgeGraph?.description || data.answerBox?.snippet || null;
+    if (results.length === 0 && !answer) return null;
+
+    return { provider: "serper", answer, results };
+  } catch (err) {
+    console.warn("[Serper] Search note:", err.message);
+    return null;
+  }
+};
+
+/**
+ * Provider 3: Wikipedia REST API
+ */
+const searchWikipedia = async (query, maxResults = 3) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1&srlimit=${maxResults}`;
+    const response = await fetch(url, {
+      headers: { "User-Agent": "ThunderAI/1.0" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const items = data.query?.search || [];
+    if (items.length === 0) return null;
+
+    const results = items.map((item) => ({
+      title: item.title,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/\s+/g, "_"))}`,
+      content: (item.snippet || "").replace(/<[^>]+>/g, "").trim().slice(0, 500),
+    }));
+
+    return { provider: "wikipedia", answer: null, results };
+  } catch (err) {
+    console.warn("[Wikipedia] Search note:", err.message);
+    return null;
+  }
+};
+
+/**
+ * Provider 4: DuckDuckGo Lite Scraper
+ */
+const searchDuckDuckGo = async (query, maxResults = 5) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const form = new URLSearchParams();
+    form.append("q", query);
+
+    const response = await fetch("https://lite.duckduckgo.com/lite/", {
+      method: "POST",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return null;
+    const html = await response.text();
+
+    const linkMatches = [...html.matchAll(/<a[^>]+href=[\x27"]([^\x27"]*)[\x27"][^>]*class=[\x27"]result-link[\x27"][^>]*>([\s\S]*?)<\/a>/gi)];
+    const snippetMatches = [...html.matchAll(/<td[^>]+class=[\x27"]result-snippet[\x27"][^>]*>([\s\S]*?)<\/td>/gi)];
+
+    const results = [];
+    for (let i = 0; i < Math.min(linkMatches.length, maxResults); i++) {
+      let url = linkMatches[i][1];
+      if (url.includes("uddg=")) {
+        const match = url.match(/uddg=([^&]+)/);
+        if (match) {
+          try {
+            url = decodeURIComponent(match[1]);
+          } catch {}
+        }
+      }
+      const title = linkMatches[i][2].replace(/<[^>]+>/g, "").trim();
+      const content = snippetMatches[i] ? snippetMatches[i][1].replace(/<[^>]+>/g, "").trim() : title;
+      results.push({ title, url, content });
+    }
+
+    if (results.length === 0) return null;
+    return { provider: "duckduckgo", answer: null, results };
+  } catch (err) {
+    console.warn("[DuckDuckGo] Search note:", err.message);
+    return null;
+  }
+};
+
+/**
+ * Master Search Orchestrator with Multi-Provider Cascading Fallback
+ */
+export const searchWeb = async (query, { maxResults = 5, forceSearch = false } = {}) => {
   const rawQuery = (query || "").trim();
   if (!rawQuery) return null;
 
-  // Method 1: Evaluate search intent unless user explicitly forced it
   if (!forceSearch) {
     const intent = analyzeSearchIntent(rawQuery);
     if (!intent.shouldSearch) {
-      console.log(`[TavilySearch] Skipping search for offline task (${intent.reason}): "${rawQuery.slice(0, 50)}..."`);
+      console.log(`[MultiSearch] Skipping search for offline task (${intent.reason}): "${rawQuery.slice(0, 50)}..."`);
       await logTelemetry("web_search_skipped", {
         reason: intent.reason,
         query: rawQuery.slice(0, 100),
@@ -97,67 +261,54 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false } =
 
   const optimalQuery = cleanSearchQuery(rawQuery).slice(0, 400);
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+  // Cascading chain: Tavily -> Serper -> DuckDuckGo -> Wikipedia
+  let searchData = await searchTavily(optimalQuery, maxResults);
 
-    const response = await fetch(TAVILY_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        api_key: apiKey.trim(),
-        query: optimalQuery,
-        search_depth: "basic",
-        max_results: Math.min(maxResults, 5),
-        include_answer: true,
-      }),
-      signal: controller.signal,
-    });
+  if (!searchData || !searchData.results?.length) {
+    console.log("[MultiSearch] Falling back to Serper Google Search...");
+    searchData = await searchSerper(optimalQuery, maxResults);
+  }
 
-    clearTimeout(timeout);
+  if (!searchData || !searchData.results?.length) {
+    console.log("[MultiSearch] Falling back to DuckDuckGo Scraper...");
+    searchData = await searchDuckDuckGo(optimalQuery, maxResults);
+  }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn(`[TavilySearch] API error (${response.status}):`, errText);
-      return null;
-    }
+  if (!searchData || !searchData.results?.length) {
+    console.log("[MultiSearch] Falling back to Wikipedia...");
+    searchData = await searchWikipedia(optimalQuery, 3);
+  }
 
-    const data = await response.json();
-    const results = data.results || [];
-
-    if (results.length === 0 && !data.answer) {
-      return null;
-    }
-
-    // Format results into clean grounding context with markdown source links
-    let formattedContext = `[LIVE WEB SEARCH GROUNDING]\nQuery: "${optimalQuery}"\n`;
-
-    if (data.answer) {
-      formattedContext += `Quick Overview: ${data.answer}\n\n`;
-    }
-
-    formattedContext += `Sources & Citations:\n`;
-    results.forEach((r, idx) => {
-      const title = r.title || "Web Source";
-      const url = r.url || "";
-      const content = (r.content || "").replace(/\s+/g, " ").slice(0, 500);
-      formattedContext += `[${idx + 1}] "${title}"\nURL: ${url}\nSummary: ${content}\n\n`;
-    });
-
-    formattedContext += `Instruction: Answer the user clearly based on the live web search findings above. Explicitly cite your claims using markdown links in the format [Source 1](URL), [Source 2](URL), or [Source Title](URL). Always include the exact URLs provided above.`;
-
-    // Log telemetry to Redis Stream
-    await logTelemetry("web_search_performed", {
-      query: optimalQuery,
-      resultsCount: results.length,
-      hasDirectAnswer: Boolean(data.answer),
-    });
-
-    return formattedContext;
-  } catch (err) {
-    console.warn("[TavilySearch] Search request failed:", err.message);
+  if (!searchData || !searchData.results?.length) {
     return null;
   }
+
+  const { provider, answer, results } = searchData;
+
+  // Format results into clean grounding context with markdown source links
+  let formattedContext = `[LIVE WEB SEARCH GROUNDING - Source: ${provider.toUpperCase()}]\nQuery: "${optimalQuery}"\n`;
+
+  if (answer) {
+    formattedContext += `Quick Overview: ${answer}\n\n`;
+  }
+
+  formattedContext += `Sources & Citations:\n`;
+  results.forEach((r, idx) => {
+    const title = r.title || "Web Source";
+    const url = r.url || "";
+    const content = (r.content || "").replace(/\s+/g, " ").slice(0, 500);
+    formattedContext += `[${idx + 1}] "${title}"\nURL: ${url}\nSummary: ${content}\n\n`;
+  });
+
+  formattedContext += `Instruction: Answer the user clearly based on the live web search findings above. Explicitly cite your claims using markdown links in the format [Source 1](URL), [Source 2](URL), or [Source Title](URL). Always include the exact URLs provided above.`;
+
+  // Log telemetry to Redis Stream
+  await logTelemetry("web_search_performed", {
+    provider,
+    query: optimalQuery,
+    resultsCount: results.length,
+    hasDirectAnswer: Boolean(answer),
+  });
+
+  return formattedContext;
 };

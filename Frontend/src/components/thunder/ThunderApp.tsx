@@ -222,6 +222,8 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
     charCount: number;
     snippet: string;
     dimensions?: { width: number; height: number } | null;
+    previewUrl?: string;
+    size?: number;
   } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [webSearchActive, setWebSearchActive] = useState(false);
@@ -238,6 +240,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
       return;
     }
 
+    const isImg = file.type.startsWith('image/') || /\.(png|jpg|jpeg|webp)$/i.test(file.name);
+    const localPreview = isImg ? URL.createObjectURL(file) : undefined;
+
     setUploadingFile(true);
     setErrorMessage(null);
 
@@ -245,13 +250,16 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
       const res = await api.message.uploadDocument(file);
       setAttachedFile({
         fileName: res.fileName,
-        fileType: res.fileType,
+        fileType: res.fileType || (isImg ? 'image' : 'document'),
         textContent: res.textContent,
         charCount: res.charCount,
         snippet: res.snippet,
         dimensions: res.dimensions,
+        previewUrl: localPreview,
+        size: file.size,
       });
     } catch (err: any) {
+      if (localPreview) URL.revokeObjectURL(localPreview);
       setErrorMessage(err.message || 'File verification or upload failed');
     } finally {
       setUploadingFile(false);
@@ -259,6 +267,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   };
 
   const handleRemoveAttachment = () => {
+    if (attachedFile?.previewUrl) {
+      URL.revokeObjectURL(attachedFile.previewUrl);
+    }
     setAttachedFile(null);
   };
 
@@ -1350,8 +1361,50 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                       }`}
                     >
                       {isUser ? (
-                        <div className="text-[15px] leading-relaxed whitespace-pre-wrap font-inter">
-                          {msg.content}
+                        <div className="text-[15px] leading-relaxed font-inter">
+                          {(() => {
+                            const attachMatch = msg.content.match(/^\[File Attached:\s*([^\]]+)\]\s*\n\n?([\s\S]*)$/);
+                            if (attachMatch) {
+                              const fileName = attachMatch[1].trim();
+                              const promptText = attachMatch[2].trim();
+                              const isImage = /\.(png|jpg|jpeg|webp)$/i.test(fileName);
+
+                              return (
+                                <div className="space-y-2.5">
+                                  {/* Claude-style Visual Attachment Card in message */}
+                                  {isImage ? (
+                                    <div className="inline-block rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-md">
+                                      <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/[0.05] border-b border-white/[0.05] text-[11px] font-mono text-zinc-300">
+                                        <ImageIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                        <span className="truncate max-w-[220px]">{fileName}</span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="inline-flex items-center space-x-2.5 px-3.5 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-xs text-zinc-200 shadow-md">
+                                      <FileText className="w-4 h-4 text-yellow-400 shrink-0" />
+                                      <span className="font-medium text-white truncate max-w-[220px]">{fileName}</span>
+                                      <span className="text-[10px] font-mono uppercase bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">
+                                        {fileName.split('.').pop()}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Clean user prompt text */}
+                                  {promptText && (
+                                    <div className="whitespace-pre-wrap leading-relaxed">
+                                      {promptText}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="whitespace-pre-wrap leading-relaxed">
+                                {msg.content}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -1478,35 +1531,48 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               </div>
             )}
 
-            {/* Attached file preview chip */}
+            {/* Attached file preview - Claude Style */}
             {attachedFile && (
-              <div className={`flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs ${
-                isDarkMode ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' : 'bg-yellow-50 border-yellow-300 text-yellow-800'
-              }`}>
-                <div className="flex items-center space-x-2 truncate">
-                  {attachedFile.fileType === 'image' ? (
-                    <ImageIcon className="w-4 h-4 text-amber-400 shrink-0" />
-                  ) : (
-                    <FileText className="w-4 h-4 text-yellow-500 shrink-0" />
-                  )}
-                  <span className="font-semibold truncate max-w-[200px] sm:max-w-xs">{attachedFile.fileName}</span>
-                  {attachedFile.dimensions ? (
-                    <span className="text-[10px] opacity-75 font-mono">({attachedFile.dimensions.width}x{attachedFile.dimensions.height}px)</span>
-                  ) : (
-                    <span className="text-[10px] opacity-75 font-mono">({attachedFile.charCount.toLocaleString()} chars)</span>
-                  )}
-                  <span className="text-[9px] font-mono uppercase bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">
-                    Verified
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveAttachment}
-                  title="Remove attachment"
-                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition ml-2 shrink-0 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+              <div className="pt-1 pb-1">
+                {attachedFile.fileType === 'image' && attachedFile.previewUrl ? (
+                  <div className="relative inline-block group">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-white/20 bg-black/60 shadow-lg">
+                      <img
+                        src={attachedFile.previewUrl}
+                        alt={attachedFile.fileName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAttachment}
+                      title="Remove image"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/20 flex items-center justify-center transition shadow-md cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative inline-flex items-center space-x-2.5 px-3 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-xs text-zinc-200 shadow-md group">
+                    <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-zinc-300 shrink-0">
+                      <FileText className="w-4 h-4 text-yellow-400" />
+                    </div>
+                    <div className="truncate max-w-[180px] sm:max-w-xs">
+                      <div className="font-medium truncate text-white">{attachedFile.fileName}</div>
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono">
+                        {attachedFile.fileName.split('.').pop()} • {((attachedFile.size || 0) / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAttachment}
+                      title="Remove file"
+                      className="p-1 hover:bg-white/10 rounded-full transition text-zinc-400 hover:text-white cursor-pointer ml-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
