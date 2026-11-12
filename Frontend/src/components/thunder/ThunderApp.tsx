@@ -35,6 +35,8 @@ import {
   Key,
   FileText,
   Loader2,
+  ImageIcon,
+  ShieldAlert,
 } from 'lucide-react';
 import { usePageSEO } from '../../utils/seo';
 
@@ -215,9 +217,11 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<{
     fileName: string;
+    fileType?: string;
     textContent: string;
     charCount: number;
     snippet: string;
+    dimensions?: { width: number; height: number } | null;
   } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [webSearchActive, setWebSearchActive] = useState(false);
@@ -241,12 +245,14 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
       const res = await api.message.uploadDocument(file);
       setAttachedFile({
         fileName: res.fileName,
+        fileType: res.fileType,
         textContent: res.textContent,
         charCount: res.charCount,
         snippet: res.snippet,
+        dimensions: res.dimensions,
       });
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to parse document attachment');
+      setErrorMessage(err.message || 'File verification or upload failed');
     } finally {
       setUploadingFile(false);
     }
@@ -1243,7 +1249,14 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         {errorMessage && (
           <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-950/50 border border-rose-500/30 text-rose-200 text-xs font-mono flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              {errorMessage.toLowerCase().includes('security') ||
+              errorMessage.toLowerCase().includes('bomb') ||
+              errorMessage.toLowerCase().includes('malware') ||
+              errorMessage.toLowerCase().includes('blocked') ? (
+                <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              )}
               <span>{errorMessage}</span>
             </div>
             <button onClick={() => setErrorMessage(null)} className="text-rose-400 hover:text-white p-1">
@@ -1468,14 +1481,25 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                 isDarkMode ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' : 'bg-yellow-50 border-yellow-300 text-yellow-800'
               }`}>
                 <div className="flex items-center space-x-2 truncate">
-                  <FileText className="w-4 h-4 text-yellow-500 shrink-0" />
+                  {attachedFile.fileType === 'image' ? (
+                    <ImageIcon className="w-4 h-4 text-amber-400 shrink-0" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-yellow-500 shrink-0" />
+                  )}
                   <span className="font-semibold truncate max-w-[200px] sm:max-w-xs">{attachedFile.fileName}</span>
-                  <span className="text-[10px] opacity-75 font-mono">({attachedFile.charCount.toLocaleString()} chars)</span>
+                  {attachedFile.dimensions ? (
+                    <span className="text-[10px] opacity-75 font-mono">({attachedFile.dimensions.width}x{attachedFile.dimensions.height}px)</span>
+                  ) : (
+                    <span className="text-[10px] opacity-75 font-mono">({attachedFile.charCount.toLocaleString()} chars)</span>
+                  )}
+                  <span className="text-[9px] font-mono uppercase bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">
+                    Verified
+                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleRemoveAttachment}
-                  title="Remove document"
+                  title="Remove attachment"
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition ml-2 shrink-0 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1486,7 +1510,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.txt,.md,.json,.csv"
+              accept=".pdf,.txt,.md,.json,.csv,.png,.jpg,.jpeg,.webp"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -1522,7 +1546,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               <div className="flex items-center space-x-1 sm:space-x-1.5 text-zinc-400">
                 <button
                   type="button"
-                  title="Upload attachment (PDF, TXT, MD, JSON, CSV)"
+                  title="Upload attachment (PDF, TXT, MD, JSON, CSV, PNG, JPG, WEBP)"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sending || uploadingFile}
                   className={`p-1.5 sm:p-2 rounded-full transition cursor-pointer ${

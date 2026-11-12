@@ -4,7 +4,7 @@ import { logTelemetry } from "./streamService.js";
 const require = createRequire(import.meta.url);
 const { Queue, Worker, QueueEvents } = require("bullmq");
 const Redis = require("ioredis");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 /**
  * OPTION B: Memory-Optimized BullMQ Background Queue
@@ -56,14 +56,44 @@ export const queueEvents = new QueueEvents("document-processing", {
 export const documentWorker = new Worker(
   "document-processing",
   async (job) => {
-    const { fileBufferBase64, fileName, mimeType, userId } = job.data;
-    const fileBuffer = Buffer.from(fileBufferBase64, "base64");
+    const { fileBufferBase64, fileName, mimeType, fileType, imageMetadata, userId } = job.data;
 
     let extractedText = "";
 
-    if (mimeType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf")) {
-      const pdfData = await pdfParse(fileBuffer);
-      extractedText = (pdfData.text || "").trim();
+    if (fileType === "image") {
+      const dims = imageMetadata ? `${imageMetadata.width}x${imageMetadata.height}` : "verified";
+      const cleanText = `[Attached Image: ${fileName} (${mimeType}, dimensions: ${dims})]`;
+
+      await logTelemetry("image_parsed", {
+        fileName,
+        userId,
+        mimeType,
+        dimensions: dims,
+      });
+
+      return {
+        fileName,
+        fileType: "image",
+        charCount: cleanText.length,
+        truncated: false,
+        snippet: `[Image: ${fileName} (${dims})]`,
+        cleanText,
+        dimensions: imageMetadata,
+      };
+    }
+
+    const fileBuffer = Buffer.from(fileBufferBase64, "base64");
+
+    if (fileType === "pdf" || mimeType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf")) {
+      const parser = new PDFParse({ data: fileBuffer });
+      const parsed = await Promise.race([
+        parser.getText(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("PDF text extraction timeout")), 4000)
+        ),
+      ]);
+      extractedText = (parsed?.text || "").trim();
+      await parser.destroy();
     } else {
       // Plain text, markdown, json, or csv
       extractedText = fileBuffer.toString("utf-8").trim();
@@ -84,6 +114,7 @@ export const documentWorker = new Worker(
 
     return {
       fileName,
+      fileType: fileType || "text",
       charCount: cleanText.length,
       truncated,
       snippet: cleanText.slice(0, 300),
@@ -105,16 +136,31 @@ documentWorker.on("failed", (job, err) => {
 });
 
 /**
- * Helper to dispatch document job and wait for completed text extraction
+ * Helper to dispatch document job and wait for completed text extraction.
+ * For images, we avoid sending raw image bytes to Redis to protect the 30MB limit.
  */
-export const processDocumentJob = async ({ fileBuffer, fileName, mimeType, userId }) => {
-  const job = await documentQueue.add("parse-document", {
-    fileBufferBase64: fileBuffer.toString("base64"),
+export const processDocumentJob = async ({
+  fileBuffer,
+  fileName,
+  mimeType,
+  fileType,
+  imageMetadata,
+  userId,
+}) => {
+  const jobPayload = {
     fileName,
     mimeType,
+    fileType,
+    imageMetadata,
     userId,
-  });
+  };
 
+  // Only attach binary base64 for non-image documents (PDF/TXT) needing worker parsing
+  if (fileType !== "image" && fileBuffer) {
+    jobPayload.fileBufferBase64 = fileBuffer.toString("base64");
+  }
+
+  const job = await documentQueue.add("parse-document", jobPayload);
   const result = await job.waitUntilFinished(queueEvents, 20000); // 20s timeout
   return result;
 };

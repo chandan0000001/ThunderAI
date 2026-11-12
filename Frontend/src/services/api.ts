@@ -154,10 +154,12 @@ export const api = {
   message: {
     uploadDocument: async (file: File): Promise<{
       fileName: string;
+      fileType?: string;
       charCount: number;
       truncated: boolean;
       snippet: string;
       textContent: string;
+      dimensions?: { width: number; height: number } | null;
     }> => {
       const formData = new FormData();
       formData.append('file', file);

@@ -9,6 +9,7 @@ import { updateSummaryIfNeeded } from "../services/summaryService.js";
 import { redisClient } from "../config/redis.js";
 import { logTelemetry } from "../services/streamService.js";
 import { processDocumentJob } from "../services/queueService.js";
+import { inspectUploadedFile, FileSecurityError } from "../services/fileSecurityService.js";
 
 
 // getMessage, sendMessage
@@ -415,39 +416,47 @@ export const sendMessageStream = async (req, res) => {
 };
 
 /**
- * OPTION B: Memory-Managed Document Attachment Handler via BullMQ
- * Extracts text from PDF / TXT / MD / CSV and enforces memory safety.
+ * Secure Document & Image Attachment Handler via BullMQ
+ * Enforces deep security scanning (Anti-Malware, Anti-Zip Bomb, Anti-Pixel Flood)
+ * and memory-safe processing before queuing.
  */
 export const uploadDocument = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No document attached" });
+      return res.status(400).json({ message: "No document or image attached" });
     }
 
-    const { originalname, mimetype, buffer, size } = req.file;
+    // 1. Master Security Inspection (Anti-Malware, Anti-Zip Bomb, Anti-Pixel Flood, Anti-MIME Spoofing)
+    const securityResult = await inspectUploadedFile(req.file, req.user);
 
-    // Disallow oversized files (>10MB)
-    if (size > 10 * 1024 * 1024) {
-      return res.status(400).json({ message: "File exceeds 10MB maximum limit" });
-    }
-
-    // Process via Option B (Memory-Optimized BullMQ Queue)
+    // 2. Process via Option B (Memory-Optimized BullMQ Queue)
     const result = await processDocumentJob({
-      fileBuffer: buffer,
-      fileName: originalname,
-      mimeType: mimetype,
+      fileBuffer: req.file.buffer,
+      fileName: securityResult.sanitizedName,
+      mimeType: securityResult.detectedMimeType,
+      fileType: securityResult.fileType,
+      imageMetadata: securityResult.imageMetadata || null,
       userId: req.user._id.toString(),
     });
 
     res.status(200).json({
-      message: "Document processed and parsed successfully",
+      message: "File verified and processed successfully",
       fileName: result.fileName,
+      fileType: securityResult.fileType,
       charCount: result.charCount,
       truncated: result.truncated,
       snippet: result.snippet,
       textContent: result.cleanText,
+      dimensions: result.dimensions || null,
     });
   } catch (err) {
+    if (err.isSecurityError) {
+      return res.status(err.statusCode || 400).json({
+        message: err.message,
+        securityAlert: true,
+        riskCategory: err.riskCategory,
+      });
+    }
     console.error("Document upload processing error:", err);
     res.status(500).json({ message: err.message || "Failed to process document attachment" });
   }

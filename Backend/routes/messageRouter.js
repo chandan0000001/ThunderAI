@@ -10,11 +10,11 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedExtensions = /\.(pdf|txt|md|json|csv)$/i;
-    if (file.originalname.match(allowedExtensions)) {
+    const allowedExtensions = /\.(pdf|txt|md|json|csv|png|jpg|jpeg|webp)$/i;
+    if (file.originalname && file.originalname.match(allowedExtensions)) {
       cb(null, true);
     } else {
-      cb(new Error("Unsupported file type. Please upload a PDF, TXT, MD, JSON, or CSV file."));
+      cb(new Error("Unsupported file type. Please upload a PDF, TXT, MD, JSON, CSV, or Image (PNG, JPG, WEBP)."));
     }
   },
 });
