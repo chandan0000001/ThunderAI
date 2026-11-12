@@ -106,7 +106,6 @@ export interface AuthResponse {
   usage?: TokenUsage;
   requiresVerification?: boolean;
   isVerified?: boolean;
-  devOtp?: string;
 }
 
 export interface VerifyOtpResponse {

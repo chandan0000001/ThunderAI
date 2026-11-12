@@ -174,13 +174,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         if (res.requiresVerification) {
           setStep('otp');
-          setOtp(res.devOtp || '');
+          setOtp('');
           setResendCooldown(60);
-          setSuccessBanner(
-            res.devOtp
-              ? `Verification code: ${res.devOtp} (Render Free Tier blocks SMTP)`
-              : (res.message || 'A 6-digit verification code has been dispatched to your email.')
-          );
+          setSuccessBanner(res.message || 'A 6-digit verification code has been dispatched to your email.');
           return;
         }
 
@@ -201,13 +197,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         if (res.requiresVerification) {
           setStep('otp');
-          setOtp(res.devOtp || '');
+          setOtp('');
           setResendCooldown(60);
-          setSuccessBanner(
-            res.devOtp
-              ? `Verification code: ${res.devOtp} (Render Free Tier blocks SMTP)`
-              : (res.message || 'Your email is not verified yet. A fresh 6-digit code has been sent to your email.')
-          );
+          setSuccessBanner(res.message || 'Your email is not verified yet. A fresh 6-digit code has been sent to your email.');
           return;
         }
 
@@ -224,14 +216,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: any) {
       if (err.status === 403 || err.message?.includes('not verified')) {
         setStep('otp');
-        const devCode = err.data?.devOtp || '';
-        if (devCode) setOtp(devCode);
+        setOtp('');
         setResendCooldown(60);
-        setSuccessBanner(
-          devCode
-            ? `Verification code: ${devCode}`
-            : (err.message || 'Please check your email for the 6-digit code.')
-        );
+        setSuccessBanner(err.message || 'Please check your email for the 6-digit code.');
         return;
       }
       setError(err.message || 'Authentication failed. Please check credentials or ensure backend is running.');
@@ -290,13 +277,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         email: email.trim().toLowerCase(),
       });
       setResendCooldown(60);
-      if (res.devOtp) {
-        setOtp(res.devOtp);
-        setSuccessBanner(`New code: ${res.devOtp} (Render Free Tier blocks SMTP)`);
-      } else {
-        setSuccessBanner(res.message || 'A new 6-digit code has been sent to your email.');
-        setOtp('');
-      }
+      setSuccessBanner(res.message || 'A new 6-digit verification code has been dispatched to your email.');
+      setOtp('');
       otpInputRef.current?.focus();
     } catch (err: any) {
       setError(err.message || 'Failed to resend code. Please try again later.');

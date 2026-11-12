@@ -105,8 +105,7 @@ export const signup = async (req, res) => {
         return res.status(200).json({
             message: "A 6-digit verification code has been dispatched to your email address.",
             email: normalizedEmail,
-            requiresVerification: true,
-            ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
+            requiresVerification: true
         });
     } catch (err) {
         console.error("Signup error:", err);
@@ -241,8 +240,7 @@ export const resendOTP = async (req, res) => {
 
         return res.status(200).json({
             message: "A new 6-digit verification code has been dispatched to your email.",
-            requiresVerification: true,
-            ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
+            requiresVerification: true
         });
     } catch (err) {
         console.error("Resend OTP error:", err);
@@ -335,8 +333,7 @@ export const login = async (req, res) => {
             return res.status(403).json({
                 message: "Your email is not verified yet. We have sent a new 6-digit code to your inbox.",
                 requiresVerification: true,
-                email: existingUser.email,
-                ...(process.env.NODE_ENV !== "production" ? { devOtp: otp } : {})
+                email: existingUser.email
             });
         }
 
