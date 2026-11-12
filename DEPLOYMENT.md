@@ -119,6 +119,13 @@ Render only felt slow before because it was trying to compile the entire 3D Reac
    * **Plan**: `Free`
    * **Health Check Path**: `/health`
 4. Add your **Environment Variables** (`MONGO_URI`, `OPENROUTER_API_KEY`, `REDIS_URL`, `JWT_SECRET`, etc.).
+   > [!IMPORTANT]
+   > **Email Delivery on Render Free Tier (Port 443 HTTPS)**:
+   > Render's Free Tier firewall blocks outbound SMTP ports 25, 465, and 587. To send OTP verification emails and password reset links from Render, add an HTTPS REST API key that operates over Port 443:
+   > - **Brevo (Recommended)**: Add `BREVO_API_KEY=xkeysib-...` and `BREVO_FROM_EMAIL=your_email@gmail.com`. (In your Brevo dashboard under Security > Authorized IPs, disable IP restrictions so dynamic cloud IPs are allowed).
+   > - **Resend**: Add `RESEND_API_KEY=re_...`.
+   >
+   > Local environments and hosts without egress SMTP blocks (such as Railway or Koyeb) can alternatively use direct Gmail SMTP (`EMAIL_USER` and `EMAIL_PASS`).
 5. Click **Create Web Service**.
 6. **To prevent Render from ever sleeping (Zero Cold Starts)**:
    * Sign up for free at **[cron-job.org](https://cron-job.org)** or **[uptimerobot.com](https://uptimerobot.com)**.

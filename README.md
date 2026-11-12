@@ -69,6 +69,12 @@ DEFAULT_AI_MODEL=openrouter/free
 REDIS_URL=your_redis_connection_url # Mandatory in production
 TOKEN_LIMIT=10000
 TOKEN_WINDOW_SECONDS=18000
+# Email Delivery: Brevo HTTP REST API (Recommended for Render Free Tier - Port 443 HTTPS)
+BREVO_API_KEY=xkeysib-your_brevo_api_key
+BREVO_FROM_EMAIL=your_email@gmail.com
+# Alternative Email Delivery: Resend HTTP REST API (Port 443 HTTPS)
+RESEND_API_KEY=re_your_resend_api_key
+# Fallback / Local SMTP (Gmail - Port 465)
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_16_character_app_password
 ```
