@@ -33,6 +33,8 @@ import {
   Home,
   Sparkles,
   Key,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import { usePageSEO } from '../../utils/seo';
 
@@ -209,6 +211,51 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeStreamChatIdRef = useRef<string | null>(null);
 
+  // Attachment & Web Grounding State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<{
+    fileName: string;
+    textContent: string;
+    charCount: number;
+    snippet: string;
+  } | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [webSearchActive, setWebSearchActive] = useState(false);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value to allow selecting the same file again if cleared
+    e.target.value = '';
+
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage('File size exceeds the 10 MB limit');
+      return;
+    }
+
+    setUploadingFile(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await api.message.uploadDocument(file);
+      setAttachedFile({
+        fileName: res.fileName,
+        textContent: res.textContent,
+        charCount: res.charCount,
+        snippet: res.snippet,
+      });
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to parse document attachment');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null);
+  };
+
   // Keep tokenStats in sync when currentUser updates
   useEffect(() => {
     if (currentUser?.usage) {
@@ -369,21 +416,43 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
 
   // Send message with STREAMING output, LIVE token updating & dynamic URL switching
   const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || inputPrompt).trim();
-    if (!text || sending) return;
+    let text = (textToSend || inputPrompt).trim();
+    if ((!text && !attachedFile) || sending || uploadingFile) return;
+
+    if (!text && attachedFile) {
+      text = `Please analyze the attached document: ${attachedFile.fileName}`;
+    }
+
+    if (webSearchActive) {
+      text = `[Live Web Grounding Enabled]\n${text}`;
+    }
 
     setErrorMessage(null);
     setSending(true);
 
+    const currentAttachment = attachedFile
+      ? {
+          fileName: attachedFile.fileName,
+          textContent: attachedFile.textContent,
+        }
+      : undefined;
+
     // Optimistic user message
     const tempUserMsgId = `temp-${Date.now()}`;
+    const displayContent = currentAttachment
+      ? `[File Attached: ${currentAttachment.fileName}]\n\n${text}`
+      : text;
+
     const tempUserMsg: Message = {
       _id: tempUserMsgId,
       chatId: currentChatId || 'temp',
       role: 'user',
-      content: text,
+      content: displayContent,
       createdAt: new Date().toISOString(),
     };
+
+    // Clear attached file immediately after staging
+    setAttachedFile(null);
 
     // Optimistic assistant message for live stream rendering
     const streamAsstId = `stream-${Date.now()}`;
@@ -410,6 +479,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
           content: text,
           model: selectedModel,
           useThunderEngine,
+          attachment: currentAttachment,
         },
         {
           onStart: (startData) => {
@@ -514,6 +584,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             content: text,
             model: selectedModel,
             useThunderEngine,
+            attachment: currentAttachment,
           });
 
           if (!currentChatId && fallbackRes.chatId) {
@@ -1383,6 +1454,43 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               ? 'bg-[#1e1f20]/85 border-white/10 focus-within:border-yellow-500/50 focus-within:bg-[#28292a]/95'
               : 'bg-[#f0f4f9]/85 border-[#d3dbdf] focus-within:border-yellow-500 focus-within:bg-white/95'
           }`}>
+            {/* Document upload loading indicator */}
+            {uploadingFile && (
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-500 animate-pulse">
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                <span className="truncate">Parsing document text via BullMQ memory queue...</span>
+              </div>
+            )}
+
+            {/* Attached file preview chip */}
+            {attachedFile && (
+              <div className={`flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs ${
+                isDarkMode ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' : 'bg-yellow-50 border-yellow-300 text-yellow-800'
+              }`}>
+                <div className="flex items-center space-x-2 truncate">
+                  <FileText className="w-4 h-4 text-yellow-500 shrink-0" />
+                  <span className="font-semibold truncate max-w-[200px] sm:max-w-xs">{attachedFile.fileName}</span>
+                  <span className="text-[10px] opacity-75 font-mono">({attachedFile.charCount.toLocaleString()} chars)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveAttachment}
+                  title="Remove document"
+                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition ml-2 shrink-0 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,.md,.json,.csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
             <textarea
               ref={textareaRef}
               rows={1}
@@ -1393,7 +1501,9 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               placeholder={
                 sending
                   ? 'Thunder is synthesizing response...'
-                  : 'Ask Thunder anything, analyze backend models, or write code...'
+                  : attachedFile
+                  ? `Ask questions about ${attachedFile.fileName} or leave empty to auto-analyze...`
+                  : 'Ask Thunder anything, analyze documents, or write code...'
               }
               className={`w-full bg-transparent text-sm focus:outline-none resize-none px-2 max-h-36 overflow-y-auto leading-relaxed transition-opacity ${
                 sending ? 'cursor-not-allowed opacity-50' : ''
@@ -1412,28 +1522,43 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               <div className="flex items-center space-x-1 sm:space-x-1.5 text-zinc-400">
                 <button
                   type="button"
-                  title="Upload attachment"
-                  disabled={sending}
-                  className={`p-1.5 sm:p-2 rounded-full transition ${
-                    sending ? 'opacity-40 cursor-not-allowed' : ''
+                  title="Upload attachment (PDF, TXT, MD, JSON, CSV)"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || uploadingFile}
+                  className={`p-1.5 sm:p-2 rounded-full transition cursor-pointer ${
+                    sending || uploadingFile ? 'opacity-40 cursor-not-allowed' : ''
                   } ${
-                    isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
+                    attachedFile
+                      ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40'
+                      : isDarkMode
+                      ? 'hover:bg-white/10 hover:text-white'
+                      : 'hover:bg-black/10 hover:text-black'
                   }`}
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  title="Web Search"
+                  title={webSearchActive ? "Web Grounding Active" : "Enable Web Grounding"}
+                  onClick={() => setWebSearchActive(!webSearchActive)}
                   disabled={sending}
-                  className={`p-1.5 sm:p-2 rounded-full transition ${
+                  className={`p-1.5 sm:p-2 rounded-full transition cursor-pointer ${
                     sending ? 'opacity-40 cursor-not-allowed' : ''
                   } ${
-                    isDarkMode ? 'hover:bg-white/10 hover:text-white' : 'hover:bg-black/10 hover:text-black'
+                    webSearchActive
+                      ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40'
+                      : isDarkMode
+                      ? 'hover:bg-white/10 hover:text-white'
+                      : 'hover:bg-black/10 hover:text-black'
                   }`}
                 >
                   <Globe className="w-4 h-4" />
                 </button>
+                {webSearchActive && (
+                  <span className="text-[10px] font-mono text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
+                    WEB ACTIVE
+                  </span>
+                )}
                 <span className="text-[10px] font-mono text-zinc-500 pl-1 truncate max-w-[90px] sm:max-w-none">
                   Model: {selectedModel.split('/')[1] || selectedModel}
                 </span>
@@ -1443,17 +1568,17 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               <button
                 type="button"
                 onClick={() => handleSendMessage()}
-                disabled={!inputPrompt.trim() || sending}
-                className={`p-2.5 rounded-full transition-all flex items-center justify-center ${
-                  inputPrompt.trim() && !sending
+                disabled={(!inputPrompt.trim() && !attachedFile) || sending || uploadingFile}
+                className={`p-2.5 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+                  (inputPrompt.trim() || attachedFile) && !sending && !uploadingFile
                     ? 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-300 text-black font-bold shadow-md shadow-yellow-500/30 hover:scale-105'
                     : isDarkMode
                     ? 'bg-[#2d2e30] text-zinc-600 cursor-not-allowed'
                     : 'bg-[#e1e3e1] text-zinc-400 cursor-not-allowed'
                 }`}
-                title={sending ? 'Synthesizing response...' : 'Send prompt'}
+                title={sending ? 'Synthesizing response...' : uploadingFile ? 'Processing document...' : 'Send prompt'}
               >
-                {sending ? (
+                {sending || uploadingFile ? (
                   <span className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />

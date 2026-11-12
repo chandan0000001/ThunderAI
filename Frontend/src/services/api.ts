@@ -152,6 +152,33 @@ export const api = {
   },
 
   message: {
+    uploadDocument: async (file: File): Promise<{
+      fileName: string;
+      charCount: number;
+      truncated: boolean;
+      snippet: string;
+      textContent: string;
+    }> => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE}/msg/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new ApiError(data.message || 'Failed to upload document', response.status);
+      }
+
+      return response.json();
+    },
+
     getMessages: async (chatId: string): Promise<{ messages: string; msg: Message[] }> => {
       return request<{ messages: string; msg: Message[] }>(`/msg/${chatId}`, {
         method: 'GET',
@@ -163,11 +190,13 @@ export const api = {
       content: string;
       model?: string;
       useThunderEngine?: boolean;
+      attachment?: { fileName: string; textContent: string };
     }): Promise<SendMessageResponse> => {
       const endpoint = params.chatId ? `/msg/${params.chatId}` : '/msg/';
       const bodyPayload: any = {
         content: params.content,
         useThunderEngine: params.useThunderEngine ?? true,
+        attachment: params.attachment,
       };
       if (!params.chatId && params.model) {
         bodyPayload.model = params.model;
@@ -185,6 +214,7 @@ export const api = {
         content: string;
         model?: string;
         useThunderEngine?: boolean;
+        attachment?: { fileName: string; textContent: string };
       },
       callbacks: StreamMessageCallbacks = {}
     ): Promise<SendMessageResponse> => {
@@ -192,6 +222,7 @@ export const api = {
       const bodyPayload: any = {
         content: params.content,
         useThunderEngine: params.useThunderEngine ?? true,
+        attachment: params.attachment,
       };
       if (!params.chatId && params.model) {
         bodyPayload.model = params.model;

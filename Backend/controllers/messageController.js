@@ -2,13 +2,13 @@ import Chat from "../model/chatSchema.js";
 import Message from "../model/messageSchema.js";
 import mongoose from "mongoose";
 import { generateAIResponse, generateAIStreamResponse } from "../services/aiProviderService.js";
-import {buildMessagesForAI} from "../utils/chatContext.js"
-import {
-  addUserTokenUsage,
-} from "../utils/userUsage.js";
+import { buildMessagesForAI } from "../utils/chatContext.js";
+import { addUserTokenUsage } from "../utils/userUsage.js";
 import { addChatTokenUsage } from "../utils/tokenUsage.js";
-import {updateSummaryIfNeeded} from "../services/summaryService.js"
-import {redisClient} from "../config/redis.js"
+import { updateSummaryIfNeeded } from "../services/summaryService.js";
+import { redisClient } from "../config/redis.js";
+import { logTelemetry } from "../services/streamService.js";
+import { processDocumentJob } from "../services/queueService.js";
 
 
 // getMessage, sendMessage
@@ -55,7 +55,7 @@ export const getMessage = async(req,res)=>{
 export const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { content, model, useThunderEngine = true } = req.body;
+    const { content, model, useThunderEngine = true, attachment } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -69,10 +69,6 @@ export const sendMessage = async (req, res) => {
         message: "Message exceeds maximum allowed length of 32,000 characters"
       });
     }
-
-
-
-    
 
     let chat;
 
@@ -113,20 +109,25 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    
-
-    // our code start here
-    // oldMessages: Jinki abhi tak summary create nahi hui hai
+    // Build context with optional attached document
     const oldMessages = await Message.find({
       chatId: chat._id,
     })
       .sort({ createdAt: 1 })
-      .skip(chat.summarizedTillMessageNumber);
+      .skip(chat.summarizedTillMessageNumber || 0);
+
+    const userDisplayContent = attachment && attachment.fileName
+      ? `[File Attached: ${attachment.fileName}]\n\n${content.trim()}`
+      : content.trim();
+
+    const promptForAI = attachment && attachment.textContent
+      ? `${content.trim()}\n\n---\n[Attached Document: ${attachment.fileName || "File"}]\n${attachment.textContent}`
+      : content.trim();
 
     const messagesForAI = buildMessagesForAI({
       chat,
       oldMessages,
-      currentMessage: content.trim(),
+      currentMessage: promptForAI,
     });
 
     const { aiReply, usage, provider, isUserKey } = await generateAIResponse({
@@ -139,8 +140,16 @@ export const sendMessage = async (req, res) => {
     const userMessage = await Message.create({
       chatId: chat._id,
       role: "user",
-      content: content.trim(),
-      userId: req.user._id
+      content: userDisplayContent,
+      userId: req.user._id,
+    });
+
+    // Option A: Log telemetry event to Redis Stream
+    await logTelemetry("chat_sync_sent", {
+      userId: req.user._id.toString(),
+      chatId: chat._id.toString(),
+      model: chat.model,
+      hasAttachment: Boolean(attachment && attachment.textContent),
     });
 
     const assistantMessage = await Message.create({
@@ -201,7 +210,7 @@ export const sendMessageStream = async (req, res) => {
   let chat = null;
   try {
     const { chatId } = req.params;
-    const { content, model, useThunderEngine = true } = req.body;
+    const { content, model, useThunderEngine = true, attachment } = req.body;
 
     // 1. Validate message content (V-08: Length bounding)
     if (!content || content.trim() === "") {
@@ -250,25 +259,41 @@ export const sendMessageStream = async (req, res) => {
       });
     }
 
-    // Prepare context
+    // Prepare context with optional attachment
     const oldMessages = await Message.find({
       chatId: chat._id,
     })
       .sort({ createdAt: 1 })
       .skip(chat.summarizedTillMessageNumber || 0);
 
+    const userDisplayContent = attachment && attachment.fileName
+      ? `[File Attached: ${attachment.fileName}]\n\n${content.trim()}`
+      : content.trim();
+
+    const promptForAI = attachment && attachment.textContent
+      ? `${content.trim()}\n\n---\n[Attached Document: ${attachment.fileName || "File"}]\n${attachment.textContent}`
+      : content.trim();
+
     const messagesForAI = buildMessagesForAI({
       chat,
       oldMessages,
-      currentMessage: content.trim(),
+      currentMessage: promptForAI,
     });
 
     // Create user message in DB
     const userMessage = await Message.create({
       chatId: chat._id,
       role: "user",
-      content: content.trim(),
+      content: userDisplayContent,
       userId: req.user._id,
+    });
+
+    // Option A: Publish telemetry event to capped Redis Stream
+    await logTelemetry("chat_stream_started", {
+      userId: req.user._id.toString(),
+      chatId: chat._id.toString(),
+      model: chat.model,
+      hasAttachment: Boolean(attachment && attachment.textContent),
     });
 
     // Setup SSE response headers
@@ -386,5 +411,44 @@ export const sendMessageStream = async (req, res) => {
       );
       res.end();
     }
+  }
+};
+
+/**
+ * OPTION B: Memory-Managed Document Attachment Handler via BullMQ
+ * Extracts text from PDF / TXT / MD / CSV and enforces memory safety.
+ */
+export const uploadDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No document attached" });
+    }
+
+    const { originalname, mimetype, buffer, size } = req.file;
+
+    // Disallow oversized files (>10MB)
+    if (size > 10 * 1024 * 1024) {
+      return res.status(400).json({ message: "File exceeds 10MB maximum limit" });
+    }
+
+    // Process via Option B (Memory-Optimized BullMQ Queue)
+    const result = await processDocumentJob({
+      fileBuffer: buffer,
+      fileName: originalname,
+      mimeType: mimetype,
+      userId: req.user._id.toString(),
+    });
+
+    res.status(200).json({
+      message: "Document processed and parsed successfully",
+      fileName: result.fileName,
+      charCount: result.charCount,
+      truncated: result.truncated,
+      snippet: result.snippet,
+      textContent: result.cleanText,
+    });
+  } catch (err) {
+    console.error("Document upload processing error:", err);
+    res.status(500).json({ message: err.message || "Failed to process document attachment" });
   }
 };
