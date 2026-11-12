@@ -1,4 +1,10 @@
 import { createClient } from "redis";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const isProduction = process.env.NODE_ENV === "production";
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;

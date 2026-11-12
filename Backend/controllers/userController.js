@@ -84,12 +84,14 @@ export const signup = async (req, res) => {
         await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
         // Dispatch verification email
-        let emailDelivered = false;
         try {
             await sendVerificationOTP(normalizedEmail, otp, name);
-            emailDelivered = true;
         } catch (mailErr) {
-            console.warn("Email delivery note:", mailErr.message);
+            console.error(`[EmailService] Failed to dispatch signup OTP to ${normalizedEmail}:`, mailErr.message);
+            return res.status(503).json({
+                message: "Unable to deliver verification code to your email address at this time. Please check your email or try again in a few moments.",
+                error: mailErr.message
+            });
         }
 
         if (process.env.NODE_ENV !== "production") {
@@ -219,12 +221,14 @@ export const resendOTP = async (req, res) => {
         await redisClient.set(`otp:${normalizedEmail}`, otp, { EX: 600 });
         await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
-        let emailDelivered = false;
         try {
             await sendVerificationOTP(normalizedEmail, otp, user.name);
-            emailDelivered = true;
         } catch (mailErr) {
-            console.warn("Resend email delivery note:", mailErr.message);
+            console.error(`[EmailService] Failed to dispatch resent OTP to ${normalizedEmail}:`, mailErr.message);
+            return res.status(503).json({
+                message: "Unable to deliver verification code to your email address. Please try again in a few moments.",
+                error: mailErr.message
+            });
         }
 
         if (process.env.NODE_ENV !== "production") {
@@ -280,12 +284,13 @@ export const login = async (req, res) => {
             await redisClient.set(`otp:${normalizedEmail}`, otp, { EX: 600 });
             await redisClient.set(`otp_cooldown:${normalizedEmail}`, "1", { EX: 60 });
 
-            let emailDelivered = false;
             try {
                 await sendVerificationOTP(normalizedEmail, otp, existingUser.name);
-                emailDelivered = true;
             } catch (mailErr) {
-                console.warn("Failed to dispatch OTP during login:", mailErr.message);
+                console.error(`[EmailService] Failed to dispatch login OTP to ${normalizedEmail}:`, mailErr.message);
+                return res.status(503).json({
+                    message: "Account requires email verification, but we could not deliver an email verification code at this time. Please try again shortly."
+                });
             }
 
             if (process.env.NODE_ENV !== "production") {

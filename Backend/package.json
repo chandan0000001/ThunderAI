@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
-    "seed:admin": "node seedAdmin.js",
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js",
+    "seed:admin": "node --env-file=.env seedAdmin.js",
     "test": "node --env-file=.env --test tests/**/*.test.js"
   },
   "author": "",

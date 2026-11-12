@@ -27,10 +27,10 @@ const getTransporter = () => {
     tls: {
       rejectUnauthorized: true,
     },
-    // Fast 5-second timeouts so Render firewall drops don't freeze the process for 2 minutes
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
+    // 15-second timeouts to provide robust TLS handshake buffer over variable networks
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 };
 
