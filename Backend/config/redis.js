@@ -1,13 +1,17 @@
 import { createClient } from "redis";
 
-const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI || "redis://localhost:6379";
+const isProduction = process.env.NODE_ENV === "production";
+const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
 
-if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL && !process.env.REDIS_URI) {
-  console.warn("[SECURITY WARNING] REDIS_URL is not set in production. Falling back to local Redis instance.");
+// F-10 Remediation: Remove localhost fallback in production; fail startup safely if Redis config is absent
+if (isProduction && !redisUrl) {
+  throw new Error("Critical production startup failure: REDIS_URL is mandatory in production environment. Localhost fallback is prohibited.");
 }
 
+const resolvedRedisUrl = redisUrl || "redis://localhost:6379";
+
 const redisClient = createClient({
-  url: redisUrl,
+  url: resolvedRedisUrl,
   socket: {
     reconnectStrategy: (retries) => {
       if (retries > 10) {
@@ -27,10 +31,13 @@ const connectRedis = async () => {
   try {
     if (!redisClient.isOpen) {
       await redisClient.connect();
-      console.log("Redis connected successfully to", redisUrl.split("@").pop());
+      console.log("Redis connected successfully to", resolvedRedisUrl.split("@").pop());
     }
   } catch (err) {
     console.error("Redis initial connection failed:", err.message);
+    if (isProduction) {
+      throw new Error(`Critical startup failure: Unable to connect to mandatory production Redis: ${err.message}`);
+    }
   }
 };
 

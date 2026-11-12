@@ -31,8 +31,9 @@ async function seedAdmin() {
       user.role = "admin";
       user.password = hashedPassword;
       user.isVerified = true;
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
-      console.log(`[SUCCESS] Updated existing user ${email} with role 'admin' and updated password.`);
+      console.log(`[AUDIT ${new Date().toISOString()}] Operator updated existing user ${email} to 'admin' and updated credentials.`);
     } else {
       user = await User.create({
         name: process.env.ADMIN_NAME || "System Administrator",
@@ -40,9 +41,10 @@ async function seedAdmin() {
         password: hashedPassword,
         role: "admin",
         isVerified: true,
+        tokenVersion: 0,
         authProvider: "local",
       });
-      console.log(`[SUCCESS] Created new user ${email} with role 'admin'.`);
+      console.log(`[AUDIT ${new Date().toISOString()}] Operator created initial administrator user: ${email}.`);
     }
 
     await mongoose.disconnect();

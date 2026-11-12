@@ -14,8 +14,33 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const config: RequestInit = {
+let refreshPromise: Promise<boolean> | null = null;
+
+async function executeSilentRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/user/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+interface RequestOptions extends RequestInit {
+  _isRetry?: boolean;
+}
+
+async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  const config: RequestOptions = {
     ...options,
     credentials: 'include',
     headers: {
@@ -31,6 +56,26 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      const isAuthExempt =
+        endpoint === '/user/login' ||
+        endpoint === '/user/signup' ||
+        endpoint === '/user/refresh' ||
+        endpoint === '/user/verify-otp' ||
+        endpoint === '/user/resend-otp' ||
+        endpoint === '/user/forgot-password' ||
+        endpoint === '/user/reset-password';
+
+      // Silent Refresh interceptor for expired 15-minute access tokens
+      if (response.status === 401 && !options._isRetry && !isAuthExempt) {
+        if (!refreshPromise) {
+          refreshPromise = executeSilentRefresh();
+        }
+        const refreshed = await refreshPromise;
+        if (refreshed) {
+          return request<T>(endpoint, { ...options, _isRetry: true });
+        }
+      }
+
       if (
         response.status === 401 &&
         typeof window !== 'undefined' &&
@@ -58,6 +103,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   auth: {
+    refreshToken: async (): Promise<{ message: string; user?: any }> => {
+      return request<{ message: string; user?: any }>('/user/refresh', {
+        method: 'POST',
+      });
+    },
     signup: async (data: { name: string; email: string; password: string; age?: number }): Promise<AuthResponse> => {
       return request<AuthResponse>('/user/signup', {
         method: 'POST',

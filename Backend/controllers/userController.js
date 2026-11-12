@@ -10,21 +10,21 @@ import { redisClient } from "../config/redis.js";
 import { sendVerificationOTP, sendPasswordResetEmail } from "../services/emailService.js";
 import { isAdminEmail } from "../utils/adminUtils.js";
 import { isAllowedOrigin } from "../utils/originUtils.js";
+import {
+    generateAccessToken,
+    setAuthCookies,
+    clearAuthCookies,
+    rotateRefreshToken,
+    getAccessTokenCookieOptions,
+    getRefreshTokenCookieOptions
+} from "../services/tokenService.js";
 
 const googleClient = new OAuth2Client();
 
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
 
 const createToken = (id, email, tokenVersion = 0) => {
-    if (!process.env.JWT_SECRET) {
-        throw new Error("JWT Secret key is Missing");
-    }
-
-    const token = jwt.sign({ id, email, tokenVersion }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-        algorithm: process.env.JWT_ALGORITHM || "HS256"
-    });
-    return token;
+    return generateAccessToken({ _id: id, email, tokenVersion });
 };
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -169,8 +169,7 @@ export const verifyOTP = async (req, res) => {
         user.isVerified = true;
         await user.save();
 
-        const token = createToken(user._id, user.email, user.tokenVersion || 0);
-        res.cookie("token", token, cookiesOption);
+        await setAuthCookies(res, user);
 
         return res.status(200).json({
             message: "Email successfully verified! Welcome to Thunder AI.",
@@ -343,8 +342,7 @@ export const login = async (req, res) => {
         }
         const isAdmin = existingUser.role === "admin";
 
-        const token = createToken(existingUser._id, existingUser.email, existingUser.tokenVersion || 0);
-        res.cookie("token", token, cookiesOption);
+        await setAuthCookies(res, existingUser);
 
         res.status(200).json({
             message: "User Logged in Successfully",
@@ -373,44 +371,68 @@ export const login = async (req, res) => {
 
 
 
-export const logout = async (req,res)=>{
-    // logut
-    try{
-
-        if(req.token){
-            const token = req.token;
-            const payload = req.tokenPayload;
-
-            const currentTime = Math.floor(Date.now() / 1000);
-            const remainingTime = payload.exp - currentTime;
-
-            if (remainingTime > 0) {
-                await redisClient.set(
-                    `blocklist:${token}`,
-                    "blocked",
-                    {
-                        EX: remainingTime
-                    }
-                );
-            }
-        }
-
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
-        });
-
-        res.status(200).json({
+export const logout = async (req, res) => {
+    try {
+        await clearAuthCookies(req, res);
+        return res.status(200).json({
             message: "User Logged Out Successfully"
-        })
-    }
-    catch(error){
+        });
+    } catch (error) {
+        console.error("Logout error:", error);
         return res.status(500).json({
             message: "Internal Server Error"
         });
     }
-}
+};
+
+/**
+ * Section 4: Refresh Token Rotation & Reuse Detection Endpoint
+ * POST /user/refresh
+ */
+export const refreshToken = async (req, res) => {
+    try {
+        const token = req.cookies?.refreshToken || req.body?.refreshToken;
+        if (!token) {
+            return res.status(401).json({
+                message: "Refresh token is missing"
+            });
+        }
+
+        const result = await rotateRefreshToken(token);
+
+        res.cookie("token", result.accessToken, getAccessTokenCookieOptions());
+        res.cookie("refreshToken", result.refreshToken, getRefreshTokenCookieOptions());
+
+        return res.status(200).json({
+            message: "Session refreshed successfully",
+            user: {
+                _id: result.user._id,
+                name: result.user.name,
+                email: result.user.email,
+                role: result.user.role || "user"
+            }
+        });
+    } catch (err) {
+        const clearOpts = {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            path: "/"
+        };
+        res.clearCookie("token", clearOpts);
+        res.clearCookie("refreshToken", clearOpts);
+
+        if (err.code === "TOKEN_REUSE") {
+            return res.status(401).json({
+                message: "Security alert: Token reuse detected. All active sessions have been revoked. Please sign in again."
+            });
+        }
+
+        return res.status(401).json({
+            message: err.message || "Failed to refresh session. Please sign in again."
+        });
+    }
+};
 
 
 
@@ -498,15 +520,12 @@ export const deleteAccount = async(req,res)=>{
       try {
         await redisClient.del(`token-usage:${userId}`);
         await redisClient.del(`rate-limit:user:${userId}`);
+        await redisClient.del(`user:tokenVersion:${userId}`);
       } catch (redisErr) {
         console.warn("Could not delete redis keys on account purge:", redisErr);
       }
 
-      res.clearCookie("token", {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-      });
+      await clearAuthCookies(req, res);
 
       return res.status(200).json({
         message: "Account deleted successfully",
@@ -622,8 +641,7 @@ export const googleAuth = async (req, res) => {
         }
         const isAdmin = user.role === "admin";
 
-        const token = createToken(user._id, user.email, user.tokenVersion || 0);
-        res.cookie("token", token, cookiesOption);
+        await setAuthCookies(res, user);
 
         return res.status(200).json({
             message: "Google login successful",
@@ -796,15 +814,19 @@ export const resetPassword = async (req, res) => {
 
         const redisKey = `password-reset:${token.trim()}`;
 
-        // F-07 Remediation: Atomic token consumption prevents concurrent reuse race condition
+        // F-13 Remediation: Atomic one-time token redemption via Redis GETDEL or atomic Lua transaction.
+        // Completely eliminates non-atomic GET-then-DEL application-space race conditions.
         let email = null;
-        if (typeof redisClient.getDel === "function") {
-            email = await redisClient.getDel(redisKey);
-        } else {
-            email = await redisClient.get(redisKey);
-            if (email) {
-                await redisClient.del(redisKey);
+        try {
+            if (typeof redisClient.getDel === "function") {
+                email = await redisClient.getDel(redisKey);
+            } else {
+                const atomicLua = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]) end; return v;";
+                email = await redisClient.eval(atomicLua, { keys: [redisKey] });
             }
+        } catch {
+            const atomicLua = "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]) end; return v;";
+            email = await redisClient.eval(atomicLua, { keys: [redisKey] });
         }
 
         if (!email) {

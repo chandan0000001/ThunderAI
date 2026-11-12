@@ -14,9 +14,17 @@ const { PDFParse } = require("pdf-parse");
  * - Raw files are NEVER stored in Redis permanently; only sanitized extracted text.
  */
 
-const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI || "redis://localhost:6379";
+const isProduction = process.env.NODE_ENV === "production";
+const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
 
-export const queueConnection = new Redis(redisUrl, {
+// F-10: In production, explicit REDIS_URL is mandatory for BullMQ queues
+if (isProduction && !redisUrl) {
+  throw new Error("Critical production startup failure: REDIS_URL is mandatory for queue connection in production.");
+}
+
+const resolvedRedisUrl = redisUrl || "redis://localhost:6379";
+
+export const queueConnection = new Redis(resolvedRedisUrl, {
   maxRetriesPerRequest: null,
   lazyConnect: true,
   enableReadyCheck: false,

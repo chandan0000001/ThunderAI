@@ -13,7 +13,8 @@ import {
     removeCustomApiKey,
     forgotPassword,
     resetPassword,
-    getClientInfo
+    getClientInfo,
+    refreshToken
 } from "../controllers/userController.js";
 import authUserMiddleware from '../middleware/authUserMiddleware.js';
 import unauthenticatedRateLimiter from '../middleware/unauthenticatedRateLimiter.js';
@@ -23,6 +24,7 @@ import loadUserMiddleware from "../middleware/loadUserMiddleware.js";
 
 const userRouter = express.Router();
 userRouter.post("/login", unauthenticatedRateLimiter, login);
+userRouter.post("/refresh", unauthenticatedRateLimiter, refreshToken);
 userRouter.post("/google-login", unauthenticatedRateLimiter, googleAuth);
 userRouter.post("/logout", authUserMiddleware, logout);
 userRouter.post("/signup", unauthenticatedRateLimiter, signup);

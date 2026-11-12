@@ -121,42 +121,8 @@ const startServer = async () => {
         // Test email configuration asynchronously in background (never blocks port binding)
         verifyEmailConfiguration().catch(() => {});
 
-        // Auto-bootstrap Admin account from environment variables if provided
-        // F-04 Remediation: Never overwrite an existing administrator's password during ordinary startup.
-        if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-            import("./model/userSchema.js").then(async ({ default: User }) => {
-                const adminEmail = process.env.ADMIN_EMAIL.trim().toLowerCase();
-                const existing = await User.findOne({ email: adminEmail });
-                if (existing) {
-                    let needsSave = false;
-                    if (existing.role !== "admin") {
-                        existing.role = "admin";
-                        needsSave = true;
-                    }
-                    if (!existing.isVerified) {
-                        existing.isVerified = true;
-                        needsSave = true;
-                    }
-                    if (needsSave) {
-                        await existing.save();
-                    }
-                    console.log(` Admin user verified: ${adminEmail} (Role: admin)`);
-                } else {
-                    const bcrypt = (await import("bcrypt")).default;
-                    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || process.env.BCRYPT_ROUNDS || "12", 10);
-                    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, saltRounds);
-                    await User.create({
-                        name: "Thunder Admin",
-                        email: adminEmail,
-                        password: hash,
-                        role: "admin",
-                        isVerified: true,
-                        authProvider: "local"
-                    });
-                    console.log(` Admin user created: ${adminEmail} (Role: admin)`);
-                }
-            }).catch(e => console.warn("Admin bootstrap note:", e.message));
-        }
+        // F-12 Remediation: Administrator account creation/promotion is strictly separated
+        // from ordinary application startup and managed via explicit audited command (npm run seed:admin).
     } catch (error) {
         console.error("Failed to connect. Please try again. ERROR:", error);
     }

@@ -38,7 +38,7 @@ export const csrfProtection = (req, res, next) => {
     }
 
     // 3. Cookie-authenticated state-changing requests require custom header proof
-    const hasAuthCookie = Boolean(req.cookies && req.cookies.token);
+    const hasAuthCookie = Boolean(req.cookies && (req.cookies.token || req.cookies.refreshToken));
     if (hasAuthCookie) {
         const customHeader = req.headers["x-requested-with"] || req.headers["x-csrf-token"];
         if (!customHeader) {

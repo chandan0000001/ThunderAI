@@ -6,25 +6,43 @@ const inMemoryCounters = new Map();
 
 /**
  * Resolves a dedicated 32-byte AES-256 key strictly from BYOK_ENCRYPTION_KEY.
- * F-01 & F-02 Remediation: Completely eliminates predictable fallback string and
- * eliminates derivation from JWT_SECRET to preserve strict cryptographic key separation.
+ * F-08 Remediation: Enforces exactly 64 hexadecimal characters (32 bytes).
+ * Rejects missing, malformed, placeholder, or weak configuration.
+ * Strictly avoids hashing arbitrary passphrases into encryption keys.
  */
 export const getEncryptionKey = () => {
   const raw = process.env.BYOK_ENCRYPTION_KEY?.trim();
-  if (!raw || raw.includes("your_64_character")) {
+  if (!raw) {
     throw new Error("BYOK_ENCRYPTION_KEY is required and missing from environment configuration");
   }
 
-  if (raw.length === 64 && /^[0-9a-fA-F]+$/.test(raw)) {
-    return Buffer.from(raw, "hex");
+  // Reject documentation placeholders
+  const lower = raw.toLowerCase();
+  if (lower.includes("your_") || lower.includes("placeholder") || lower.includes("encryption_key")) {
+    throw new Error("BYOK_ENCRYPTION_KEY contains a placeholder value; a real 64-hex key is required");
   }
 
-  // Derive fixed 32-byte key from high-entropy passphrase if not hex-encoded
-  return crypto.createHash("sha256").update(raw).digest();
+  // Reject non-conforming lengths (must be exactly 64 hex characters for 32 bytes)
+  if (raw.length !== 64) {
+    throw new Error(`BYOK_ENCRYPTION_KEY must be exactly 64 hexadecimal characters (got ${raw.length})`);
+  }
+
+  // Reject non-hexadecimal characters
+  if (!/^[0-9a-fA-F]{64}$/.test(raw)) {
+    throw new Error("BYOK_ENCRYPTION_KEY must consist exclusively of hexadecimal characters [0-9a-fA-F]");
+  }
+
+  // Reject weak trivial repeating keys (e.g. 0000... or 1111...)
+  if (raw === raw[0].repeat(64)) {
+    throw new Error("BYOK_ENCRYPTION_KEY is insecure (trivial repeated character pattern)");
+  }
+
+  return Buffer.from(raw, "hex");
 };
 
 /**
  * Validates key manager cryptographic configuration at startup.
+ * F-08: Production startup strictly fails if BYOK_ENCRYPTION_KEY is absent or malformed.
  */
 export const validateKeyManagerConfig = () => {
   try {
@@ -35,9 +53,9 @@ export const validateKeyManagerConfig = () => {
     return true;
   } catch (err) {
     if (process.env.NODE_ENV === "production") {
-      throw err;
+      throw new Error(`[CRITICAL STARTUP FAILURE] ${err.message}`);
     }
-    console.warn(`[KeyManager] WARNING: ${err.message}. Set BYOK_ENCRYPTION_KEY in .env.`);
+    console.warn(`[KeyManager] CONFIG WARNING: ${err.message}. Provide a 64-char hex key.`);
     return false;
   }
 };
@@ -45,7 +63,7 @@ export const validateKeyManagerConfig = () => {
 /**
  * AES-256-GCM authenticated encryption for Redis BYOK storage.
  */
-const encryptAES = (text) => {
+export const encryptAES = (text) => {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
@@ -60,7 +78,7 @@ const encryptAES = (text) => {
  * Fails closed on authentication-tag mismatch or malformed inputs.
  * Never treats ciphertext or corrupted records as valid credential material.
  */
-const decryptAES = (payload) => {
+export const decryptAES = (payload) => {
   if (!payload || typeof payload !== "string") {
     return "";
   }
