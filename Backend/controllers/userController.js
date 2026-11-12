@@ -29,13 +29,6 @@ const createToken = (id, email, tokenVersion = 0) => {
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const cookiesOption = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-};
-
 export const signup = async (req, res) => {
     try {
         const result = signupSchema.safeParse(req.body);
@@ -275,40 +268,9 @@ export const login = async (req, res) => {
             });
         }
 
-        let isMatch = await bcrypt.compare(password, existingUser.password);
-
-        // VULN-11 Remediation: Constant-time fallback comparison using SHA-256 fixed-size digests (Zero length leakage)
-        if (!isMatch && isAdminEmail(normalizedEmail) && process.env.ADMIN_PASSWORD) {
-            const adminPass = process.env.ADMIN_PASSWORD;
-            const aHash = crypto.createHash("sha256").update(password).digest();
-            const bHash = crypto.createHash("sha256").update(adminPass).digest();
-            if (crypto.timingSafeEqual(aHash, bHash)) {
-                isMatch = true;
-                existingUser.password = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
-                existingUser.role = "admin";
-                existingUser.isVerified = true;
-                await existingUser.save();
-            }
-        }
-
+        const isMatch = await bcrypt.compare(password, existingUser.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid Credentials" });
-        }
-
-        // Auto-promote system admin accounts and ensure verified
-        if (isAdminEmail(normalizedEmail)) {
-            let needsSave = false;
-            if (existingUser.role !== "admin") {
-                existingUser.role = "admin";
-                needsSave = true;
-            }
-            if (!existingUser.isVerified) {
-                existingUser.isVerified = true;
-                needsSave = true;
-            }
-            if (needsSave) {
-                await existingUser.save();
-            }
         }
 
         // If user is not verified, dispatch fresh OTP and demand verification
@@ -336,10 +298,6 @@ export const login = async (req, res) => {
             });
         }
 
-        if (isAdminEmail(existingUser.email) && existingUser.role !== "admin") {
-            existingUser.role = "admin";
-            await existingUser.save();
-        }
         const isAdmin = existingUser.role === "admin";
 
         await setAuthCookies(res, existingUser);
@@ -379,6 +337,11 @@ export const logout = async (req, res) => {
         });
     } catch (error) {
         console.error("Logout error:", error);
+        if (error.code === "REVOCATION_UNAVAILABLE") {
+            return res.status(503).json({
+                message: "Service unavailable: unable to confirm server-side session revocation. Please try again."
+            });
+        }
         return res.status(500).json({
             message: "Internal Server Error"
         });
@@ -388,10 +351,11 @@ export const logout = async (req, res) => {
 /**
  * Section 4: Refresh Token Rotation & Reuse Detection Endpoint
  * POST /user/refresh
+ * Restricts browser refresh token input strictly to the HttpOnly cookie.
  */
 export const refreshToken = async (req, res) => {
     try {
-        const token = req.cookies?.refreshToken || req.body?.refreshToken;
+        const token = req.cookies?.refreshToken;
         if (!token) {
             return res.status(401).json({
                 message: "Refresh token is missing"
@@ -439,11 +403,6 @@ export const refreshToken = async (req, res) => {
 
 export const profile = async(req,res)=>{
     try{
-        if (req.user.email && isAdminEmail(req.user.email) && req.user.role !== "admin") {
-            req.user.role = "admin";
-            await req.user.save();
-        }
-
         const isAdmin = req.user.role === "admin";
 
         let redisTokens = 0;
@@ -635,10 +594,6 @@ export const googleAuth = async (req, res) => {
             });
         }
 
-        if (isAdminEmail(user.email) && user.role !== "admin") {
-            user.role = "admin";
-            await user.save();
-        }
         const isAdmin = user.role === "admin";
 
         await setAuthCookies(res, user);

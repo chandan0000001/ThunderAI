@@ -28,7 +28,7 @@ const getOpenRouterReferer = () => process.env.OPENROUTER_REFERER || process.env
 const getClaudeMaxTokens = () => parseInt(process.env.CLAUDE_MAX_TOKENS || "4096", 10);
 
 // Dispatch non-streaming AI response with multi-key and multi-provider failover
-export const generateAIResponse = async ({ model, messages, userId, useThunderEngine = true }) => {
+export const generateAIResponse = async ({ model, messages, userId, useThunderEngine = true, webSearch = false }) => {
   const provider = getProviderFromModel(model);
   const candidates = await getCandidateKeys(userId, provider, { useThunderEngine });
   let lastError = null;
@@ -47,6 +47,25 @@ export const generateAIResponse = async ({ model, messages, userId, useThunderEn
       if (activeProvider === "groq") endpoint = "https://api.groq.com/openai/v1/chat/completions";
       else if (activeProvider === "chatgpt") endpoint = "https://api.openai.com/v1/chat/completions";
 
+      const requestPayload = {
+        model: targetModel,
+        messages,
+        temperature: 0.7,
+        ...(webSearch && activeProvider === "openrouter"
+          ? {
+              tools: [
+                {
+                  type: "openrouter:web_search",
+                  parameters: {
+                    max_results: 5,
+                    engine: "auto",
+                  },
+                },
+              ],
+            }
+          : {}),
+      };
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -59,11 +78,7 @@ export const generateAIResponse = async ({ model, messages, userId, useThunderEn
               }
             : {}),
         },
-        body: JSON.stringify({
-          model: targetModel,
-          messages,
-          temperature: 0.7,
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!response.ok) {
@@ -162,6 +177,7 @@ export const generateAIStreamResponse = async ({
   onChunk,
   userId,
   useThunderEngine = true,
+  webSearch = false,
 }) => {
   const provider = getProviderFromModel(model);
   const candidates = await getCandidateKeys(userId, provider, { useThunderEngine });
@@ -258,6 +274,19 @@ export const generateAIStreamResponse = async ({
             model: targetModel,
             messages,
             stream: true,
+            ...(webSearch && activeProvider === "openrouter"
+              ? {
+                  tools: [
+                    {
+                      type: "openrouter:web_search",
+                      parameters: {
+                        max_results: 5,
+                        engine: "auto",
+                      },
+                    },
+                  ],
+                }
+              : {}),
           }),
         });
 

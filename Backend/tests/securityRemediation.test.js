@@ -2,6 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "crypto";
 import fs from "fs";
+import { spawnSync } from "child_process";
 import jwt from "jsonwebtoken";
 
 import {
@@ -16,7 +17,8 @@ import {
     generateRefreshToken,
     hashRefreshToken,
     storeRefreshToken,
-    rotateRefreshToken
+    rotateRefreshToken,
+    clearAuthCookies
 } from "../services/tokenService.js";
 
 import fallbackLimiter from "../utils/fallbackRateLimiter.js";
@@ -25,6 +27,7 @@ import csrfProtection from "../middleware/csrfProtection.js";
 import authUserMiddleware from "../middleware/authUserMiddleware.js";
 import { redisClient, connectRedis } from "../config/redis.js";
 import User from "../model/userSchema.js";
+import { login, logout } from "../controllers/userController.js";
 
 const VALID_KEY_64_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const TEST_JWT_SECRET = "test-jwt-secret-very-secure-32chars-minimum!";
@@ -209,6 +212,29 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
             process.env.NODE_ENV = prevEnv;
             process.env.REDIS_URL = prevUrl;
         });
+
+        test("Subprocess execution with NODE_ENV=production without REDIS_URL fails startup immediately", () => {
+            const result = spawnSync(
+                process.execPath,
+                ["--input-type=module", "-e", "import('./config/redis.js')"],
+                {
+                    cwd: process.cwd(),
+                    env: {
+                        ...process.env,
+                        NODE_ENV: "production",
+                        REDIS_URL: "",
+                        REDIS_URI: ""
+                    },
+                    encoding: "utf8"
+                }
+            );
+
+            assert.strictEqual(result.status, 1);
+            assert.match(
+                result.stderr,
+                /Critical production startup failure: REDIS_URL is mandatory in production/
+            );
+        });
     });
 
     // ==========================================
@@ -352,6 +378,65 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
 
             await redisClient.del(`refresh_revoked:${hashA}`);
         });
+
+        test("F-14: Concurrent rotation of the same refresh token yields exactly 1 success and 1 TOKEN_REUSE", async () => {
+            if (!redisClient || !redisClient.isOpen) return;
+
+            const userId = "65a123456789012345678999";
+            const email = "concurrency@thunder.ai";
+            const familyId = crypto.randomUUID();
+            const token = generateRefreshToken();
+            const tokenHash = hashRefreshToken(token);
+
+            await storeRefreshToken(token, userId, email, familyId, 0);
+
+            // Execute concurrent rotation requests
+            const [result1, result2] = await Promise.allSettled([
+                rotateRefreshToken(token),
+                rotateRefreshToken(token)
+            ]);
+
+            const fulfilled = [result1, result2].filter(r => r.status === "fulfilled");
+            const rejected = [result1, result2].filter(r => r.status === "rejected");
+
+            assert.strictEqual(fulfilled.length, 1, "Exactly one rotation must succeed");
+            assert.strictEqual(rejected.length, 1, "Exactly one rotation must fail");
+            assert.strictEqual(rejected[0].reason?.code, "TOKEN_REUSE");
+
+            // Clean up
+            await redisClient.del(`refresh_token:${tokenHash}`);
+            await redisClient.del(`refresh_revoked:${tokenHash}`);
+            await redisClient.del(`refresh_family:${familyId}`);
+            if (fulfilled[0]?.value?.refreshToken) {
+                const newHash = hashRefreshToken(fulfilled[0].value.refreshToken);
+                await redisClient.del(`refresh_token:${newHash}`);
+            }
+        });
+
+        test("F-15: Retains consumed-token reuse markers for the full family lifetime (>600000s)", async () => {
+            if (!redisClient || !redisClient.isOpen) return;
+
+            const userId = "65a123456789012345678998";
+            const email = "lifetime@thunder.ai";
+            const familyId = crypto.randomUUID();
+            const token = generateRefreshToken();
+            const tokenHash = hashRefreshToken(token);
+
+            await storeRefreshToken(token, userId, email, familyId, 0);
+            const rotated = await rotateRefreshToken(token);
+
+            const ttl = await redisClient.ttl(`refresh_revoked:${tokenHash}`);
+            // REFRESH_TOKEN_TTL_SECONDS is 604800 (7 days). Must be far greater than legacy 60s.
+            assert.ok(ttl > 600000, `Expected TTL > 600000s, got ${ttl}s`);
+
+            // Clean up
+            await redisClient.del(`refresh_revoked:${tokenHash}`);
+            await redisClient.del(`refresh_family:${familyId}`);
+            if (rotated?.refreshToken) {
+                const newHash = hashRefreshToken(rotated.refreshToken);
+                await redisClient.del(`refresh_token:${newHash}`);
+            }
+        });
     });
 
     // ==========================================
@@ -461,6 +546,151 @@ describe("Thunder AI - Security Remediation Acceptance Test Suite", () => {
                 assert.ok(true);
                 done();
             });
+        });
+    });
+
+    // ==========================================
+    // F-16: Fail-Closed Logout Revocation Guarantee
+    // ==========================================
+    describe("F-16: Fail-Closed Logout Revocation Guarantee", () => {
+        test("clearAuthCookies throws REVOCATION_UNAVAILABLE when Redis client is disconnected", async () => {
+            const fakeReq = { cookies: { refreshToken: "fake-refresh-token" } };
+            const fakeRes = { clearCookie: () => {} };
+
+            const originalIsOpen = redisClient.isOpen;
+            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
+
+            try {
+                await assert.rejects(
+                    () => clearAuthCookies(fakeReq, fakeRes),
+                    (err) => {
+                        assert.strictEqual(err.code, "REVOCATION_UNAVAILABLE");
+                        return true;
+                    }
+                );
+            } finally {
+                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
+            }
+        });
+
+        test("logout controller returns HTTP 503 when session store revocation fails", async () => {
+            const fakeReq = { cookies: { refreshToken: "fake-refresh-token" } };
+            let statusSent = null;
+            let bodySent = null;
+            const fakeRes = {
+                status: (code) => {
+                    statusSent = code;
+                    return { json: (data) => { bodySent = data; } };
+                },
+                clearCookie: () => {}
+            };
+
+            const originalIsOpen = redisClient.isOpen;
+            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
+
+            try {
+                await logout(fakeReq, fakeRes);
+                assert.strictEqual(statusSent, 503);
+                assert.match(bodySent.message, /service unavailable: unable to confirm server-side session revocation/i);
+            } finally {
+                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
+            }
+        });
+    });
+
+    // ==========================================
+    // F-17: Elimination of Login Master-Password Fallback & Auto-Promotion
+    // ==========================================
+    describe("F-17: Elimination of Login Master-Password Fallback & Auto-Promotion", () => {
+        test("Application code contains zero references to ADMIN_PASSWORD in controllers and routes", () => {
+            const userControllerSrc = fs.readFileSync("controllers/userController.js", "utf8");
+            assert.strictEqual(userControllerSrc.includes("ADMIN_PASSWORD"), false);
+            assert.strictEqual(userControllerSrc.includes("ADMIN_EMAILS"), false);
+
+            const userRouterSrc = fs.readFileSync("routes/userRouter.js", "utf8");
+            assert.strictEqual(userRouterSrc.includes("ADMIN_PASSWORD"), false);
+
+            const adminRouterSrc = fs.readFileSync("routes/adminRouter.js", "utf8");
+            assert.strictEqual(adminRouterSrc.includes("ADMIN_PASSWORD"), false);
+        });
+
+        test("Login fails with 401 when attempting master password against account with different password", async () => {
+            process.env.ADMIN_PASSWORD = "MasterPassword123!";
+            let statusSent = null;
+            let bodySent = null;
+            const req = {
+                body: {
+                    email: "member@thunder.ai",
+                    password: "MasterPassword123!"
+                }
+            };
+            const res = {
+                status: (code) => {
+                    statusSent = code;
+                    return { json: (data) => { bodySent = data; } };
+                }
+            };
+
+            const origFindOne = User.findOne;
+            try {
+                // Mock user with a distinct legitimate password
+                User.findOne = async () => ({
+                    _id: "65a000000000000000000001",
+                    email: "member@thunder.ai",
+                    password: "$2b$10$invalidhashdifferentfrommasterpassword12345678901234567",
+                    role: "user",
+                    isVerified: true
+                });
+
+                await login(req, res);
+                assert.strictEqual(statusSent, 401);
+                assert.strictEqual(bodySent.message, "Invalid Credentials");
+            } finally {
+                User.findOne = origFindOne;
+                delete process.env.ADMIN_PASSWORD;
+            }
+        });
+    });
+
+    // ==========================================
+    // F-18: Access-Token Blocklist Fail-Closed in Production
+    // ==========================================
+    describe("F-18: Access-Token Blocklist Fail-Closed in Production", () => {
+        test("authUserMiddleware returns HTTP 503 in production when Redis session store is offline", async () => {
+            const prevEnv = process.env.NODE_ENV;
+            process.env.NODE_ENV = "production";
+
+            const validToken = jwt.sign(
+                { id: "65a000000000000000000001", email: "prod@thunder.ai", tokenVersion: 1 },
+                TEST_JWT_SECRET,
+                { algorithm: "HS256", issuer: "thunder-ai", audience: "thunder-ai-client" }
+            );
+
+            let statusSent = null;
+            let bodySent = null;
+            let nextCalled = false;
+
+            const req = { cookies: { token: validToken }, headers: {} };
+            const res = {
+                status: (code) => {
+                    statusSent = code;
+                    return { json: (data) => { bodySent = data; } };
+                }
+            };
+            const next = () => { nextCalled = true; };
+
+            const originalIsOpen = redisClient.isOpen;
+            Object.defineProperty(redisClient, "isOpen", { value: false, configurable: true });
+
+            try {
+                await authUserMiddleware(req, res, next);
+                assert.strictEqual(statusSent, 503);
+                assert.strictEqual(nextCalled, false);
+                assert.match(bodySent.message, /authentication service unavailable/i);
+            } finally {
+                Object.defineProperty(redisClient, "isOpen", { value: originalIsOpen, configurable: true });
+                process.env.NODE_ENV = prevEnv;
+            }
         });
     });
 });

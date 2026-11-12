@@ -9,8 +9,11 @@ A high-performance, full-stack AI platform inspired by modern 3D interactive web
 - **Interactive Landing Page & Alpine Backdrop**: Cinematic panoramic hero, floating capsule navigation, and responsive above-the-fold layout with micro-guarantees.
 - **Real-Time Device Governance & Telemetry**: Dynamic client browser, operating system form-factor (Laptop, Smartphone, Tablet), and live public IP address detection.
 - **Real-Time Streaming Output**: High-throughput Server-Sent Events (SSE) token streaming with animated electric pulse cursor and markdown rendering.
-- **Multi-Model AI Routing & BYOK**: OpenRouter free tier, Groq LPU, DeepSeek R1, and Claude 3.5 Sonnet with client-side Bring-Your-Own-Key encryption and round-robin fallback.
+- **Multi-Model AI Routing & BYOK**: OpenRouter free tier, Groq LPU, DeepSeek R1, and Claude 3.5 Sonnet with client-side Bring-Your-Own-Key encryption (AES-256-GCM) and round-robin fallback.
+- **Multi-Engine Real-Time Web Search**: Redis-governed round-robin load balancer distributing queries across OpenRouter (`openrouter:web_search`), Tavily, Serper, DuckDuckGo, and Wikipedia REST API with automatic multi-tier failover.
+- **Enterprise Session Governance**: Atomic refresh-token rotation via Redis Lua scripts, 7-day token family reuse detection with instantaneous session invalidation, and 15-minute ephemeral access tokens in HttpOnly SameSite cookies.
 - **Live Redis Token Metering**: Sliding-window rate governance, lifetime usage telemetry, and live consumption indicators.
+- **Strict Role-Based Access Control**: Zero startup admin mutations or login master-password backdoors; dedicated operator-driven audited administrative seeding (`npm run seed:admin`).
 - **Dynamic Routing & History**: Full URL routing (`/`, `/chat`, `/chat/:chatId`, `/profile`, `/privacy`), custom 404 terminal page, automatic session persistence, and instant conversation switching.
 - **Comprehensive Privacy Policy**: 10-clause governance specification covering zero persistent model training, ephemeral 61-second Redis sliding-window TTLs, and GDPR Article 17 hard erasure.
 - **Observability & Web Vitals**: Built-in Vercel Web Analytics and Vercel Speed Insights with zero render-blocking penalties.
@@ -51,19 +54,29 @@ npm install
 Configure `Backend/.env`:
 ```env
 PORT=3000
+NODE_ENV=development # In production, REDIS_URL is mandatory (no localhost fallback)
 MONGO_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret_key
+JWT_SECRET=your_jwt_secret_key_minimum_32_characters
+BYOK_ENCRYPTION_KEY=your_64_character_hex_encryption_key
+ACCESS_TOKEN_TTL=15m
+REFRESH_TOKEN_TTL_SECONDS=604800
 OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_SEARCH_MODEL=google/gemini-2.0-flash-exp:free
+TAVILY_API_KEY=your_tavily_api_key_optional
+SERPER_API_KEY=your_serper_api_key_optional
 GROQ_API_KEY=your_groq_api_key
 DEFAULT_AI_MODEL=openrouter/free
-REDIS_URL=your_redis_connection_url
+REDIS_URL=your_redis_connection_url # Mandatory in production
 TOKEN_LIMIT=10000
 TOKEN_WINDOW_SECONDS=18000
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_16_character_app_password
-# Admin Bootstrap (wrap password in quotes if it contains '#' or special characters)
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD="your_strong_admin_password"
+```
+
+#### Administrator Account Provisioning
+Administrator accounts are never provisioned through automatic startup routines or login master-password bypasses. Use the audited, explicit CLI provisioning tool:
+```bash
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD="your_strong_admin_password" npm run seed:admin
 ```
 
 Start the backend:

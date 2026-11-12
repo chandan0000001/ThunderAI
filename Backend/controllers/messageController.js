@@ -144,6 +144,7 @@ export const sendMessage = async (req, res) => {
       messages: messagesForAI,
       userId: req.user._id,
       useThunderEngine,
+      webSearch: Boolean(webSearch),
     });
 
     const userMessage = await Message.create({
@@ -337,6 +338,7 @@ export const sendMessageStream = async (req, res) => {
       messages: messagesForAI,
       userId: req.user._id,
       useThunderEngine,
+      webSearch: Boolean(webSearch),
       onChunk: async (delta) => {
         res.write(
           `data: ${JSON.stringify({

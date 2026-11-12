@@ -1,15 +1,18 @@
 import { logTelemetry } from "./streamService.js";
 import { redisClient } from "../config/redis.js";
+import { getActiveApiKey } from "./keyManagerService.js";
 
 /**
  * Multi-Provider Web Search & Grounding Engine
  * Supports:
  * 1. Tavily AI Search (https://api.tavily.com)
  * 2. Serper Google Search (https://google.serper.dev)
- * 3. Wikipedia REST API (https://en.wikipedia.org)
+ * 3. OpenRouter Web Search Server Tool (openrouter:web_search)
  * 4. DuckDuckGo Search (https://lite.duckduckgo.com)
+ * 5. Wikipedia REST API (https://en.wikipedia.org)
  *
- * Equipped with Adaptive Intent Classification and automatic multi-engine failover.
+ * Equipped with Adaptive Intent Classification, Redis Round-Robin Multi-User Load Balancing,
+ * and automatic multi-engine failover.
  */
 
 const TAVILY_ENDPOINT = "https://api.tavily.com/search";
@@ -242,9 +245,110 @@ const searchDuckDuckGo = async (query, maxResults = 5) => {
 };
 
 /**
+ * Provider 5: OpenRouter Web Search Server Tool (openrouter:web_search)
+ * Executes live search queries through OpenRouter's integrated web search server tool.
+ */
+export const searchOpenRouter = async (query, maxResults = 5, userId = null) => {
+  let apiKey = process.env.OPENROUTER_API_KEY?.trim();
+
+  if (userId) {
+    try {
+      const userKey = await getActiveApiKey(userId, "openrouter", { useThunderEngine: true });
+      if (userKey) apiKey = userKey;
+    } catch {}
+  }
+
+  if (!apiKey || apiKey.includes("your_openrouter")) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+
+    const model = process.env.OPENROUTER_SEARCH_MODEL || "google/gemini-2.0-flash-exp:free";
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://thunder.ai",
+        "X-Title": "Thunder AI Web Search Grounding",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: `Search the web for up-to-date facts on: "${query}". Provide direct findings, source names, and exact URLs formatted as markdown links [Source Title](URL).`,
+          },
+        ],
+        tools: [
+          {
+            type: "openrouter:web_search",
+            parameters: {
+              max_results: maxResults,
+              engine: "auto",
+            },
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const message = data.choices?.[0]?.message;
+    if (!message) return null;
+
+    const content = message.content || "";
+
+    const results = [];
+    const linkMatches = [...content.matchAll(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g)];
+    for (const match of linkMatches.slice(0, maxResults)) {
+      results.push({
+        title: match[1].trim(),
+        url: match[2].trim(),
+        content: content.slice(0, 300),
+      });
+    }
+
+    // Inspect server tool annotations if returned in message payload
+    if (Array.isArray(message.annotations)) {
+      for (const ann of message.annotations) {
+        if (ann.url && !results.some((r) => r.url === ann.url)) {
+          results.push({
+            title: ann.title || "OpenRouter Web Source",
+            url: ann.url,
+            content: ann.text || content.slice(0, 300),
+          });
+        }
+      }
+    }
+
+    if (results.length === 0 && content) {
+      results.push({
+        title: "OpenRouter Web Intelligence",
+        url: "https://openrouter.ai",
+        content: content.slice(0, 500),
+      });
+    }
+
+    return {
+      provider: "openrouter",
+      answer: content.slice(0, 400),
+      results,
+    };
+  } catch (err) {
+    console.warn("[OpenRouter Web Search] Search note:", err.message);
+    return null;
+  }
+};
+
+/**
  * Determines active candidate providers based on environment configuration and query intent.
  */
-const getCandidateProviders = (query) => {
+const getCandidateProviders = async (query, userId = null) => {
   const pool = [];
 
   // Provider 1: Tavily AI Search (active if API key is present)
@@ -257,10 +361,22 @@ const getCandidateProviders = (query) => {
     pool.push("serper");
   }
 
-  // Provider 3: DuckDuckGo Organic Scraper (free, zero-config, always active)
+  // Provider 3: OpenRouter Web Search Server Tool (active if system or user BYOK key is present)
+  let hasOpenRouter = Boolean(process.env.OPENROUTER_API_KEY && !process.env.OPENROUTER_API_KEY.includes("your_openrouter"));
+  if (!hasOpenRouter && userId) {
+    try {
+      const userKey = await getActiveApiKey(userId, "openrouter", { useThunderEngine: false });
+      if (userKey) hasOpenRouter = true;
+    } catch {}
+  }
+  if (hasOpenRouter) {
+    pool.push("openrouter");
+  }
+
+  // Provider 4: DuckDuckGo Organic Scraper (free, zero-config, always active)
   pool.push("duckduckgo");
 
-  // Provider 4: Wikipedia REST API (free encyclopedic search, active for conceptual/historical queries)
+  // Provider 5: Wikipedia REST API (free encyclopedic search, active for conceptual/historical queries)
   const isWikiTopic = /\b(what is|who was|history of|define|definition of|concept of|origin of|biography|wikipedia)\b/i.test(query);
   if (isWikiTopic) {
     pool.push("wikipedia");
@@ -272,12 +388,14 @@ const getCandidateProviders = (query) => {
 /**
  * Dispatches query execution to a named search provider.
  */
-const executeProviderSearch = async (provider, query, maxResults) => {
+const executeProviderSearch = async (provider, query, maxResults, userId = null) => {
   switch (provider) {
     case "tavily":
       return await searchTavily(query, maxResults);
     case "serper":
       return await searchSerper(query, maxResults);
+    case "openrouter":
+      return await searchOpenRouter(query, maxResults, userId);
     case "duckduckgo":
       return await searchDuckDuckGo(query, maxResults);
     case "wikipedia":
@@ -309,7 +427,7 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false, us
   const optimalQuery = cleanSearchQuery(rawQuery).slice(0, 400);
 
   // 1. Build candidate search provider pool
-  const candidatePool = getCandidateProviders(optimalQuery);
+  const candidatePool = await getCandidateProviders(optimalQuery, userId);
 
   // 2. Redis-backed Atomic Load Balancing across queries and users
   let assignedIndex = 0;
@@ -342,7 +460,7 @@ export const searchWeb = async (query, { maxResults = 5, forceSearch = false, us
   let searchData = null;
   for (const provider of executionOrder) {
     try {
-      searchData = await executeProviderSearch(provider, optimalQuery, maxResults);
+      searchData = await executeProviderSearch(provider, optimalQuery, maxResults, userId);
       if (searchData && searchData.results && searchData.results.length > 0) {
         if (provider !== assignedProvider) {
           console.log(`[MultiSearch] Assigned provider "${assignedProvider}" exhausted or failed; successfully cascaded to "${provider}"`);

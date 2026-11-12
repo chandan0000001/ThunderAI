@@ -71,20 +71,30 @@ flowchart LR
    NODE_ENV=production
    PORT=3000
    MONGO_URI=your_mongodb_atlas_connection_string
-   JWT_SECRET=your_jwt_secret_key
+   JWT_SECRET=your_jwt_secret_key_minimum_32_characters
+   BYOK_ENCRYPTION_KEY=your_64_character_hex_encryption_key
+   ACCESS_TOKEN_TTL=15m
+   REFRESH_TOKEN_TTL_SECONDS=604800
    OPENROUTER_API_KEY=your_openrouter_api_key
+   OPENROUTER_SEARCH_MODEL=google/gemini-2.0-flash-exp:free
+   TAVILY_API_KEY=your_tavily_api_key_optional
+   SERPER_API_KEY=your_serper_api_key_optional
    DEFAULT_AI_MODEL=openrouter/free
-   REDIS_URL=your_redis_connection_url
+   REDIS_URL=your_redis_connection_url # MANDATORY: Production fails closed if absent
    TOKEN_LIMIT=10000
    TOKEN_WINDOW_SECONDS=18000
-   ADMIN_EMAIL=admin@thunderai.com
-   ADMIN_PASSWORD="your_admin_password_in_quotes" # Keep quoted if containing symbols like #
    BCRYPT_SALT_ROUNDS=12
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_email_app_password
    FRONTEND_URL=https://thunder-ai.pages.dev
    CORS_ALLOWED_ORIGINS=https://thunder-ai.pages.dev
    ```
+
+   > [!IMPORTANT]
+   > Administrator accounts are provisioned via explicit operator CLI tooling, not through ambient runtime environment variables or login master-password bypasses. Once deployed, run the audited seeding task in Railway's shell or one-off runner:
+   > ```bash
+   > ADMIN_EMAIL=admin@thunderai.com ADMIN_PASSWORD="your_strong_admin_password" npm run seed:admin
+   > ```
 5. In the **Settings** or **Networking** tab, click **Generate Domain** (gives you `https://thunder-ai-production.up.railway.app`).
 6. Test your backend: `https://thunder-ai-production.up.railway.app/health`.
 

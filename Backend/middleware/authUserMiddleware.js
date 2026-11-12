@@ -24,7 +24,15 @@ const authUserMiddleware = async (req, res, next) => {
             });
         }
 
-        // Verify active token blocklist in Redis
+        // F-18 Remediation: Require confirmed revocation check before accepting session
+        if (!redisClient || !redisClient.isOpen) {
+            if (process.env.NODE_ENV === "production") {
+                return res.status(503).json({
+                    message: "Authentication service unavailable. Session revocation checks cannot be verified."
+                });
+            }
+        }
+
         let blockedToken = null;
         try {
             if (redisClient && redisClient.isOpen) {
