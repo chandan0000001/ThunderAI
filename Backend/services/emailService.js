@@ -35,6 +35,41 @@ const getTransporter = () => {
 };
 
 /**
+ * Sends OTP email via Brevo (Sendinblue) HTTP REST API (over HTTPS Port 443, never blocked by Render).
+ */
+const sendViaBrevo = async (email, otp, name = 'User') => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return false;
+
+  const senderEmail = process.env.BREVO_FROM_EMAIL || process.env.EMAIL_USER || 'noreply@thunder.ai';
+  const senderName = process.env.BREVO_FROM_NAME || 'Thunder AI';
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey.trim(),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email, name }],
+      subject: `Your Thunder AI Verification Code is ${otp}`,
+      htmlContent: getEmailHtml(otp, name),
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || `Brevo API error status ${response.status}`);
+  }
+
+  console.log(`[EmailService] Verification OTP successfully sent to ${email} via Brevo API (Message ID: ${data.messageId || 'ok'})`);
+  return true;
+};
+
+/**
  * Sends OTP email via Resend HTTP REST API (over HTTPS Port 443, never blocked by Render).
  */
 const sendViaResend = async (email, otp, name = 'User') => {
@@ -72,6 +107,11 @@ const sendViaResend = async (email, otp, name = 'User') => {
  * Verifies email service configuration during server startup and logs diagnostic info.
  */
 export const verifyEmailConfiguration = async () => {
+  if (process.env.BREVO_API_KEY) {
+    console.log('[EmailService] Brevo API configured (HTTPS Port 443 - Fully supported on Render Free Tier)');
+    return true;
+  }
+
   if (process.env.RESEND_API_KEY) {
     console.log('[EmailService] Resend API configured (HTTPS Port 443 - Fully supported on Render Free Tier)');
     return true;
@@ -80,9 +120,9 @@ export const verifyEmailConfiguration = async () => {
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.warn('\n[EmailService] WARNING: Neither RESEND_API_KEY nor Gmail credentials configured in Environment.');
+    console.warn('\n[EmailService] WARNING: Neither BREVO_API_KEY, RESEND_API_KEY, nor Gmail credentials configured in Environment.');
     console.warn('- On Render Free tier, outbound SMTP (465/587) is blocked by firewall.');
-    console.warn('- Add RESEND_API_KEY in Render Environment for 100% free delivery over HTTPS (port 443).\n');
+    console.warn('- Add BREVO_API_KEY or RESEND_API_KEY in Render Environment for 100% free delivery over HTTPS (port 443).\n');
     return false;
   }
 
@@ -93,7 +133,7 @@ export const verifyEmailConfiguration = async () => {
   } catch (err) {
     console.warn(`\n[EmailService] WARNING: Gmail SMTP connection failed:`, err.message);
     console.warn(`Reason: Render Free Tier firewall blocks outbound SMTP ports (25, 465, 587).`);
-    console.warn(`- Solution: Set RESEND_API_KEY in Render Environment. Resend sends via HTTPS (port 443) which is never blocked.\n`);
+    console.warn(`- Solution: Set BREVO_API_KEY or RESEND_API_KEY in Render Environment. Both send via HTTPS (port 443) which is never blocked.\n`);
     return false;
   }
 };
@@ -252,7 +292,16 @@ const getEmailHtml = (otp, name = 'Agent') => {
  * @returns {Promise<boolean>}
  */
 export const sendVerificationOTP = async (email, otp, name = 'User') => {
-  // Option 1: Resend HTTP REST API (Bypasses Render's egress SMTP firewall on Port 443)
+  // Option 1: Brevo HTTP REST API (Bypasses Render's egress SMTP firewall on Port 443)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      return await sendViaBrevo(email, otp, name);
+    } catch (err) {
+      console.error(`[EmailService] ERROR: Brevo API failed:`, err.message);
+    }
+  }
+
+  // Option 2: Resend HTTP REST API (Bypasses Render's egress SMTP firewall on Port 443)
   if (process.env.RESEND_API_KEY) {
     try {
       return await sendViaResend(email, otp, name);
@@ -262,7 +311,7 @@ export const sendVerificationOTP = async (email, otp, name = 'User') => {
     }
   }
 
-  // Option 2: Gmail SMTP (Fast 5s timeout)
+  // Option 3: Gmail SMTP (Fast 15s timeout)
   const transporter = getTransporter();
 
   if (transporter) {
@@ -469,7 +518,38 @@ const getResetPasswordHtml = (resetUrl, name = 'Operator') => {
 export const sendPasswordResetEmail = async (email, resetUrl, name = 'Operator') => {
   const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@thunder.ai';
 
-  // Option 1: Resend HTTP REST API
+  // Option 1: Brevo HTTP REST API (HTTPS Port 443 - never blocked by Render)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const apiKey = process.env.BREVO_API_KEY.trim();
+      const senderEmail = process.env.BREVO_FROM_EMAIL || adminEmail;
+      const senderName = process.env.BREVO_FROM_NAME || 'Thunder AI Security';
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email, name }],
+          subject: 'Reset Your Thunder AI Password',
+          htmlContent: getResetPasswordHtml(resetUrl, name),
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`[EmailService] Password reset link sent to ${email} via Brevo`);
+        return true;
+      }
+    } catch (err) {
+      console.warn(`Brevo failed for reset email:`, err.message);
+    }
+  }
+
+  // Option 2: Resend HTTP REST API
   if (process.env.RESEND_API_KEY) {
     try {
       const apiKey = process.env.RESEND_API_KEY.trim();
