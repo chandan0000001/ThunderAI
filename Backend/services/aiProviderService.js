@@ -18,7 +18,13 @@ const normalizeModelForProvider = (provider, model = "") => {
     return "gpt-4o";
   }
   // OpenRouter models: default to configured free model
-  if (model === "openrouter/free" || !model || !model.includes("/") || model.includes("gemini")) {
+  if (
+    model === "openrouter/free" ||
+    !model ||
+    !model.includes("/") ||
+    model.includes("gemini") ||
+    model.startsWith("groq/")
+  ) {
     return process.env.DEFAULT_FREE_MODEL || "nvidia/nemotron-3.5-lightning:free";
   }
   return model;

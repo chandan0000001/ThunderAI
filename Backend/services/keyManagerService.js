@@ -221,7 +221,7 @@ export const deleteUserApiKey = async (userId, provider) => {
 
 // Get list of all providers with active BYOK keys for a user
 export const getUserConfiguredProviders = async (userId) => {
-  const providers = ["openrouter", "groq", "claude", "chatgpt"];
+  const providers = ["groq", "openrouter", "claude", "chatgpt"];
   const results = [];
 
   for (const prov of providers) {

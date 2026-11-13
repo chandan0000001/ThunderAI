@@ -9,10 +9,9 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Cpu,
-  Layers,
-  Database,
+  Sparkles,
   ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { AdminPanel } from '../admin/AdminPanel';
@@ -109,7 +108,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
             <div>
               <h3 className="font-mono text-[11px] sm:text-xs uppercase tracking-widest font-bold text-white truncate">
-                {isAdmin ? 'System Governance // Telemetry' : 'Operator Profile // Telemetry'}
+                {isAdmin ? 'System Governance // Admin' : 'Account Profile'}
               </h3>
             </div>
           </div>
@@ -285,64 +284,64 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           </div>
 
-          {/* 3. TECHNICAL SPEC MATRIX */}
+          {/* 3. ACCOUNT OVERVIEW MATRIX */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {/* Operator Info */}
+            {/* Account Plan */}
             <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0 text-amber-400">
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
-                  Tier & Role
+                  Account Plan
                 </span>
                 <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
-                  {isAdmin ? 'System Admin' : 'Standard Core'}
+                  {isAdmin ? 'Administrator / Pro' : 'Free Workspace'}
                 </span>
               </div>
             </div>
 
-            {/* Engine Gateway */}
+            {/* Verification Status */}
             <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center shrink-0 text-emerald-400">
+                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
-                  Neural Router
+                  Account Status
                 </span>
                 <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
-                  OpenRouter Active
+                  {currentUser?.isVerified ? 'Verified Account' : 'Verification Required'}
                 </span>
               </div>
             </div>
 
-            {/* Security Protocol */}
+            {/* Session Security */}
             <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-emerald-400">
-                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0 text-blue-400">
+                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
-                  Security Protocol
+                  Session Security
                 </span>
                 <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
-                  JWT // Bcrypt-12
+                  Encrypted & Active
                 </span>
               </div>
             </div>
 
-            {/* Context Summarization */}
+            {/* Intelligence Engine */}
             <div className="p-2.5 sm:p-3.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center space-x-2 sm:space-x-3">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-white">
-                <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 text-yellow-400">
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[8px] sm:text-[10px] font-mono text-zinc-500 uppercase block truncate">
-                  Memory Cache
+                  Intelligence Engine
                 </span>
                 <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-white truncate block">
-                  Adaptive Summary
+                  Thunder API 2.0
                 </span>
               </div>
             </div>

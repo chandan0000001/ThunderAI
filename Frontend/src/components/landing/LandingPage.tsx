@@ -83,7 +83,7 @@ const SecurityStreamCard: React.FC<{
   const [telemetryLogs, setTelemetryLogs] = useState<string[]>([
     '[AUTH] 23:45:01 · Google OAuth ID Token verified (sub: 10744745...)',
     '[REDIS] 23:45:04 · sliding_window: 142/10,000 tokens (ttl: 17980s)',
-    '[ROUTER] 23:45:05 · dispatch: openrouter/free (latency: 94ms)',
+    '[ROUTER] 23:45:05 · dispatch: thunder-flash-lpu (latency: 48ms)',
     '[SESSION] 23:45:09 · 7-day HttpOnly cookie issued (SameSite=None, Secure)',
   ]);
 
@@ -101,7 +101,7 @@ const SecurityStreamCard: React.FC<{
     const interval = setInterval(() => {
       const sampleEvents = [
         '[REDIS] sliding_window: user capacity replenished',
-        '[ROUTER] openrouter/free: 98ms first-byte stream latency',
+        '[ROUTER] thunder-flash-lpu: sub-second LPU inference stream',
         '[AUTH] Google One-Tap handshake validated successfully',
         '[MEMORY] semantic context condensator: 88% token reduction',
         '[BLOCKLIST] stateless revocation audit: 0 revoked tokens active',

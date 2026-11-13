@@ -1,7 +1,7 @@
 import Chat from "../model/chatSchema.js";
 import Message from "../model/messageSchema.js";
 import User from "../model/userSchema.js";
-import { generateAIResponse } from "./openRouterService.js";
+import { generateAIResponse } from "./aiProviderService.js";
 
 const SUMMARY_CHUNK_SIZE = 20;
 
@@ -53,6 +53,8 @@ export const updateSummaryIfNeeded = async (chatId) => {
   const { aiReply, usage } = await generateAIResponse({
     model: chat.model,
     messages: summaryMessages,
+    userId: chat.userId,
+    useThunderEngine: true,
   });
 
   chat.summary = aiReply;

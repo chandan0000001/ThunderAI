@@ -20,36 +20,37 @@ interface ApiKeyModalProps {
   onKeysUpdated?: () => void;
   useThunderEngine?: boolean;
   onToggleEngine?: (useEngine: boolean) => void;
+  initialProvider?: string;
 }
 
 const PROVIDERS = [
+  {
+    id: 'claude',
+    name: 'Anthropic Claude',
+    tag: 'Claude 3.5 Sonnet',
+    placeholder: 'sk-ant-api03-..., sk-ant-api03-...',
+    desc: 'Enter your personal Anthropic API key to unlock Claude 3.5 Sonnet in the User Provided section.',
+  },
+  {
+    id: 'chatgpt',
+    name: 'ChatGPT / OpenAI',
+    tag: 'GPT-4o & Frontier',
+    placeholder: 'sk-proj-..., sk-proj-...',
+    desc: 'Enter your personal OpenAI API key to unlock ChatGPT GPT-4o in the User Provided section.',
+  },
+  {
+    id: 'groq',
+    name: 'Groq LPU',
+    tag: 'Sub-Second Inference',
+    placeholder: 'gsk_..., gsk_... (comma-separated for round-robin)',
+    desc: 'Enter your personal Groq API key for unlimited 500+ tokens/sec LPU inference.',
+  },
   {
     id: 'openrouter',
     name: 'OpenRouter',
     tag: 'Open-Weights Gateway',
     placeholder: 'sk-or-v1-..., sk-or-v1-... (comma-separated for round-robin)',
-    desc: 'Access hundreds of open-source & proprietary models via unified endpoint.',
-  },
-  {
-    id: 'groq',
-    name: 'Groq',
-    tag: 'LPU Ultra Inference',
-    placeholder: 'gsk_..., gsk_... (comma-separated for round-robin)',
-    desc: 'Lightning-fast 500+ tokens/sec inference for Llama 3.3 and DeepSeek R1.',
-  },
-  {
-    id: 'claude',
-    name: 'Anthropic Claude',
-    tag: 'Reasoning Titan',
-    placeholder: 'sk-ant-api03-..., sk-ant-api03-...',
-    desc: 'Claude 3.5 Sonnet and Haiku for complex architecture and coding.',
-  },
-  {
-    id: 'chatgpt',
-    name: 'ChatGPT / OpenAI',
-    tag: 'OpenAI Frontier',
-    placeholder: 'sk-proj-..., sk-proj-...',
-    desc: 'GPT-4o, o1, and o3-mini models via OpenAI direct API.',
+    desc: 'Enter your personal OpenRouter API key for dedicated open-weights model routing.',
   },
 ] as const;
 
@@ -59,9 +60,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   onKeysUpdated,
   useThunderEngine = true,
   onToggleEngine,
+  initialProvider = 'claude',
 }) => {
   const [statuses, setStatuses] = useState<Record<string, ByokProviderStatus>>({});
-  const [selectedProvider, setSelectedProvider] = useState<string>('openrouter');
+  const [selectedProvider, setSelectedProvider] = useState<string>(initialProvider);
   const [keyInput, setKeyInput] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -82,8 +84,11 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadStatuses();
+      if (initialProvider) {
+        setSelectedProvider(initialProvider);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialProvider]);
 
   const showNotice = (type: 'success' | 'error', message: string) => {
     setNotice({ type, message });
@@ -103,6 +108,9 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
       showNotice('success', res.message || 'API key saved with 3-hour lease!');
       setKeyInput('');
       await loadStatuses();
+      if (onToggleEngine && useThunderEngine) {
+        onToggleEngine(false);
+      }
       if (onKeysUpdated) onKeysUpdated();
     } catch (err: any) {
       showNotice('error', err.message || 'Failed to save API key');
@@ -129,6 +137,8 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
 
   const currentStatus = statuses[selectedProvider];
   const activeProviderMeta = PROVIDERS.find((p) => p.id === selectedProvider) || PROVIDERS[0];
+  const totalConnectedKeys = Object.values(statuses).reduce((acc, s) => acc + (s?.keyCount || 0), 0);
+  const hasActiveCustomKeys = totalConnectedKeys > 0;
 
   const formatTtl = (seconds?: number) => {
     if (!seconds || seconds <= 0) return 'Inactive';
@@ -151,13 +161,23 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             </div>
             <div>
               <h3 className="font-mono text-xs sm:text-sm uppercase tracking-wider font-bold text-white flex items-center space-x-2">
-                <span>Custom API Keys // BYOK Engine</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[9px] font-bold">
-                  Round-Robin Active
-                </span>
+                <span>User Provided API Keys // BYOK Section</span>
+                {totalConnectedKeys > 1 ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[9px] font-bold">
+                    {totalConnectedKeys} Keys Connected
+                  </span>
+                ) : totalConnectedKeys === 1 ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[9px] font-bold">
+                    1 Key Connected
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[9px] font-bold">
+                    User Key Required
+                  </span>
+                )}
               </h3>
               <p className="text-[11px] text-zinc-400 font-mono hidden sm:block">
-                Bring your own keys to bypass platform rate limits with Thunder system prompts.
+                Where you enter your personal API keys to unlock custom models or bypass platform rate limits.
               </p>
             </div>
           </div>
@@ -176,17 +196,19 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           <div className="p-3.5 rounded-2xl border border-white/10 bg-black/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
             <div>
               <div className="font-bold text-white flex items-center space-x-2">
-                <span>ACTIVE ENGINE MODE:</span>
+                <span>ACTIVE ROUTING MODE:</span>
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                   useThunderEngine ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                 }`}>
-                  {useThunderEngine ? 'THUNDER INTERNAL API (ON)' : 'USER CUSTOM API KEY (OFF)'}
+                  {useThunderEngine ? 'THUNDER INTERNAL API' : 'USER PROVIDED KEYS (ACTIVE)'}
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400 mt-1">
                 {useThunderEngine
-                  ? "Thunder handles models and failovers using internal environment keys."
-                  : "Uses your own provided API keys directly. Rate limits are handled by your provider."}
+                  ? "Currently using built-in Thunder API keys. Add your personal key below to use your own account quota."
+                  : hasActiveCustomKeys
+                  ? `Routing inference through your ${totalConnectedKeys} connected personal API key(s).`
+                  : "User-Provided mode selected. Connect your API keys below to bypass platform rate limits."}
               </p>
             </div>
 
@@ -354,9 +376,13 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             </div>
           ) : (
             <div className="p-3.5 rounded-2xl border border-white/5 bg-white/[0.01] flex items-start space-x-2 text-zinc-400 text-[11px]">
-              <Info className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <span>
-                Currently utilizing Thunder default free system keys for {activeProviderMeta.name}. Add your own keys below to unlock dedicated high-throughput concurrency.
+                {activeProviderMeta.id === 'claude' || activeProviderMeta.id === 'chatgpt'
+                  ? `User Provided Section: Enter your personal ${activeProviderMeta.name} API key below to unlock this model.`
+                  : useThunderEngine
+                  ? `Thunder API currently handles ${activeProviderMeta.name} with built-in keys. Paste your personal key below to use your account quota.`
+                  : `No personal key connected for ${activeProviderMeta.name}. Enter your API key below to activate User-Provided mode.`}
               </span>
             </div>
           )}
@@ -365,8 +391,8 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           <form onSubmit={handleSaveKey} className="space-y-3 pt-2">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] uppercase tracking-wider text-zinc-300 font-bold block">
-                  {activeProviderMeta.name} API Key(s):
+                <label className="text-[11px] uppercase tracking-wider text-amber-300 font-bold block">
+                  Your {activeProviderMeta.name} API Key(s):
                 </label>
                 <span className="text-[10px] text-zinc-500 font-normal">
                   Comma-separated for Round-Robin

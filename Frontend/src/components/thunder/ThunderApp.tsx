@@ -50,33 +50,36 @@ interface ThunderAppProps {
   initialProfileOpen?: boolean;
 }
 
-const AVAILABLE_MODELS: AvailableModel[] = [
-  {
-    id: 'openrouter/free',
-    name: 'OpenRouter Free Tier',
-    provider: 'OpenRouter (.env)',
-    description: 'Active environment engine connected to NVIDIA Nemotron 3.5 & open weights.',
-    tag: 'ACTIVE IN ENV',
-    badge: 'Operational',
-    enabled: true,
-    isEnvActive: true,
-  },
+const THUNDER_MODELS: AvailableModel[] = [
   {
     id: 'groq/openai/gpt-oss-120b',
-    name: 'Groq LPU Engine',
-    provider: 'Groq LPU (.env)',
-    description: 'Active ultra-fast inference engine powered by Groq LPU hardware.',
-    tag: 'ACTIVE IN ENV',
-    badge: 'Operational',
+    name: 'Thunder Flash LPU',
+    provider: 'Thunder API',
+    description: 'Sub-second ultra-fast inference for rapid coding and immediate answers.',
+    tag: 'HIGH SPEED',
+    badge: 'Default',
     enabled: true,
     isEnvActive: true,
   },
+  {
+    id: 'openrouter/free',
+    name: 'Thunder Core 2.0',
+    provider: 'Thunder API',
+    description: 'High-speed balanced reasoning powered by Thunder Intelligence.',
+    tag: 'THUNDER CORE',
+    badge: 'Standard',
+    enabled: true,
+    isEnvActive: true,
+  },
+];
+
+const USER_PROVIDED_MODELS: AvailableModel[] = [
   {
     id: 'anthropic/claude-3.5-sonnet',
     name: 'Claude 3.5 Sonnet',
-    provider: 'Anthropic (BYOK)',
-    description: 'Industry benchmark for code architecture. Requires custom Anthropic API key.',
-    tag: 'BYOK KEY REQUIRED',
+    provider: 'Anthropic (User Key)',
+    description: 'Industry benchmark for code architecture. Requires your personal Anthropic API key.',
+    tag: 'USER KEY REQUIRED',
     badge: 'BYOK',
     enabled: true,
     isEnvActive: false,
@@ -84,14 +87,16 @@ const AVAILABLE_MODELS: AvailableModel[] = [
   {
     id: 'openai/gpt-4o',
     name: 'ChatGPT GPT-4o',
-    provider: 'OpenAI (BYOK)',
-    description: 'OpenAI flagship reasoning model. Requires custom OpenAI API key.',
-    tag: 'BYOK KEY REQUIRED',
+    provider: 'OpenAI (User Key)',
+    description: 'OpenAI flagship reasoning model. Requires your personal OpenAI API key.',
+    tag: 'USER KEY REQUIRED',
     badge: 'BYOK',
     enabled: true,
     isEnvActive: false,
   },
 ];
+
+const AVAILABLE_MODELS: AvailableModel[] = [...THUNDER_MODELS, ...USER_PROVIDED_MODELS];
 
 const SUGGESTIONS = [
   {
@@ -160,7 +165,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   // Input & model
   const [inputPrompt, setInputPrompt] = useState('');
   const [sending, setSending] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('openrouter/free');
+  const [selectedModel, setSelectedModel] = useState<string>('groq/openai/gpt-oss-120b');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
 
   // Dynamic Page SEO Synchronization
@@ -207,6 +212,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
   // Settings / Profile Modal
   const [profileModalOpen, setProfileModalOpen] = useState(initialProfileOpen);
   const [byokModalOpen, setByokModalOpen] = useState(false);
+  const [byokInitialProvider, setByokInitialProvider] = useState<string>('claude');
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -987,16 +993,17 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
             <button
               onClick={() => {
                 if (isMobile) setSidebarOpen(false);
+                setByokInitialProvider('claude');
                 setByokModalOpen(true);
               }}
               className="w-full px-3 py-2 rounded-xl border border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-mono text-xs flex items-center justify-between transition cursor-pointer"
-              title="Add custom API keys for Claude, Groq, OpenRouter, ChatGPT"
+              title="User Provided Section — add custom API keys for Claude, ChatGPT, Groq, OpenRouter"
             >
               <div className="flex items-center space-x-2">
                 <Key className="w-3.5 h-3.5 text-amber-400" />
-                <span className="font-semibold text-[11px]">API KEYS (BYOK)</span>
+                <span className="font-semibold text-[11px]">USER PROVIDED KEYS</span>
               </div>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold">ROUND-ROBIN</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold">BYOK</span>
             </button>
           )}
 
@@ -1109,7 +1116,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                     : 'bg-amber-400'
                 }`} />
                 <span className="font-medium truncate text-[11px] sm:text-xs">
-                  {AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || 'OpenRouter Free Tier'}
+                  {AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || 'Thunder Flash LPU'}
                 </span>
                 <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-500 shrink-0" />
               </button>
@@ -1117,74 +1124,131 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               {/* Model Dropdown Menu */}
               {modelDropdownOpen && (
                 <div
-                  className={`absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl border shadow-2xl p-2 z-50 space-y-1.5 ${
+                  className={`absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl border shadow-2xl p-2 z-50 space-y-2 ${
                     isDarkMode
                       ? 'bg-[#1e1f20] border-[#2d2e30]'
                       : 'bg-[#ffffff] border-[#d3dbdf]'
                   }`}
                 >
-                  <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex justify-between items-center border-b border-white/5 pb-2">
-                    <span>Neural Router Model</span>
-                    <span className="text-emerald-400 font-bold">2 Active in Env (OpenRouter & Groq)</span>
-                  </div>
-                  {AVAILABLE_MODELS.map((model) => {
-                    const isSelected = selectedModel === model.id;
-                    const isEnv = model.isEnvActive;
-                    return (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          if (!isEnv && useThunderEngine) {
-                            setErrorMessage(
-                              `${model.name} requires a custom API key. Switch Engine to User Key mode or open API Keys.`
-                            );
-                          }
-                          setSelectedModel(model.id);
-                          setModelDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-start justify-between cursor-pointer ${
-                          isSelected
-                            ? isDarkMode
-                              ? 'bg-[#004a77]/40 text-[#c2e7ff] border border-blue-500/30'
-                              : 'bg-[#e8f0fe] text-[#1967d2] border border-blue-200'
-                            : isDarkMode
-                            ? 'hover:bg-[#28292a] text-[#c4c7c5]'
-                            : 'hover:bg-[#f0f4f9] text-[#1f1f1f]'
-                        }`}
-                      >
-                        <div className="space-y-0.5 min-w-0 pr-2">
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
-                              {model.name}
-                            </span>
-                            {isEnv ? (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[8px] font-mono font-bold shrink-0">
-                                ACTIVE IN ENV
+                  {/* Section 1: Thunder API (Built-in) */}
+                  <div className="space-y-1">
+                    <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-blue-400 flex justify-between items-center border-b border-white/5 pb-1.5">
+                      <span className="flex items-center space-x-1.5">
+                        <Zap className="w-3 h-3 text-blue-400 fill-current" />
+                        <span className="font-bold">Thunder API (Built-in)</span>
+                      </span>
+                      <span className="text-emerald-400 font-bold text-[9px]">Included & Ready</span>
+                    </div>
+                    {THUNDER_MODELS.map((model) => {
+                      const isSelected = selectedModel === model.id;
+                      return (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setModelDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl transition flex items-start justify-between cursor-pointer ${
+                            isSelected
+                              ? isDarkMode
+                                ? 'bg-[#004a77]/40 text-[#c2e7ff] border border-blue-500/30'
+                                : 'bg-[#e8f0fe] text-[#1967d2] border border-blue-200'
+                              : isDarkMode
+                              ? 'hover:bg-[#28292a] text-[#c4c7c5]'
+                              : 'hover:bg-[#f0f4f9] text-[#1f1f1f]'
+                          }`}
+                        >
+                          <div className="space-y-0.5 min-w-0 pr-2">
+                            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                              <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+                                {model.name}
                               </span>
-                            ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 text-[8px] font-mono font-bold shrink-0">
-                                USER KEY REQUIRED
+                              <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[8px] font-mono font-bold shrink-0">
+                                {model.tag}
                               </span>
-                            )}
+                            </div>
+                            <p className="text-[11px] text-zinc-400 leading-snug">
+                              {model.description}
+                            </p>
                           </div>
-                          <p className="text-[11px] text-zinc-400 leading-snug">
-                            {model.description}
-                          </p>
-                        </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Section 2: User Provided (Where user puts their API keys) */}
+                  <div className="space-y-1 pt-1 border-t border-white/10">
+                    <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-400 flex justify-between items-center border-b border-white/5 pb-1.5">
+                      <span className="flex items-center space-x-1.5">
+                        <Key className="w-3 h-3 text-amber-400" />
+                        <span className="font-bold">User Provided (Where user puts their API keys)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModelDropdownOpen(false);
+                          setByokInitialProvider('claude');
+                          setByokModalOpen(true);
+                        }}
+                        className="text-[9px] px-2 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold transition cursor-pointer"
+                      >
+                        + Add Key
                       </button>
-                    );
-                  })}
+                    </div>
+                    {USER_PROVIDED_MODELS.map((model) => {
+                      const isSelected = selectedModel === model.id;
+                      const providerId = model.id.startsWith('anthropic') ? 'claude' : 'chatgpt';
+                      return (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setModelDropdownOpen(false);
+                            if (useThunderEngine) {
+                              setByokInitialProvider(providerId);
+                              setByokModalOpen(true);
+                            }
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl transition flex items-start justify-between cursor-pointer ${
+                            isSelected
+                              ? isDarkMode
+                                ? 'bg-amber-500/20 text-amber-200 border border-amber-500/30'
+                                : 'bg-amber-50 text-amber-900 border border-amber-200'
+                              : isDarkMode
+                              ? 'hover:bg-[#28292a] text-[#c4c7c5]'
+                              : 'hover:bg-[#f0f4f9] text-[#1f1f1f]'
+                          }`}
+                        >
+                          <div className="space-y-0.5 min-w-0 pr-2">
+                            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                              <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+                                {model.name}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 text-[8px] font-mono font-bold shrink-0">
+                                {model.tag}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-400 leading-snug">
+                              {model.description}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   <div className="pt-2 border-t border-white/10 px-1">
                     <button
                       onClick={() => {
                         setModelDropdownOpen(false);
+                        setByokInitialProvider('claude');
                         setByokModalOpen(true);
                       }}
                       className="w-full py-2 px-3 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-300 font-mono text-[11px] font-bold flex items-center justify-center space-x-1.5 transition cursor-pointer"
                     >
                       <Key className="w-3.5 h-3.5 text-amber-400" />
-                      <span>MANAGE / ADD API KEYS (BYOK)</span>
+                      <span>USER PROVIDED SECTION // ENTER API KEYS</span>
                     </button>
                   </div>
                 </div>
@@ -1203,7 +1267,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow'
                     : 'text-zinc-400 hover:text-white'
                 }`}
-                title="Thunder Internal Engine (ON) — automatic failover across environment models (OpenRouter & Groq)"
+                title="Thunder API Engine (Active) — built-in high-performance model routing"
               >
                 <Zap className="w-2.5 h-2.5 fill-current" />
                 <span className="hidden sm:inline">Thunder API</span>
@@ -1216,7 +1280,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                     ? 'bg-amber-400 text-black shadow font-extrabold'
                     : 'text-zinc-400 hover:text-white'
                 }`}
-                title="User Custom Key (OFF) — strictly uses your provided API key with round-robin"
+                title="User Custom Key (Active) — routes directly via your personal API keys"
               >
                 <Key className="w-2.5 h-2.5" />
                 <span className="hidden sm:inline">User Key</span>
@@ -1224,14 +1288,17 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
               </button>
             </div>
 
-            {/* BYOK Custom Keys Button */}
+            {/* User Provided Section Button */}
             <button
-              onClick={() => setByokModalOpen(true)}
-              className="flex items-center space-x-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition cursor-pointer shadow-sm"
-              title="Add your own API key (Claude, Groq, OpenRouter, ChatGPT) with round-robin support"
+              onClick={() => {
+                setByokInitialProvider('claude');
+                setByokModalOpen(true);
+              }}
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition cursor-pointer shadow-sm"
+              title="User Provided Section (Where user puts their API keys)"
             >
               <Key className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
-              <span className="hidden sm:inline font-mono text-[11px] font-bold">API KEYS</span>
+              <span className="hidden sm:inline font-mono text-[11px] font-bold">USER KEYS (BYOK)</span>
             </button>
 
             <button
@@ -1670,7 +1737,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
                   </span>
                 )}
                 <span className="text-[10px] font-mono text-zinc-500 pl-1 truncate max-w-[90px] sm:max-w-none">
-                  Model: {selectedModel.split('/')[1] || selectedModel}
+                  Model: {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Thunder Flash LPU'}
                 </span>
               </div>
 
@@ -1723,6 +1790,7 @@ export const ThunderApp: React.FC<ThunderAppProps> = ({
         onClose={() => setByokModalOpen(false)}
         useThunderEngine={useThunderEngine}
         onToggleEngine={handleToggleEngine}
+        initialProvider={byokInitialProvider}
       />
     </div>
   );
